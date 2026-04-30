@@ -69,6 +69,21 @@ function checkPm2Status(pm2Name) {
     }
 }
 
+function checkFailedLogins() {
+    try {
+        let cmd = '';
+        if (process.platform === 'win32') {
+            cmd = `ssh root@vee-app.co.il "lastb -n 100 | grep -v 'btmp begins' | wc -l"`;
+        } else {
+            cmd = `lastb -n 100 | grep -v 'btmp begins' | wc -l`;
+        }
+        const output = child_process.execSync(cmd, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] });
+        return parseInt(output.trim()) || 0;
+    } catch (e) {
+        return 0;
+    }
+}
+
 setInterval(() => {
     const apps = db.prepare('SELECT * FROM apps').all();
     
@@ -84,6 +99,9 @@ setInterval(() => {
         // 2. Parse logs if configured
         if (app.log_path) {
             metrics = parseNginxLog(app.log_path);
+        } else if (app.name === 'SSH Security') {
+            metrics.attacks = checkFailedLogins();
+            status = metrics.attacks > 10 ? 'offline' : 'online'; // Mark as "warning/offline" if many attacks
         } else {
             // Mock data for demonstration if no log path provided
             metrics.requests = Math.floor(Math.random() * 50);
