@@ -40,7 +40,7 @@ const AppDetails = () => {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ background: 'var(--accent-gradient)', padding: '20px', borderRadius: '20px', color: 'white', boxShadow: '0 8px 16px rgba(79, 70, 229, 0.3)' }}>
+          <div style={{ background: 'var(--accent-gradient)', padding: '20px', borderRadius: '20px', color: 'white', boxShadow: '0 8px 16px rgba(59, 130, 246, 0.3)' }}>
             <Server size={40} />
           </div>
           <div>
@@ -56,7 +56,7 @@ const AppDetails = () => {
         
         {/* Remote Control Panel */}
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="btn-icon" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', borderColor: 'transparent' }} title="Stop App">
+          <button className="btn-icon" style={{ background: '#fee2e2', color: 'var(--danger)', borderColor: 'transparent' }} title="Stop App">
             <Power size={20} />
           </button>
           <button className="btn-icon" title="Clear Logs">
@@ -69,23 +69,40 @@ const AppDetails = () => {
         </div>
       </div>
 
-      <div className="bento-grid">
-        {/* Main Chart */}
-        <div className="bento-card span-8 row-span-2" style={{ padding: '2rem' }}>
-          <h2 style={{ marginBottom: '1.5rem', fontSize: '1.4rem', fontWeight: 'bold' }}>היסטוריית תעבורה (24 דגימות)</h2>
-          <div style={{ height: '350px' }}>
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        <div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>
+          <Globe size={30} color="var(--accent-secondary)" style={{ margin: '0 auto 10px' }} />
+          <h3 style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>מבקרים סה״כ</h3>
+          <p style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{chartData[chartData.length - 1]?.visitors || 0}</p>
+        </div>
+        <div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>
+          <Activity size={30} color="var(--success)" style={{ margin: '0 auto 10px' }} />
+          <h3 style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>בקשות / תעבורה</h3>
+          <p style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{chartData[chartData.length - 1]?.requests || 0}</p>
+        </div>
+        <div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>
+          <ShieldAlert size={30} color="var(--danger)" style={{ margin: '0 auto 10px' }} />
+          <h3 style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>התקפות נחסמו</h3>
+          <p style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--danger)' }}>{chartData[chartData.length - 1]?.attacks || 0}</p>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginTop: '2rem' }}>
+        <div className="glass-card" style={{ padding: '2rem' }}>
+          <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold' }}>היסטוריית תעבורה (24 דגימות אחרונות)</h2>
+          <div style={{ height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="colorReq" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.4}/>
+                    <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.3}/>
                     <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="timestamp" tickFormatter={(t) => t ? new Date(t).toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'}) : ''} stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} />
-                <Area type="monotone" dataKey="requests" stroke="var(--accent-primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorReq)" name="בקשות" />
+                <XAxis dataKey="timestamp" tickFormatter={(t) => t ? new Date(t).toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'}) : ''} />
+                <YAxis />
+                <Tooltip />
+                <Area type="monotone" dataKey="requests" stroke="var(--accent-primary)" strokeWidth={2} fillOpacity={1} fill="url(#colorReq)" name="בקשות" />
                 <Area type="monotone" dataKey="visitors" stroke="var(--success)" strokeWidth={2} fill="transparent" name="מבקרים" />
                 <Area type="monotone" dataKey="attacks" stroke="var(--danger)" strokeWidth={2} fill="transparent" name="התקפות" />
               </AreaChart>
@@ -93,75 +110,45 @@ const AppDetails = () => {
           </div>
         </div>
 
-        {/* Stats Column */}
-        <div className="bento-card span-4" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-          <Globe size={36} color="var(--accent-secondary)" style={{ marginBottom: '10px' }} />
-          <h3 style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>מבקרים סה״כ</h3>
-          <p style={{ fontSize: '3rem', fontWeight: '800' }}>{chartData[chartData.length - 1]?.visitors || 0}</p>
-        </div>
-
-        <div className="bento-card span-4" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-          <ShieldAlert size={36} color="var(--danger)" style={{ marginBottom: '10px' }} />
-          <h3 style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>התקפות נחסמו</h3>
-          <p style={{ fontSize: '3rem', fontWeight: '800', color: 'var(--danger)' }}>{chartData[chartData.length - 1]?.attacks || 0}</p>
-        </div>
-
-        {/* Live Terminal */}
-        <div className="span-8 row-span-3" style={{ height: '500px' }}>
-          <LiveTerminal />
-        </div>
-
-        {/* Visitor Geography Dummy */}
-        <div className="bento-card span-4 row-span-3" style={{ padding: '2rem' }}>
+        <div className="glass-card" style={{ padding: '2rem' }}>
           <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Globe size={20} color="var(--accent-primary)" />
-            מקורות תנועה (גיאוגרפי)
+            מקורות תנועה
           </h2>
-          
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '2rem' }}>
-            {/* Israel */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <span style={{ fontWeight: '600' }}>ישראל 🇮🇱</span>
                 <span style={{ fontWeight: 'bold' }}>78%</span>
               </div>
-              <div style={{ width: '100%', height: '10px', background: '#e2e8f0', borderRadius: '5px', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
                 <div style={{ width: '78%', height: '100%', background: 'var(--accent-gradient)' }}></div>
               </div>
             </div>
-            {/* USA */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <span style={{ fontWeight: '600' }}>ארצות הברית 🇺🇸</span>
                 <span style={{ fontWeight: 'bold' }}>12%</span>
               </div>
-              <div style={{ width: '100%', height: '10px', background: '#e2e8f0', borderRadius: '5px', overflow: 'hidden' }}>
-                <div style={{ width: '12%', height: '100%', background: 'var(--success-gradient)' }}></div>
+              <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ width: '12%', height: '100%', background: 'var(--success)' }}></div>
               </div>
             </div>
-            {/* Europe */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <span style={{ fontWeight: '600' }}>אירופה 🇪🇺</span>
                 <span style={{ fontWeight: 'bold' }}>8%</span>
               </div>
-              <div style={{ width: '100%', height: '10px', background: '#e2e8f0', borderRadius: '5px', overflow: 'hidden' }}>
-                <div style={{ width: '8%', height: '100%', background: 'var(--warning-gradient)' }}></div>
-              </div>
-            </div>
-            {/* Unknown */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontWeight: '600' }}>לא ידוע ❓</span>
-                <span style={{ fontWeight: 'bold' }}>2%</span>
-              </div>
-              <div style={{ width: '100%', height: '10px', background: '#e2e8f0', borderRadius: '5px', overflow: 'hidden' }}>
-                <div style={{ width: '2%', height: '100%', background: 'var(--danger-gradient)' }}></div>
+              <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ width: '8%', height: '100%', background: 'var(--warning)' }}></div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
+      <div style={{ marginTop: '2rem', height: '400px' }}>
+        <LiveTerminal />
       </div>
     </div>
   );

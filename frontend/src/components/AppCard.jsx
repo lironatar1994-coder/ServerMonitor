@@ -12,13 +12,13 @@ const AppCard = ({ app }) => {
     : [{value: 0}, {value: 10}, {value: 5}, {value: 20}]; // fallback
 
   const handleRestart = (e) => {
-    e.stopPropagation(); // Prevent card click
+    e.stopPropagation();
     alert(`Mock: Restarting ${app.name}...`);
   };
 
   return (
     <div 
-      className="bento-card" 
+      className="glass-card" 
       style={{ padding: '1.5rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', height: '100%', minHeight: '300px' }}
       onClick={() => navigate(`/app/${app.id}`)}
     >
@@ -31,7 +31,6 @@ const AppCard = ({ app }) => {
           {app.url && <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{app.url}</p>}
         </div>
         
-        {/* Hover Actions - In a real app we'd use CSS group-hover, here we'll just show the button */}
         <button 
           onClick={handleRestart}
           className="btn-icon" 
@@ -49,31 +48,25 @@ const AppCard = ({ app }) => {
             <Line 
               type="monotone" 
               dataKey="value" 
-              stroke="url(#colorUv)" 
-              strokeWidth={4} 
+              stroke="var(--accent-primary)" 
+              strokeWidth={3} 
               dot={false} 
             />
-            <defs>
-              <linearGradient id="colorUv" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="var(--accent-primary)" />
-                <stop offset="100%" stopColor="var(--accent-secondary)" />
-              </linearGradient>
-            </defs>
           </LineChart>
         </ResponsiveContainer>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.5)', padding: '1rem', borderRadius: '12px', marginTop: 'auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #f1f5f9', paddingTop: '1rem', marginTop: 'auto' }}>
         <div style={{ textAlign: 'center' }}>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}><Globe size={12}/> מבקרים</p>
           <p style={{ fontWeight: '800', fontSize: '1.2rem' }}>{app.metrics?.visitors || 0}</p>
         </div>
-        <div style={{ width: '1px', background: 'rgba(0,0,0,0.05)' }}></div>
+        <div style={{ width: '1px', background: '#f1f5f9' }}></div>
         <div style={{ textAlign: 'center' }}>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}><ArrowUpRight size={12}/> בקשות</p>
           <p style={{ fontWeight: '800', fontSize: '1.2rem' }}>{app.metrics?.requests || 0}</p>
         </div>
-        <div style={{ width: '1px', background: 'rgba(0,0,0,0.05)' }}></div>
+        <div style={{ width: '1px', background: '#f1f5f9' }}></div>
         <div style={{ textAlign: 'center' }}>
           <p style={{ color: 'var(--danger)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}><Shield size={12}/> התקפות</p>
           <p style={{ fontWeight: '800', fontSize: '1.2rem', color: app.metrics?.attacks > 0 ? 'var(--danger)' : 'var(--text-primary)' }}>
