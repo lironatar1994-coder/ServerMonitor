@@ -12,7 +12,10 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: false, // Disable CSP for now to ensure resources load
+    hsts: false,                 // Disable HSTS since we are on HTTP
+}));
 app.use(express.json());
 app.use(morgan('dev'));
 
