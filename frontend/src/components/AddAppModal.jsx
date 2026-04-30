@@ -10,7 +10,7 @@ const AddAppModal = ({ onClose, onAdded }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:4000/api/apps', {
+      const res = await fetch('/api/apps', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

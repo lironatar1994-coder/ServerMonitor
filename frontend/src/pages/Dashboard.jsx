@@ -12,12 +12,12 @@ const Dashboard = () => {
 
   const fetchData = async () => {
     try {
-      const appsRes = await fetch('http://localhost:4000/api/apps', {
+      const appsRes = await fetch('/api/apps', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (appsRes.ok) setApps(await appsRes.json());
 
-      const statsRes = await fetch('http://localhost:4000/api/apps/server-stats', {
+      const statsRes = await fetch('/api/apps/server-stats', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (statsRes.ok) setStats(await statsRes.json());

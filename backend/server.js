@@ -20,6 +20,14 @@ app.use(morgan('dev'));
 app.use('/api/auth', authRoutes);
 app.use('/api/apps', apiRoutes);
 
+// Serve frontend
+const distPath = path.join(__dirname, '../frontend/dist');
+app.use(express.static(distPath));
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+});
+
 app.listen(PORT, () => {
     console.log(`Server Monitor API running on port ${PORT}`);
 });
