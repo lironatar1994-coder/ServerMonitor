@@ -24,7 +24,7 @@ function parseNginxLog(logPath) {
             logData = child_process.execSync(tailCmd, { encoding: 'utf-8' });
         }
 
-        const lines = logData.split('\\n').filter(l => l.trim().length > 0);
+        const lines = logData.split('\n').filter(l => l.trim().length > 0);
         
         let attacks = 0;
         const ips = new Set();
