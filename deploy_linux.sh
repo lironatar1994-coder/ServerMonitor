@@ -7,7 +7,7 @@
 set -e
 
 APP_NAME="server-monitor"
-BACKEND_PORT=4000
+BACKEND_PORT=4010
 FRONTEND_DIR="frontend"
 BACKEND_DIR="backend"
 

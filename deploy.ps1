@@ -1,8 +1,9 @@
-# ==============================================================================
-# Server Monitor Deployment Script (Local Windows)
-# ==============================================================================
+param (
+    [string]$CommitMessage = ""
+)
 
 $ErrorActionPreference = "Stop"
+
 
 Write-Host "--- Starting Server Monitor Deployment ---" -ForegroundColor Cyan
 
@@ -18,7 +19,10 @@ if (-not (Test-Connection -ComputerName "vee-app.co.il" -Count 1 -Quiet)) {
 # 2. Git Workflow (Assume ServerMonitor is a git repo or part of one)
 $status = git status --porcelain
 if ($status) {
-    $Message = Read-Host "Changes detected. Enter commit message"
+    $Message = $CommitMessage
+    if (-not $Message) {
+        $Message = Read-Host "Changes detected. Enter commit message"
+    }
     if (-not $Message) { $Message = "Deployment update" }
     
     Write-Host "Staging and committing changes..." -ForegroundColor Gray

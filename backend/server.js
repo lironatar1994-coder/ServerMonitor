@@ -9,7 +9,7 @@ const apiRoutes = require('./routes/api');
 require('./monitor'); // Start background monitor
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 4010;
 
 app.use(cors());
 app.use(helmet({

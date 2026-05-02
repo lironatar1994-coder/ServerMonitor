@@ -12,7 +12,7 @@ const AppDetails = () => {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:4000/api/apps/${id}`, {
+      const res = await fetch(`/api/apps/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) setApp(await res.json());
