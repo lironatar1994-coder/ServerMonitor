@@ -299,19 +299,14 @@ router.get('/:id/whatsapp-status', (req, res) => {
             }
         }
         
-        // Check PM2 state
-        const pm2 = require('pm2');
-        pm2.connect((err) => {
-            if (err) {
-                return res.json({ ...statusData, isOnline: false, pm2Error: 'PM2 Connect Error' });
-            }
-            pm2.describe(app.pm2_name, (err2, desc) => {
-                pm2.disconnect();
-                const isOnline = !err2 && desc && desc.length > 0 && desc[0].pm2_env.status === 'online';
-                res.json({
-                    ...statusData,
-                    isOnline
-                });
+        // Check PM2 state safely using CLI to prevent axon socket concurrency crashes
+        const { exec } = require('child_process');
+        exec(`pm2 pid ${app.pm2_name}`, (err, stdout, stderr) => {
+            const pid = stdout.trim();
+            const isOnline = !err && pid !== '' && pid !== '0';
+            res.json({
+                ...statusData,
+                isOnline
             });
         });
         return;
