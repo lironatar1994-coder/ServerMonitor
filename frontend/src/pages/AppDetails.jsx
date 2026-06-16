@@ -9,6 +9,7 @@ const AppDetails = () => {
   const navigate = useNavigate();
   const [app, setApp] = useState(null);
   const [visitors, setVisitors] = useState([]);
+  const [isWhatsApp, setIsWhatsApp] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -31,6 +32,7 @@ const AppDetails = () => {
       if (res.ok) {
         const data = await res.json();
         setVisitors(data.visitors || []);
+        setIsWhatsApp(data.is_whatsapp || false);
       }
     } catch (e) {
       console.error(e);
@@ -212,24 +214,80 @@ const AppDetails = () => {
       </div>
 
       <div className="glass-card" style={{ padding: '2rem', marginTop: '2rem' }}>
-        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold' }}>כניסות אחרונות (100 כניסות אחרונות בזמן אמת)</h2>
+        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold' }}>
+          {isWhatsApp ? 'הודעות אחרונות (100 הודעות אחרונות בזמן אמת)' : 'כניסות אחרונות (100 כניסות אחרונות בזמן אמת)'}
+        </h2>
         <div style={{ overflowX: 'auto', maxHeight: '400px', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', direction: 'rtl' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #e2e8f0', color: 'var(--text-secondary)' }}>
-                <th style={{ padding: '12px 8px' }}>זמן</th>
-                <th style={{ padding: '12px 8px' }}>כתובת IP</th>
-                <th style={{ padding: '12px 8px' }}>מתודה</th>
-                <th style={{ padding: '12px 8px' }}>נתיב</th>
-                <th style={{ padding: '12px 8px' }}>סוג</th>
-                <th style={{ padding: '12px 8px' }}>סטטוס</th>
-              </tr>
+              {isWhatsApp ? (
+                <tr style={{ borderBottom: '1px solid #e2e8f0', color: 'var(--text-secondary)' }}>
+                  <th style={{ padding: '12px 8px' }}>זמן שליחה</th>
+                  <th style={{ padding: '12px 8px' }}>מספר יעד</th>
+                  <th style={{ padding: '12px 8px' }}>סטטוס</th>
+                  <th style={{ padding: '12px 8px' }}>תוכן ההודעה</th>
+                  <th style={{ padding: '12px 8px' }}>שגיאה</th>
+                </tr>
+              ) : (
+                <tr style={{ borderBottom: '1px solid #e2e8f0', color: 'var(--text-secondary)' }}>
+                  <th style={{ padding: '12px 8px' }}>זמן</th>
+                  <th style={{ padding: '12px 8px' }}>כתובת IP</th>
+                  <th style={{ padding: '12px 8px' }}>מתודה</th>
+                  <th style={{ padding: '12px 8px' }}>נתיב</th>
+                  <th style={{ padding: '12px 8px' }}>סוג</th>
+                  <th style={{ padding: '12px 8px' }}>סטטוס</th>
+                </tr>
+              )}
             </thead>
             <tbody>
               {visitors.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>אין כניסות זמינות להצגה כעת</td>
+                  <td colSpan={isWhatsApp ? '5' : '6'} style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    {isWhatsApp ? 'אין הודעות זמינות להצגה כעת' : 'אין כניסות זמינות להצגה כעת'}
+                  </td>
                 </tr>
+              ) : isWhatsApp ? (
+                visitors.map((v, i) => {
+                  const formatTime = (ts) => {
+                    if (!ts) return '';
+                    try {
+                      return new Date(ts).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    } catch(e) {
+                      return ts;
+                    }
+                  };
+                  let statusBg = '#fef3c7'; // pending
+                  let statusText = '#92400e';
+                  if (v.status === 'sent') {
+                    statusBg = '#d1fae5';
+                    statusText = '#065f46';
+                  } else if (v.status === 'failed') {
+                    statusBg = '#fee2e2';
+                    statusText = '#991b1b';
+                  }
+                  return (
+                    <tr key={v.id || i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '10px 8px', fontFamily: 'monospace', fontSize: '0.9rem' }}>{formatTime(v.created_at)}</td>
+                      <td style={{ padding: '10px 8px', fontWeight: '600' }}>{v.phone}</td>
+                      <td style={{ padding: '10px 8px' }}>
+                        <span style={{ 
+                          padding: '3px 8px', 
+                          borderRadius: '6px', 
+                          fontSize: '0.8rem', 
+                          fontWeight: 'bold',
+                          background: statusBg,
+                          color: statusText
+                        }}>
+                          {v.status === 'sent' ? 'נשלח' : v.status === 'failed' ? 'נכשל' : 'ממתין'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 8px', color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={v.message}>
+                        {v.message}
+                      </td>
+                      <td style={{ padding: '10px 8px', color: 'var(--danger)', fontSize: '0.85rem' }}>{v.error || '-'}</td>
+                    </tr>
+                  );
+                })
               ) : (
                 visitors.map((v, i) => {
                   const formatTime = (ts) => {

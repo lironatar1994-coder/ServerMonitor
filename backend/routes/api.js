@@ -175,8 +175,38 @@ router.get('/:id/visitors', (req, res) => {
     const app = db.prepare('SELECT * FROM apps WHERE id = ?').get(req.params.id);
     if (!app) return res.status(404).json({ error: 'App not found' });
     
+    // Check if the app is the WhatsApp Worker
+    if (app.pm2_name === 'vee-whatsapp-worker') {
+        const veeDbPath = '/root/Vee/backend/database.sqlite';
+        if (!fs.existsSync(veeDbPath)) {
+            // Mock data for local development/fallback
+            return res.json({
+                is_whatsapp: true,
+                visitors: [
+                    { id: 1, phone: '0508611888', message: '🔔 בדיקת מערכת התראות מנטור Vee - הודעת הבדיקה נשלחה בהצלחה!', status: 'sent', error: null, created_at: new Date().toISOString() },
+                    { id: 2, phone: '0508611888', message: '⚠️ התראת שרת Vee: שגיאה - האפליקציה vee-app אינה מקוונת', status: 'failed', error: 'Failed to send message', created_at: new Date().toISOString() }
+                ]
+            });
+        }
+        try {
+            const veeDb = new (require('better-sqlite3'))(veeDbPath);
+            const query = `
+                SELECT id, phone, message, status, error, created_at FROM whatsapp_logs
+                UNION ALL
+                SELECT id, to_phone AS phone, message, status, NULL AS error, created_at FROM whatsapp_outbox WHERE status = 'pending'
+                ORDER BY created_at DESC LIMIT 100
+            `;
+            const logs = veeDb.prepare(query).all();
+            veeDb.close();
+            return res.json({ is_whatsapp: true, visitors: logs });
+        } catch (e) {
+            console.error(e);
+            return res.status(500).json({ error: `Failed to query WhatsApp database: ${e.message}` });
+        }
+    }
+    
     if (!app.log_path || !fs.existsSync(app.log_path)) {
-        return res.json({ visitors: [] });
+        return res.json({ is_whatsapp: false, visitors: [] });
     }
     
     try {
@@ -245,7 +275,7 @@ router.get('/:id/visitors', (req, res) => {
             }
         }
         
-        res.json({ visitors });
+        res.json({ is_whatsapp: false, visitors });
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: e.message });
