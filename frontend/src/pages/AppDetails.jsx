@@ -192,7 +192,7 @@ const AppDetails = () => {
       </div>
 
       <div style={{ marginTop: '2rem', height: '400px' }}>
-        <LiveTerminal />
+        <LiveTerminal appId={app.id} />
       </div>
     </div>
   );
