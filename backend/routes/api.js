@@ -7,6 +7,7 @@ const path = require('path');
 
 const router = express.Router();
 const WHATSAPP_STATUS_PATH = process.env.WHATSAPP_STATUS_PATH || '/root/Vee/backend/whatsapp_status.json';
+let pm2SnapshotCache = { fetchedAt: 0, processes: [] };
 
 function normalizeWhatsappStatus(rawStatus) {
     const qr = rawStatus?.qr || rawStatus?.qrCode || rawStatus?.qr_code || null;
@@ -33,12 +34,19 @@ function getLivePm2Status(pm2Name) {
 
     const { execFileSync } = require('child_process');
     try {
-        const stdout = execFileSync('/usr/bin/pm2', ['jlist'], {
-            env: { ...process.env, PM2_HOME: '/root/.pm2' }
-        }).toString().trim();
+        const now = Date.now();
+        if (now - pm2SnapshotCache.fetchedAt > 5000) {
+            const stdout = execFileSync('/usr/bin/pm2', ['jlist'], {
+                env: { ...process.env, PM2_HOME: '/root/.pm2' }
+            }).toString().trim();
 
-        const processes = JSON.parse(stdout || '[]');
-        const match = processes.find(process => process?.name === pm2Name);
+            pm2SnapshotCache = {
+                fetchedAt: now,
+                processes: JSON.parse(stdout || '[]')
+            };
+        }
+
+        const match = pm2SnapshotCache.processes.find(process => process?.name === pm2Name);
         return match?.pm2_env?.status === 'online' ? 'online' : 'offline';
     } catch (e) {
         return 'offline';
