@@ -20,15 +20,19 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/apps', apiRoutes);
+app.use('/serve-monitor/api/auth', authRoutes);
+app.use('/serve-monitor/api/apps', apiRoutes);
 
 // Serve frontend
 const distPath = path.join(__dirname, '../frontend/dist');
-app.use(express.static(distPath));
+app.use('/serve-monitor', express.static(distPath));
+
+app.use('/serve-monitor', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+});
 
 app.use((req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
+    res.redirect('/serve-monitor');
 });
 
 app.listen(PORT, () => {

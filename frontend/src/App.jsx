@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AppDetails from './pages/AppDetails';
@@ -12,9 +12,10 @@ const ProtectedRoute = ({ children }) => {
 };
 
 const Navbar = () => {
+  const navigate = useNavigate();
   const handleLogout = () => {
     localStorage.removeItem('token');
-    window.location.href = '/login';
+    navigate('/login');
   };
 
   return (
@@ -34,7 +35,7 @@ const Navbar = () => {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <div className="app-layout">
         {localStorage.getItem('token') && <Navbar />}
         <main className="main-content">

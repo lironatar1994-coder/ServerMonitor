@@ -11,9 +11,33 @@ const AppCard = ({ app }) => {
     ? app.trend.map((t, i) => ({ name: i, value: t.requests }))
     : [{value: 0}, {value: 10}, {value: 5}, {value: 20}]; // fallback
 
-  const handleRestart = (e) => {
+  const handleRestart = async (e) => {
     e.stopPropagation();
-    alert(`Mock: Restarting ${app.name}...`);
+    if (!app.pm2_name) {
+      alert('אפליקציה זו אינה מנוהלת ע״י PM2');
+      return;
+    }
+    if (!window.confirm(`האם אתה בטוח שברצונך להפעיל מחדש את ${app.name}?`)) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/serve-monitor/api/apps/${app.id}/action`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: 'restart' })
+      });
+      if (res.ok) {
+        alert('אותחל בהצלחה');
+      } else {
+        const err = await res.json();
+        alert(`שגיאה: ${err.error}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('שגיאת תקשורת');
+    }
   };
 
   return (
@@ -31,14 +55,16 @@ const AppCard = ({ app }) => {
           {app.url && <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{app.url}</p>}
         </div>
         
-        <button 
-          onClick={handleRestart}
-          className="btn-icon" 
-          style={{ padding: '8px', borderRadius: '50%' }}
-          title="Restart App"
-        >
-          <RefreshCw size={18} />
-        </button>
+        {app.pm2_name && (
+          <button 
+            onClick={handleRestart}
+            className="btn-icon" 
+            style={{ padding: '8px', borderRadius: '50%' }}
+            title="Restart App"
+          >
+            <RefreshCw size={18} />
+          </button>
+        )}
       </div>
 
       <div style={{ flex: 1, minHeight: '100px', margin: '1rem 0' }}>

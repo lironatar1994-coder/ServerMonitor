@@ -64,4 +64,39 @@ router.get('/:id', (req, res) => {
     });
 });
 
+// POST action on application (restart / stop / start)
+router.post('/:id/action', (req, res) => {
+    const { action } = req.body;
+    const { id } = req.params;
+    
+    if (!['restart', 'stop', 'start'].includes(action)) {
+        return res.status(400).json({ error: 'Invalid action. Must be restart, stop, or start.' });
+    }
+    
+    const app = db.prepare('SELECT * FROM apps WHERE id = ?').get(id);
+    if (!app) return res.status(404).json({ error: 'App not found' });
+    if (!app.pm2_name) return res.status(400).json({ error: 'This app is not configured with PM2' });
+    
+    const pm2 = require('pm2');
+    pm2.connect((err) => {
+        if (err) return res.status(500).json({ error: 'Failed to connect to PM2' });
+        
+        const callback = (err2) => {
+            pm2.disconnect();
+            if (err2) {
+                return res.status(500).json({ error: `PM2 action ${action} failed: ${err2.message}` });
+            }
+            res.json({ message: `App ${app.name} (${action}) executed successfully` });
+        };
+        
+        if (action === 'restart') {
+            pm2.restart(app.pm2_name, callback);
+        } else if (action === 'stop') {
+            pm2.stop(app.pm2_name, callback);
+        } else if (action === 'start') {
+            pm2.start(app.pm2_name, callback);
+        }
+    });
+});
+
 module.exports = router;

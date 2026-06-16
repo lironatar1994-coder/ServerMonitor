@@ -12,12 +12,37 @@ const AppDetails = () => {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/apps/${id}`, {
+      const res = await fetch(`/serve-monitor/api/apps/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) setApp(await res.json());
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleAction = async (action) => {
+    if (!window.confirm(`האם אתה בטוח שברצונך לבצע ${action} לאפליקציה?`)) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/serve-monitor/api/apps/${id}/action`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ action })
+      });
+      if (res.ok) {
+        alert('הפעולה בוצעה בהצלחה');
+        fetchData();
+      } else {
+        const err = await res.json();
+        alert(`שגיאה: ${err.error}`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('שגיאת תקשורת עם השרת');
     }
   };
 
@@ -55,18 +80,37 @@ const AppDetails = () => {
         </div>
         
         {/* Remote Control Panel */}
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="btn-icon" style={{ background: '#fee2e2', color: 'var(--danger)', borderColor: 'transparent' }} title="Stop App">
-            <Power size={20} />
-          </button>
-          <button className="btn-icon" title="Clear Logs">
-            <Trash2 size={20} />
-          </button>
-          <button className="btn-primary" style={{ padding: '10px 20px' }}>
-            <RefreshCw size={18} />
-            הפעל מחדש (Restart)
-          </button>
-        </div>
+        {app.pm2_name && (
+          <div style={{ display: 'flex', gap: '10px' }}>
+            {app.status === 'online' ? (
+              <button 
+                onClick={() => handleAction('stop')}
+                className="btn-icon" 
+                style={{ background: '#fee2e2', color: 'var(--danger)', borderColor: 'transparent' }} 
+                title="Stop App"
+              >
+                <Power size={20} />
+              </button>
+            ) : (
+              <button 
+                onClick={() => handleAction('start')}
+                className="btn-icon" 
+                style={{ background: '#d1fae5', color: 'var(--success)', borderColor: 'transparent' }} 
+                title="Start App"
+              >
+                <Power size={20} />
+              </button>
+            )}
+            <button 
+              onClick={() => handleAction('restart')}
+              className="btn-primary" 
+              style={{ padding: '10px 20px' }}
+            >
+              <RefreshCw size={18} />
+              הפעל מחדש (Restart)
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
