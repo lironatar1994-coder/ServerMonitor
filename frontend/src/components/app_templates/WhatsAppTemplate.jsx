@@ -10,7 +10,10 @@ const WhatsAppTemplate = ({ app }) => {
   const [sendingTest, setSendingTest] = useState(false);
 
   // WhatsApp worker states
-  const [waStatus, setWaStatus] = useState({ status: 'UNKNOWN', qr: null, isOnline: false });
+  const [waStatus, setWaStatus] = useState(() => app.whatsapp_status ? {
+    ...app.whatsapp_status,
+    isOnline: app.whatsapp_status.isOnline ?? (app.whatsapp_status.status !== 'UNKNOWN')
+  } : { status: 'UNKNOWN', qr: null, isOnline: false });
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [togglingPower, setTogglingPower] = useState(false);
 
@@ -120,7 +123,8 @@ const WhatsAppTemplate = ({ app }) => {
   const failedCount = visitors.filter(v => v.status === 'failed').length;
   const pendingCount = visitors.filter(v => v.status === 'pending' || v.status === 'pending').length;
   const qrImage = waStatus.qr || waStatus.qrCode || waStatus.qr_code;
-  const shouldShowQr = waStatus.isOnline && qrImage && waStatus.status !== 'READY';
+  const hasActiveWhatsappState = waStatus.status === 'READY' || waStatus.status === 'NEEDS_SCAN' || waStatus.status === 'INITIALIZING';
+  const shouldShowQr = qrImage && waStatus.status !== 'READY';
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -144,18 +148,18 @@ const WhatsAppTemplate = ({ app }) => {
                 width: '10px',
                 height: '10px',
                 borderRadius: '50%',
-                backgroundColor: waStatus.isOnline 
+                backgroundColor: (waStatus.isOnline || hasActiveWhatsappState)
                   ? (waStatus.status === 'READY' ? '#10b981' : waStatus.status === 'NEEDS_SCAN' ? '#f59e0b' : '#3b82f6')
                   : '#ef4444',
-                boxShadow: waStatus.isOnline && waStatus.status === 'READY' 
+                boxShadow: (waStatus.isOnline || hasActiveWhatsappState) && waStatus.status === 'READY' 
                   ? '0 0 10px #10b981' 
-                  : waStatus.isOnline && waStatus.status === 'NEEDS_SCAN'
+                  : (waStatus.isOnline || hasActiveWhatsappState) && waStatus.status === 'NEEDS_SCAN'
                   ? '0 0 10px #f59e0b'
                   : '0 0 10px #ef4444',
                 display: 'inline-block'
               }} />
               <span style={{ fontSize: '0.95rem', fontWeight: 'bold' }}>
-                {!waStatus.isOnline 
+                {!(waStatus.isOnline || hasActiveWhatsappState) 
                   ? 'השירות כבוי' 
                   : (waStatus.status === 'READY' ? 'מחובר ומאומת' 
                      : waStatus.status === 'NEEDS_SCAN' ? 'ממתין לסריקה' 

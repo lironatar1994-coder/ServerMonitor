@@ -45,6 +45,9 @@ function enrichAppStatus(app) {
                 enriched.whatsapp_status = normalizeWhatsappStatus(
                     JSON.parse(fs.readFileSync(WHATSAPP_STATUS_PATH, 'utf8'))
                 );
+                if (enriched.whatsapp_status.status !== 'UNKNOWN') {
+                    enriched.status = 'online';
+                }
             }
         } catch (e) {
             console.error('Failed to read whatsapp_status.json for app details:', e.message);
@@ -322,19 +325,13 @@ router.get('/:id/whatsapp-status', (req, res) => {
             }
         }
         
-        // Check PM2 state safely using CLI to prevent axon socket concurrency crashes (using absolute path)
-        // Check PM2 state safely using CLI to prevent axon socket concurrency crashes (using absolute path and PM2_HOME env)
-        const { exec } = require('child_process');
-        exec(`PM2_HOME=/root/.pm2 /usr/bin/pm2 pid ${app.pm2_name}`, (err, stdout, stderr) => {
-            if (err) {
-                console.error(`[PM2 Status Error]:`, err.message, stderr);
-            }
-            const pid = stdout.trim();
-            const isOnline = !err && pid !== '' && pid !== '0';
-            res.json({
-                ...statusData,
-                isOnline
-            });
+        const isOnline = getLivePm2Status(app.pm2_name) === 'online';
+        const hasActiveWhatsAppState = ['INITIALIZING', 'NEEDS_SCAN', 'READY'].includes(statusData.status) || !!statusData.qr;
+
+        res.json({
+            ...statusData,
+            isOnline: isOnline || hasActiveWhatsAppState,
+            pm2Online: isOnline
         });
         return;
     }
