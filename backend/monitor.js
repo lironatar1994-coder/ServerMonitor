@@ -71,18 +71,11 @@ function parseNginxLog(logPath, appName, logFilter) {
 
 function checkPm2Status(pm2Name) {
     return new Promise((resolve) => {
-        pm2.connect((err) => {
-            if (err) return resolve('offline');
-            pm2.list((err, list) => {
-                if (err) {
-                    pm2.disconnect();
-                    return resolve('offline');
-                }
-                const processInfo = list.find(p => p.name === pm2Name);
-                const status = processInfo && processInfo.pm2_env.status === 'online' ? 'online' : 'offline';
-                pm2.disconnect();
-                resolve(status);
-            });
+        const { exec } = require('child_process');
+        exec(`/usr/bin/pm2 pid ${pm2Name}`, (err, stdout, stderr) => {
+            const pid = stdout.trim();
+            const status = (!err && pid !== '' && pid !== '0') ? 'online' : 'offline';
+            resolve(status);
         });
     });
 }

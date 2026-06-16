@@ -126,31 +126,18 @@ router.get('/:id/logs', (req, res) => {
             logLines = [`Error reading log file: ${e.message}`];
         }
     } else if (app.pm2_name) {
-        const pm2 = require('pm2');
-        pm2.connect((err) => {
-            if (err) {
-                logLines = ['Failed to connect to PM2 to retrieve logs'];
-                return res.json({ logs: logLines });
-            }
-            pm2.describe(app.pm2_name, (err2, desc) => {
-                pm2.disconnect();
-                if (err2 || !desc || desc.length === 0) {
-                    logLines = [`No PM2 process found for name: ${app.pm2_name}`];
-                    return res.json({ logs: logLines });
-                }
-                const pm2LogPath = desc[0].pm2_env.pm_out_log_path;
-                const pm2ErrorLogPath = desc[0].pm2_env.pm_err_log_path;
-                
-                try {
-                    let outLogs = fs.existsSync(pm2LogPath) ? fs.readFileSync(pm2LogPath, 'utf-8').split('\n') : [];
-                    let errLogs = fs.existsSync(pm2ErrorLogPath) ? fs.readFileSync(pm2ErrorLogPath, 'utf-8').split('\n') : [];
-                    logLines = [...outLogs.slice(-25), ...errLogs.slice(-25)].filter(Boolean);
-                    res.json({ logs: logLines });
-                } catch (e) {
-                    res.json({ logs: [`Error reading PM2 logs: ${e.message}`] });
-                }
-            });
-        });
+        const homeDir = process.env.HOME || '/root';
+        const outLogPath = path.join(homeDir, '.pm2/logs', `${app.pm2_name}-out.log`);
+        const errLogPath = path.join(homeDir, '.pm2/logs', `${app.pm2_name}-error.log`);
+        
+        try {
+            let outLogs = fs.existsSync(outLogPath) ? fs.readFileSync(outLogPath, 'utf-8').split('\n') : [];
+            let errLogs = fs.existsSync(errLogPath) ? fs.readFileSync(errLogPath, 'utf-8').split('\n') : [];
+            logLines = [...outLogs.slice(-25), ...errLogs.slice(-25)].filter(Boolean);
+            res.json({ logs: logLines });
+        } catch (e) {
+            res.json({ logs: [`Error reading PM2 logs: ${e.message}`] });
+        }
         return;
     } else {
         logLines = ['No log file or PM2 process configured for this application'];
