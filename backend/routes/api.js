@@ -19,6 +19,41 @@ function normalizeWhatsappStatus(rawStatus) {
     };
 }
 
+function getLivePm2Status(pm2Name) {
+    if (!pm2Name) return null;
+
+    const { execFileSync } = require('child_process');
+    try {
+        const stdout = execFileSync('/usr/bin/pm2', ['pid', pm2Name], {
+            env: { ...process.env, PM2_HOME: '/root/.pm2' }
+        }).toString().trim();
+
+        return stdout && stdout !== '0' ? 'online' : 'offline';
+    } catch (e) {
+        return 'offline';
+    }
+}
+
+function enrichAppStatus(app) {
+    if (!app?.pm2_name) return app;
+
+    const enriched = { ...app, status: getLivePm2Status(app.pm2_name) };
+
+    if (app.pm2_name === 'vee-whatsapp-worker') {
+        try {
+            if (fs.existsSync(WHATSAPP_STATUS_PATH)) {
+                enriched.whatsapp_status = normalizeWhatsappStatus(
+                    JSON.parse(fs.readFileSync(WHATSAPP_STATUS_PATH, 'utf8'))
+                );
+            }
+        } catch (e) {
+            console.error('Failed to read whatsapp_status.json for app details:', e.message);
+        }
+    }
+
+    return enriched;
+}
+
 router.use(authenticateToken);
 
 // Get Server General Stats
@@ -44,7 +79,7 @@ router.get('/', (req, res) => {
         const trend = db.prepare('SELECT requests, timestamp FROM metrics WHERE app_id = ? ORDER BY timestamp DESC LIMIT 10').all(app.id);
         
         return {
-            ...app,
+            ...enrichAppStatus(app),
             metrics: latestMetrics || { visitors: 0, requests: 0, attacks: 0 },
             trend: trend.reverse()
         };
@@ -73,7 +108,7 @@ router.get('/:id', (req, res) => {
     const history = db.prepare('SELECT * FROM metrics WHERE app_id = ? ORDER BY timestamp DESC LIMIT 24').all(req.params.id);
     
     res.json({
-        ...app,
+        ...enrichAppStatus(app),
         history: history.reverse()
     });
 });
