@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowRight, Server, RefreshCw, Power } from 'lucide-react';
+import { ArrowRight, Server, RefreshCw, Power, MemoryStick } from 'lucide-react';
 import DefaultWebTemplate from '../components/app_templates/DefaultWebTemplate';
 import WhatsAppTemplate from '../components/app_templates/WhatsAppTemplate';
 import SshSecurityTemplate from '../components/app_templates/SshSecurityTemplate';
@@ -9,6 +9,7 @@ const AppDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [app, setApp] = useState(null);
+  const [stats, setStats] = useState({ ram: {}, cpu: {} });
 
   const fetchData = async () => {
     try {
@@ -17,6 +18,18 @@ const AppDetails = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) setApp(await res.json());
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/serve-monitor/api/apps/server-stats', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) setStats(await res.json());
     } catch (e) {
       console.error(e);
     }
@@ -49,8 +62,13 @@ const AppDetails = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
+    fetchStats();
+    const appInterval = setInterval(fetchData, 5000);
+    const statsInterval = setInterval(fetchStats, 15000);
+    return () => {
+      clearInterval(appInterval);
+      clearInterval(statsInterval);
+    };
   }, [id]);
 
   if (!app) return <div style={{ padding: '3rem', textAlign: 'center' }}>טוען נתונים...</div>;
@@ -120,6 +138,33 @@ const AppDetails = () => {
           </div>
         )}
       </div>
+
+      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
+        <div className="glass-card" style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '14px', borderRadius: '12px', color: 'var(--accent-primary)' }}>
+            <Server size={26} />
+          </div>
+          <div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '600' }}>CPU Load</p>
+            <h3 style={{ fontSize: '1.35rem', marginTop: '0.25rem', fontWeight: '800' }}>
+              {(stats.cpu?.load || 0).toFixed(2)}
+            </h3>
+          </div>
+        </div>
+
+        <div className="glass-card" style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '14px', borderRadius: '12px', color: 'var(--success)' }}>
+            <MemoryStick size={26} />
+          </div>
+          <div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '600' }}>RAM Usage</p>
+            <h3 style={{ fontSize: '1.35rem', marginTop: '0.25rem', fontWeight: '800' }}>
+              {stats.ram?.percentage?.toFixed(1) || 0}%
+            </h3>
+          </div>
+        </div>
+      </div>
+
       {renderTemplate()}
     </div>
   );
