@@ -92,7 +92,7 @@ const WhatsAppTemplate = ({ app }) => {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', direction: 'rtl' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #e2e8f0', color: 'var(--text-secondary)' }}>
-                  <th style={{ padding: '12px 8px' }}>זמן שליחה</th>
+                  <th style={{ padding: '12px 8px' }}>תאריך וזמן שליחה</th>
                   <th style={{ padding: '12px 8px' }}>מספר יעד</th>
                   <th style={{ padding: '12px 8px' }}>סטטוס</th>
                   <th style={{ padding: '12px 8px' }}>תוכן ההודעה</th>
@@ -113,7 +113,23 @@ const WhatsAppTemplate = ({ app }) => {
                     const formatTime = (ts) => {
                       if (!ts) return '';
                       try {
-                        return new Date(ts).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        let dateStr = ts;
+                        if (!ts.includes('T') && !ts.includes('Z') && !ts.includes('+')) {
+                          // SQLite datetime values are stored in UTC like 'YYYY-MM-DD HH:MM:SS'.
+                          // Replace the space with 'T' and add 'Z' to parse as proper UTC in JS.
+                          dateStr = ts.trim().replace(' ', 'T') + 'Z';
+                        }
+                        const date = new Date(dateStr);
+                        if (isNaN(date.getTime())) return ts;
+                        return date.toLocaleString('he-IL', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: false
+                        });
                       } catch(e) {
                         return ts;
                       }
