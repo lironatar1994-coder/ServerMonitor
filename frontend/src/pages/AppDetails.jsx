@@ -8,6 +8,7 @@ const AppDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [app, setApp] = useState(null);
+  const [visitors, setVisitors] = useState([]);
 
   const fetchData = async () => {
     try {
@@ -16,6 +17,21 @@ const AppDetails = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) setApp(await res.json());
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchVisitors = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/serve-monitor/api/apps/${id}/visitors`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setVisitors(data.visitors || []);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -48,7 +64,11 @@ const AppDetails = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 5000);
+    fetchVisitors();
+    const interval = setInterval(() => {
+      fetchData();
+      fetchVisitors();
+    }, 5000);
     return () => clearInterval(interval);
   }, [id]);
 
@@ -188,6 +208,63 @@ const AppDetails = () => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="glass-card" style={{ padding: '2rem', marginTop: '2rem' }}>
+        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold' }}>כניסות אחרונות (100 כניסות אחרונות בזמן אמת)</h2>
+        <div style={{ overflowX: 'auto', maxHeight: '400px', overflowY: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', direction: 'rtl' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #e2e8f0', color: 'var(--text-secondary)' }}>
+                <th style={{ padding: '12px 8px' }}>זמן</th>
+                <th style={{ padding: '12px 8px' }}>כתובת IP</th>
+                <th style={{ padding: '12px 8px' }}>מתודה</th>
+                <th style={{ padding: '12px 8px' }}>נתיב</th>
+                <th style={{ padding: '12px 8px' }}>סוג</th>
+                <th style={{ padding: '12px 8px' }}>סטטוס</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visitors.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>אין כניסות זמינות להצגה כעת</td>
+                </tr>
+              ) : (
+                visitors.map((v, i) => {
+                  const formatTime = (ts) => {
+                    if (!ts) return '';
+                    const parts = ts.split(':');
+                    if (parts.length >= 4) {
+                      return parts[1] + ':' + parts[2] + ':' + parts[3].split(' ')[0];
+                    }
+                    return ts;
+                  };
+                  return (
+                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '10px 8px', fontFamily: 'monospace', fontSize: '0.9rem' }}>{formatTime(v.timestamp)}</td>
+                      <td style={{ padding: '10px 8px', fontWeight: '600' }}>{v.ip}</td>
+                      <td style={{ padding: '10px 8px' }}><span style={{ padding: '2px 6px', borderRadius: '4px', background: '#f1f5f9', fontSize: '0.8rem', fontWeight: 'bold' }}>{v.method}</span></td>
+                      <td style={{ padding: '10px 8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{v.path}</td>
+                      <td style={{ padding: '10px 8px' }}>{v.agent === 'Mobile' ? '📱 נייד' : v.agent === 'Desktop' ? '💻 מחשב' : v.agent === 'Bot' ? '🤖 בוט' : '❓ לא ידוע'}</td>
+                      <td style={{ padding: '10px 8px' }}>
+                        <span style={{ 
+                          padding: '3px 8px', 
+                          borderRadius: '6px', 
+                          fontSize: '0.8rem', 
+                          fontWeight: 'bold',
+                          background: v.status >= 200 && v.status < 300 ? '#d1fae5' : v.status >= 300 && v.status < 400 ? '#eff6ff' : v.status >= 400 && v.status < 500 ? '#fef3c7' : '#fee2e2',
+                          color: v.status >= 200 && v.status < 300 ? '#065f46' : v.status >= 300 && v.status < 400 ? '#1e40af' : v.status >= 400 && v.status < 500 ? '#92400e' : '#991b1b'
+                        }}>
+                          {v.status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 

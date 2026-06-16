@@ -170,4 +170,86 @@ router.get('/:id/logs', (req, res) => {
     res.json({ logs: logLines });
 });
 
+// GET last 100 visitors for app
+router.get('/:id/visitors', (req, res) => {
+    const app = db.prepare('SELECT * FROM apps WHERE id = ?').get(req.params.id);
+    if (!app) return res.status(404).json({ error: 'App not found' });
+    
+    if (!app.log_path || !fs.existsSync(app.log_path)) {
+        return res.json({ visitors: [] });
+    }
+    
+    try {
+        const fd = fs.openSync(app.log_path, 'r');
+        const stat = fs.fstatSync(fd);
+        // Read last 256KB to ensure we can find up to 100 hits
+        const bufferSize = Math.min(stat.size, 262144); 
+        const buffer = Buffer.alloc(bufferSize);
+        const position = Math.max(0, stat.size - bufferSize);
+        
+        fs.readSync(fd, buffer, 0, bufferSize, position);
+        fs.closeSync(fd);
+        
+        const logData = buffer.toString('utf-8');
+        const lines = logData.split('\n').filter(Boolean);
+        
+        const visitors = [];
+        
+        // Parse from bottom to top (newest first)
+        for (let i = lines.length - 1; i >= 0; i--) {
+            const line = lines[i];
+            let isTargetApp = false;
+            
+            if (app.log_filter) {
+                if (line.includes(app.log_filter)) isTargetApp = true;
+            } else if (app.name === 'PDF Generator') {
+                if (line.includes('/text-to-pdf')) isTargetApp = true;
+            } else if (app.name === 'Vee Main App') {
+                if (!line.includes('/text-to-pdf') && !line.includes('/serve-monitor')) isTargetApp = true;
+            } else {
+                isTargetApp = true;
+            }
+            
+            if (isTargetApp) {
+                // Regex to parse Nginx log line
+                // Format: IP - - [date] "method path proto" status bytes "referrer" "user-agent"
+                const match = line.match(/^(\d+\.\d+\.\d+\.\d+)\s+-\s+-\s+\[([^\]]+)\]\s+\"(\w+)\s+([^\s?]+)[^\"]*\"\s+(\d+)/);
+                if (match) {
+                    const [_, ip, timestamp, method, path, status] = match;
+                    
+                    // Simple user agent parse
+                    let agent = 'Unknown';
+                    const uaMatch = line.match(/\"[^\"]*\"\s+\"([^\"]+)\"$/);
+                    if (uaMatch && uaMatch[1]) {
+                        const ua = uaMatch[1];
+                        if (ua.includes('Mobile') || ua.includes('Android') || ua.includes('iPhone')) {
+                            agent = 'Mobile';
+                        } else if (ua.includes('Windows') || ua.includes('Macintosh') || ua.includes('Linux')) {
+                            agent = 'Desktop';
+                        } else if (ua.includes('bot') || ua.includes('crawler') || ua.includes('Spider')) {
+                            agent = 'Bot';
+                        }
+                    }
+                    
+                    visitors.push({
+                        ip,
+                        timestamp,
+                        method,
+                        path,
+                        status: parseInt(status, 10),
+                        agent
+                    });
+                    
+                    if (visitors.length >= 100) break;
+                }
+            }
+        }
+        
+        res.json({ visitors });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 module.exports = router;
