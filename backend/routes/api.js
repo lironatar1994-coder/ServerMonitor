@@ -6,6 +6,18 @@ const fs = require('fs');
 const path = require('path');
 
 const router = express.Router();
+const WHATSAPP_STATUS_PATH = process.env.WHATSAPP_STATUS_PATH || '/root/Vee/backend/whatsapp_status.json';
+
+function normalizeWhatsappStatus(rawStatus) {
+    const qr = rawStatus?.qr || rawStatus?.qrCode || rawStatus?.qr_code || null;
+    const status = (rawStatus?.status || '').toString().trim().toUpperCase();
+
+    return {
+        status: status || (qr ? 'NEEDS_SCAN' : 'UNKNOWN'),
+        qr,
+        updatedAt: rawStatus?.updatedAt || rawStatus?.updated_at || null
+    };
+}
 
 router.use(authenticateToken);
 
@@ -265,12 +277,11 @@ router.get('/:id/whatsapp-status', (req, res) => {
     if (!app) return res.status(404).json({ error: 'App not found' });
     
     if (app.pm2_name === 'vee-whatsapp-worker') {
-        const statusPath = '/root/Vee/backend/whatsapp_status.json';
         let statusData = { status: 'UNKNOWN', qr: null, updatedAt: null };
         
-        if (fs.existsSync(statusPath)) {
+        if (fs.existsSync(WHATSAPP_STATUS_PATH)) {
             try {
-                statusData = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+                statusData = normalizeWhatsappStatus(JSON.parse(fs.readFileSync(WHATSAPP_STATUS_PATH, 'utf8')));
             } catch (e) {
                 console.error('Failed to parse whatsapp_status.json:', e.message);
             }

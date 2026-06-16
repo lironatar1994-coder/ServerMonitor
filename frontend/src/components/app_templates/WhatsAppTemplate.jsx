@@ -65,6 +65,10 @@ const WhatsAppTemplate = ({ app }) => {
       if (res.ok) {
         alert(data.message || 'הפעולה בוצעה בהצלחה');
         fetchWhatsAppStatus();
+        if (action === 'start') {
+          setTimeout(fetchWhatsAppStatus, 2000);
+          setTimeout(fetchWhatsAppStatus, 5000);
+        }
       } else {
         alert(data.error || 'שגיאה בביצוע הפעולה');
       }
@@ -115,6 +119,8 @@ const WhatsAppTemplate = ({ app }) => {
   const sentCount = visitors.filter(v => v.status === 'sent').length;
   const failedCount = visitors.filter(v => v.status === 'failed').length;
   const pendingCount = visitors.filter(v => v.status === 'pending' || v.status === 'pending').length;
+  const qrImage = waStatus.qr || waStatus.qrCode || waStatus.qr_code;
+  const shouldShowQr = waStatus.isOnline && qrImage && waStatus.status !== 'READY';
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -198,7 +204,7 @@ const WhatsAppTemplate = ({ app }) => {
         </div>
 
         {/* QR Code section inside the panel if Needs Scan */}
-        {waStatus.isOnline && waStatus.status === 'NEEDS_SCAN' && waStatus.qr && (
+        {shouldShowQr && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -227,7 +233,7 @@ const WhatsAppTemplate = ({ app }) => {
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <img src={waStatus.qr} alt="WhatsApp QR" style={{ width: '180px', height: '180px' }} />
+              <img src={qrImage} alt="WhatsApp QR" style={{ width: '180px', height: '180px' }} />
             </div>
           </div>
         )}
