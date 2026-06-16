@@ -106,8 +106,8 @@ const SettingsModal = ({ onClose }) => {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-      <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '450px', padding: '2rem', background: '#fff' }}>
+    <div className="settings-modal" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+      <div className="glass-card settings-modal-card animate-fade-in" style={{ width: '100%', maxWidth: '450px', padding: '2rem', background: '#fff' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1.3rem', fontWeight: 'bold' }}>הגדרות מערכת</h2>
           <button onClick={onClose} className="btn-icon" style={{ border: 'none', background: 'transparent', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>

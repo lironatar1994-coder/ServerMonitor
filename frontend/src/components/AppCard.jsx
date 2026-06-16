@@ -42,11 +42,11 @@ const AppCard = ({ app }) => {
 
   return (
     <div 
-      className="glass-card" 
+      className="glass-card app-card" 
       style={{ padding: '1.5rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', height: '100%', minHeight: '300px' }}
       onClick={() => navigate(`/app/${app.id}`)}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+      <div className="app-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
             <span className={`status-dot ${isOnline ? 'online' : 'offline'}`}></span>
@@ -67,7 +67,7 @@ const AppCard = ({ app }) => {
         )}
       </div>
 
-      <div style={{ flex: 1, minHeight: '100px', margin: '1rem 0' }}>
+      <div className="app-card-chart" style={{ flex: 1, minHeight: '100px', margin: '1rem 0' }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={trendData}>
             <YAxis domain={['dataMin', 'dataMax']} hide />
@@ -82,7 +82,7 @@ const AppCard = ({ app }) => {
         </ResponsiveContainer>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #f1f5f9', paddingTop: '1rem', marginTop: 'auto' }}>
+      <div className="app-card-metrics" style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #f1f5f9', paddingTop: '1rem', marginTop: 'auto' }}>
         <div style={{ textAlign: 'center' }}>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}><Globe size={12}/> מבקרים</p>
           <p style={{ fontWeight: '800', fontSize: '1.2rem' }}>{app.metrics?.visitors || 0}</p>

@@ -90,8 +90,8 @@ const AppDetails = () => {
         חזרה לדשבורד
       </button>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+      <div className="details-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+        <div className="details-title" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <div style={{ background: 'var(--accent-gradient)', padding: '20px', borderRadius: '20px', color: 'white', boxShadow: '0 8px 16px rgba(59, 130, 246, 0.3)' }}>
             <Server size={40} />
           </div>
@@ -107,7 +107,7 @@ const AppDetails = () => {
         </div>
         
         {app.pm2_name && (
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div className="details-actions" style={{ display: 'flex', gap: '10px' }}>
             {app.status === 'online' ? (
               <button 
                 onClick={() => handleAction('stop')}
@@ -139,7 +139,7 @@ const AppDetails = () => {
         )}
       </div>
 
-      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
+      <div className="stats-grid details-metrics" style={{ marginBottom: '2rem' }}>
         <div className="glass-card" style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '14px', borderRadius: '12px', color: 'var(--accent-primary)' }}>
             <Server size={26} />
