@@ -72,7 +72,7 @@ function parseNginxLog(logPath, appName, logFilter) {
 function checkPm2Status(pm2Name) {
     return new Promise((resolve) => {
         const { exec } = require('child_process');
-        exec(`/usr/bin/pm2 pid ${pm2Name}`, (err, stdout, stderr) => {
+        exec(`PM2_HOME=/root/.pm2 /usr/bin/pm2 pid ${pm2Name}`, (err, stdout, stderr) => {
             const pid = stdout.trim();
             const status = (!err && pid !== '' && pid !== '0') ? 'online' : 'offline';
             resolve(status);

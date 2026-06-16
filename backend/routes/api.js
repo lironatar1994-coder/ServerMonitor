@@ -79,9 +79,9 @@ router.post('/:id/action', (req, res) => {
     if (!app) return res.status(404).json({ error: 'App not found' });
     if (!app.pm2_name) return res.status(400).json({ error: 'This app is not configured with PM2' });
     
-    // Run PM2 action safely via CLI to prevent socket concurrency crashes (using absolute path)
+    // Run PM2 action safely via CLI to prevent socket concurrency crashes (using absolute path and PM2_HOME env)
     const { exec } = require('child_process');
-    exec(`/usr/bin/pm2 ${action} ${app.pm2_name}`, (err, stdout, stderr) => {
+    exec(`PM2_HOME=/root/.pm2 /usr/bin/pm2 ${action} ${app.pm2_name}`, (err, stdout, stderr) => {
         if (err) {
             console.error(`[PM2 Action Error]:`, err.message, stderr);
             return res.status(500).json({ error: `PM2 action ${action} failed: ${stderr || err.message}` });
@@ -277,8 +277,9 @@ router.get('/:id/whatsapp-status', (req, res) => {
         }
         
         // Check PM2 state safely using CLI to prevent axon socket concurrency crashes (using absolute path)
+        // Check PM2 state safely using CLI to prevent axon socket concurrency crashes (using absolute path and PM2_HOME env)
         const { exec } = require('child_process');
-        exec(`/usr/bin/pm2 pid ${app.pm2_name}`, (err, stdout, stderr) => {
+        exec(`PM2_HOME=/root/.pm2 /usr/bin/pm2 pid ${app.pm2_name}`, (err, stdout, stderr) => {
             if (err) {
                 console.error(`[PM2 Status Error]:`, err.message, stderr);
             }
