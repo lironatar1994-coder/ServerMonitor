@@ -33,11 +33,13 @@ function getLivePm2Status(pm2Name) {
 
     const { execFileSync } = require('child_process');
     try {
-        const stdout = execFileSync('/usr/bin/pm2', ['pid', pm2Name], {
+        const stdout = execFileSync('/usr/bin/pm2', ['jlist'], {
             env: { ...process.env, PM2_HOME: '/root/.pm2' }
         }).toString().trim();
 
-        return stdout && stdout !== '0' ? 'online' : 'offline';
+        const processes = JSON.parse(stdout || '[]');
+        const match = processes.find(process => process?.name === pm2Name);
+        return match?.pm2_env?.status === 'online' ? 'online' : 'offline';
     } catch (e) {
         return 'offline';
     }

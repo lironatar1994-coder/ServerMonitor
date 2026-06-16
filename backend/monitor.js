@@ -71,11 +71,22 @@ function parseNginxLog(logPath, appName, logFilter) {
 
 function checkPm2Status(pm2Name) {
     return new Promise((resolve) => {
-        const { exec } = require('child_process');
-        exec(`PM2_HOME=/root/.pm2 /usr/bin/pm2 pid ${pm2Name}`, (err, stdout, stderr) => {
-            const pid = stdout.trim();
-            const status = (!err && pid !== '' && pid !== '0') ? 'online' : 'offline';
-            resolve(status);
+        const { execFile } = require('child_process');
+        execFile('/usr/bin/pm2', ['jlist'], {
+            env: { ...process.env, PM2_HOME: '/root/.pm2' }
+        }, (err, stdout) => {
+            if (err) {
+                resolve('offline');
+                return;
+            }
+
+            try {
+                const processes = JSON.parse((stdout || '').trim() || '[]');
+                const match = processes.find(process => process?.name === pm2Name);
+                resolve(match?.pm2_env?.status === 'online' ? 'online' : 'offline');
+            } catch (parseErr) {
+                resolve('offline');
+            }
         });
     });
 }
@@ -167,16 +178,26 @@ async function runMonitorCycle() {
             
             // 1. Check PM2 status
             if (app.pm2_name) {
-                status = await checkPm2Status(app.pm2_name);
-                
-                // 2. If PM2 is online, verify HTTP health check if applicable
-                if (status === 'online') {
+                const pm2Status = await checkPm2Status(app.pm2_name);
+                status = pm2Status;
+
+                // Health checks are advisory for PM2-backed apps; do not mark them offline if PM2 is up.
+                if (pm2Status === 'online') {
                     if (app.health_port) {
-                        status = await checkHttpHealth(app.health_port, app.health_path || '/');
+                        const healthStatus = await checkHttpHealth(app.health_port, app.health_path || '/');
+                        if (healthStatus !== 'online') {
+                            console.warn(`[Monitor] Health check failed for ${app.name} on port ${app.health_port}: ${healthStatus}`);
+                        }
                     } else if (app.pm2_name === 'vee-app') {
-                        status = await checkHttpHealth(3001, '/api/health');
+                        const healthStatus = await checkHttpHealth(3001, '/api/health');
+                        if (healthStatus !== 'online') {
+                            console.warn(`[Monitor] Health check failed for ${app.name} on port 3001: ${healthStatus}`);
+                        }
                     } else if (app.pm2_name === 'text-to-pdf') {
-                        status = await checkHttpHealth(3002, '/text-to-pdf');
+                        const healthStatus = await checkHttpHealth(3002, '/text-to-pdf');
+                        if (healthStatus !== 'online') {
+                            console.warn(`[Monitor] Health check failed for ${app.name} on port 3002: ${healthStatus}`);
+                        }
                     }
                 }
             }
