@@ -4,7 +4,8 @@ import { Terminal as TerminalIcon } from 'lucide-react';
 const LiveTerminal = ({ appId }) => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const terminalEndRef = useRef(null);
+  const [initialScrolled, setInitialScrolled] = useState(false);
+  const containerRef = useRef(null);
 
   const fetchLogs = async () => {
     try {
@@ -55,17 +56,21 @@ const LiveTerminal = ({ appId }) => {
 
   useEffect(() => {
     setLoading(true);
+    setInitialScrolled(false);
     fetchLogs();
     const interval = setInterval(fetchLogs, 5000);
     return () => clearInterval(interval);
   }, [appId]);
 
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [logs]);
+    if (logs.length > 0 && !initialScrolled && containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      setInitialScrolled(true);
+    }
+  }, [logs, initialScrolled]);
 
   return (
-    <div className="terminal-window" style={{ overflowY: 'auto', maxHeight: '100%' }}>
+    <div ref={containerRef} className="terminal-window" style={{ overflowY: 'auto', maxHeight: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
         <TerminalIcon size={16} color="#60a5fa" />
         <span style={{ color: '#fff', fontWeight: '600', letterSpacing: '1px' }}>LIVE TAIL ACCESS / APP LOGS</span>
@@ -90,7 +95,6 @@ const LiveTerminal = ({ appId }) => {
             </div>
           ))
         )}
-        <div ref={terminalEndRef} />
       </div>
     </div>
   );
