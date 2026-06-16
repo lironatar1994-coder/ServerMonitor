@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Server, Users, ShieldAlert, Cpu, BellRing, HardDrive, ShieldCheck } from 'lucide-react';
 import AppCard from '../components/AppCard';
 import AddAppModal from '../components/AddAppModal';
@@ -7,6 +8,7 @@ const Dashboard = () => {
   const [apps, setApps] = useState([]);
   const [stats, setStats] = useState({ ram: {}, cpu: {} });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   const fetchApps = async () => {
     try {
@@ -75,7 +77,21 @@ const Dashboard = () => {
       {/* Stats Grid - Clean 4 column layout */}
       <div className="stats-grid">
         {/* Memory / CPU */}
-        <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <button
+          type="button"
+          className="glass-card"
+          onClick={() => navigate('/system-stats')}
+          style={{
+            padding: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            textAlign: 'left',
+            width: '100%',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
           <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '15px', borderRadius: '12px', color: 'var(--accent-primary)' }}>
             <Server size={28} />
           </div>
@@ -95,7 +111,7 @@ const Dashboard = () => {
               </p>
             )}
           </div>
-        </div>
+        </button>
 
         {/* Disk Space - Reverted to clean metric instead of huge gauge */}
         <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>

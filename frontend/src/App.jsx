@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AppDetails from './pages/AppDetails';
+import SystemStats from './pages/SystemStats';
 import { Activity } from 'lucide-react';
 
 const ProtectedRoute = ({ children }) => {
@@ -257,6 +258,11 @@ function App() {
             <Route path="/app/:id" element={
               <ProtectedRoute>
                 <AppDetails />
+              </ProtectedRoute>
+            } />
+            <Route path="/system-stats" element={
+              <ProtectedRoute>
+                <SystemStats />
               </ProtectedRoute>
             } />
           </Routes>
