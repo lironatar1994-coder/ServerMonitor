@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../database');
+const fs = require('fs');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret_monitor_key_123';
@@ -60,6 +61,28 @@ router.post('/change-password', authenticateToken, (req, res) => {
     db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hash, req.user.id);
 
     res.json({ message: 'הסיסמה שונתה בהצלחה!' });
+});
+
+router.post('/test-whatsapp', authenticateToken, (req, res) => {
+    const { phone, message } = req.body;
+    if (!phone || !message) {
+        return res.status(400).json({ error: 'יש להזין מספר טלפון והודעה' });
+    }
+
+    const veeDbPath = '/root/Vee/backend/database.sqlite';
+    if (!fs.existsSync(veeDbPath)) {
+        return res.status(400).json({ error: 'בסיס הנתונים של Vee לא נמצא בשרת' });
+    }
+
+    try {
+        const veeDb = new (require('better-sqlite3'))(veeDbPath);
+        veeDb.prepare('INSERT INTO whatsapp_outbox (to_phone, message) VALUES (?, ?)').run(phone, message);
+        veeDb.close();
+        res.json({ message: 'הודעת הבדיקה נשלחה לתור ה-WhatsApp בהצלחה!' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: `שגיאה בשליחה לתור: ${e.message}` });
+    }
 });
 
 module.exports = router;
