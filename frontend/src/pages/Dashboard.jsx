@@ -8,12 +8,19 @@ const Dashboard = () => {
   const [stats, setStats] = useState({ ram: {}, cpu: {} });
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const fetchData = async () => {
+  const fetchApps = async () => {
     try {
       const token = localStorage.getItem('token');
       const appsRes = await fetch('/serve-monitor/api/apps', { headers: { 'Authorization': `Bearer ${token}` } });
       if (appsRes.ok) setApps(await appsRes.json());
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
       const statsRes = await fetch('/serve-monitor/api/apps/server-stats', { headers: { 'Authorization': `Bearer ${token}` } });
       if (statsRes.ok) setStats(await statsRes.json());
     } catch (e) {
@@ -21,11 +28,24 @@ const Dashboard = () => {
     }
   };
 
+  const fetchData = async () => {
+    await Promise.all([fetchApps(), fetchStats()]);
+  };
+
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
+    const appsInterval = setInterval(fetchApps, 5000);
+    const statsInterval = setInterval(fetchStats, 15000);
+    return () => {
+      clearInterval(appsInterval);
+      clearInterval(statsInterval);
+    };
   }, []);
+
+  const topCpuProcess = stats.cpu?.snapshot?.topProcesses?.[0];
+  const snapshotUpdatedAt = stats.cpu?.snapshot?.updatedAt
+    ? new Date(stats.cpu.snapshot.updatedAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : null;
 
   const totalVisitors = apps.reduce((acc, app) => acc + (app.metrics?.visitors || 0), 0);
   const totalAttacks = apps.reduce((acc, app) => acc + (app.metrics?.attacks || 0), 0);
@@ -64,6 +84,16 @@ const Dashboard = () => {
             <h3 style={{ fontSize: '1.4rem', marginTop: '0.3rem', fontWeight: '800' }}>
               {stats.ram?.percentage?.toFixed(1) || 0}% / {(stats.cpu?.load || 0).toFixed(2)}
             </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: '0.35rem' }}>
+              {topCpuProcess
+                ? `Snapshot: ${topCpuProcess.command.split(' ').slice(0, 1)[0]} ${topCpuProcess.cpu.toFixed(1)}% CPU`
+                : 'Snapshot unavailable'}
+            </p>
+            {snapshotUpdatedAt && (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '0.15rem' }}>
+                Updated: {snapshotUpdatedAt}
+              </p>
+            )}
           </div>
         </div>
 

@@ -8,6 +8,7 @@ const path = require('path');
 const router = express.Router();
 const WHATSAPP_STATUS_PATH = process.env.WHATSAPP_STATUS_PATH || '/root/Vee/backend/whatsapp_status.json';
 let pm2SnapshotCache = { fetchedAt: 0, processes: [] };
+let cpuSnapshotCache = { fetchedAt: 0, snapshot: null };
 
 function normalizeWhatsappStatus(rawStatus) {
     const qr = rawStatus?.qr || rawStatus?.qrCode || rawStatus?.qr_code || null;
@@ -53,6 +54,62 @@ function getLivePm2Status(pm2Name) {
     }
 }
 
+function getCpuSnapshot() {
+    const { execFileSync } = require('child_process');
+
+    try {
+        const now = Date.now();
+        if (cpuSnapshotCache.snapshot && now - cpuSnapshotCache.fetchedAt < 15000) {
+            return cpuSnapshotCache.snapshot;
+        }
+
+        const output = execFileSync('/bin/bash', ['-lc', "ps -eo pid,ppid,pcpu,pmem,args --sort=-pcpu --no-headers | head -n 8"], {
+            env: process.env
+        }).toString();
+
+        const topProcesses = output
+            .split('\n')
+            .map(line => line.trim())
+            .filter(Boolean)
+            .map(line => {
+                const match = line.match(/^(\d+)\s+(\d+)\s+([0-9.]+)\s+([0-9.]+)\s+(.*)$/);
+                if (!match) return null;
+
+                const [, pid, ppid, cpu, mem, command] = match;
+                return {
+                    pid: Number(pid),
+                    ppid: Number(ppid),
+                    cpu: Number(cpu),
+                    mem: Number(mem),
+                    command
+                };
+            })
+            .filter(Boolean);
+
+        const snapshot = {
+            updatedAt: new Date().toISOString(),
+            topProcesses
+        };
+
+        cpuSnapshotCache = {
+            fetchedAt: now,
+            snapshot
+        };
+
+        return snapshot;
+    } catch (error) {
+        if (cpuSnapshotCache.snapshot) {
+            return cpuSnapshotCache.snapshot;
+        }
+
+        return {
+            updatedAt: new Date().toISOString(),
+            topProcesses: [],
+            error: error.message
+        };
+    }
+}
+
 function enrichAppStatus(app) {
     if (!app?.pm2_name) return app;
 
@@ -84,10 +141,11 @@ router.get('/server-stats', (req, res) => {
     const freeMem = os.freemem();
     const usedMem = totalMem - freeMem;
     const cpuLoad = os.loadavg()[0]; // 1 min average
+    const cpuSnapshot = getCpuSnapshot();
     
     res.json({
         ram: { total: totalMem, used: usedMem, percentage: (usedMem / totalMem) * 100 },
-        cpu: { load: cpuLoad, cores: os.cpus().length },
+        cpu: { load: cpuLoad, cores: os.cpus().length, snapshot: cpuSnapshot },
         uptime: os.uptime()
     });
 });
