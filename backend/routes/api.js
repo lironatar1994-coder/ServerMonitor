@@ -229,8 +229,9 @@ router.get('/:id/visitors', (req, res) => {
             const query = `
                 SELECT id, phone, message, status, error, created_at FROM whatsapp_logs
                 UNION ALL
-                SELECT id, to_phone AS phone, message, status, NULL AS error, created_at FROM whatsapp_outbox WHERE status = 'pending'
-                ORDER BY created_at DESC LIMIT 100
+                SELECT id, to_phone AS phone, message, status, NULL AS error, created_at FROM whatsapp_outbox
+                ORDER BY datetime(created_at) DESC, id DESC
+                LIMIT 100
             `;
             const logs = veeDb.prepare(query).all().map(row => ({
                 ...row,
