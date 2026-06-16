@@ -17,7 +17,7 @@ const WhatsAppTemplate = ({ app }) => {
   const fetchVisitors = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/serve-monitor/api/apps/${app.id}/visitors`, {
+      const res = await fetch(`/serve-monitor/api/apps/${app.id}/visitors?t=${Date.now()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -33,7 +33,7 @@ const WhatsAppTemplate = ({ app }) => {
   const fetchWhatsAppStatus = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/serve-monitor/api/apps/${app.id}/whatsapp-status`, {
+      const res = await fetch(`/serve-monitor/api/apps/${app.id}/whatsapp-status?t=${Date.now()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
