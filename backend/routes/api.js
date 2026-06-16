@@ -3,6 +3,7 @@ const db = require('../database');
 const { authenticateToken } = require('./auth');
 const os = require('os');
 const fs = require('fs');
+const path = require('path');
 
 const router = express.Router();
 
