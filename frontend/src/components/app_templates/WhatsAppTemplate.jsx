@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, AlertTriangle, Clock } from 'lucide-react';
+import { Send, AlertTriangle, Clock, Power, RefreshCw, Smartphone, CheckCircle, XCircle } from 'lucide-react';
 import LiveTerminal from '../LiveTerminal';
 
 const WhatsAppTemplate = ({ app }) => {
@@ -8,6 +8,11 @@ const WhatsAppTemplate = ({ app }) => {
   const [testPhone, setTestPhone] = useState('0508611888');
   const [testMessage, setTestMessage] = useState('🔔 *בדיקת מערכת התראות מנטור Vee* - הודעת הבדיקה נשלחה בהצלחה!');
   const [sendingTest, setSendingTest] = useState(false);
+
+  // WhatsApp worker states
+  const [waStatus, setWaStatus] = useState({ status: 'UNKNOWN', qr: null, isOnline: false });
+  const [loadingStatus, setLoadingStatus] = useState(true);
+  const [togglingPower, setTogglingPower] = useState(false);
 
   const fetchVisitors = async () => {
     try {
@@ -23,6 +28,51 @@ const WhatsAppTemplate = ({ app }) => {
       console.error(e);
     }
     setLoading(false);
+  };
+
+  const fetchWhatsAppStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/serve-monitor/api/apps/${app.id}/whatsapp-status`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWaStatus(data);
+      }
+    } catch (e) {
+      console.error('Failed to load whatsapp status:', e);
+    }
+    setLoadingStatus(false);
+  };
+
+  const handlePowerAction = async (action) => {
+    if (!window.confirm(`האם אתה בטוח שברצונך לבצע ${action === 'start' ? 'הפעלה' : action === 'stop' ? 'כיבוי' : 'אתחול'} לשירות ה-WhatsApp?`)) {
+      return;
+    }
+    setTogglingPower(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/serve-monitor/api/apps/${app.id}/action`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ action })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || 'הפעולה בוצעה בהצלחה');
+        fetchWhatsAppStatus();
+      } else {
+        alert(data.error || 'שגיאה בביצוע הפעולה');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('שגיאת תקשורת');
+    }
+    setTogglingPower(false);
   };
 
   const handleSendTest = async (e) => {
@@ -54,7 +104,11 @@ const WhatsAppTemplate = ({ app }) => {
 
   useEffect(() => {
     fetchVisitors();
-    const interval = setInterval(fetchVisitors, 5000);
+    fetchWhatsAppStatus();
+    const interval = setInterval(() => {
+      fetchVisitors();
+      fetchWhatsAppStatus();
+    }, 5000);
     return () => clearInterval(interval);
   }, [app.id]);
 
@@ -63,7 +117,122 @@ const WhatsAppTemplate = ({ app }) => {
   const pendingCount = visitors.filter(v => v.status === 'pending' || v.status === 'pending').length;
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* WhatsApp Status and Controls Panel */}
+      <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', direction: 'rtl' }}>
+          <div>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Smartphone size={24} color="var(--accent-primary)" />
+              סטטוס חיבור WhatsApp
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.2rem' }}>
+              ניהול וחיבור שירות ה-WhatsApp של Vee
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {/* Status indicator */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.5rem 1rem', borderRadius: '30px' }}>
+              <span style={{
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                backgroundColor: waStatus.isOnline 
+                  ? (waStatus.status === 'READY' ? '#10b981' : waStatus.status === 'NEEDS_SCAN' ? '#f59e0b' : '#3b82f6')
+                  : '#ef4444',
+                boxShadow: waStatus.isOnline && waStatus.status === 'READY' 
+                  ? '0 0 10px #10b981' 
+                  : waStatus.isOnline && waStatus.status === 'NEEDS_SCAN'
+                  ? '0 0 10px #f59e0b'
+                  : '0 0 10px #ef4444',
+                display: 'inline-block'
+              }} />
+              <span style={{ fontSize: '0.95rem', fontWeight: 'bold' }}>
+                {!waStatus.isOnline 
+                  ? 'השירות כבוי' 
+                  : (waStatus.status === 'READY' ? 'מחובר ומאומת' 
+                     : waStatus.status === 'NEEDS_SCAN' ? 'ממתין לסריקה' 
+                     : waStatus.status === 'INITIALIZING' ? 'באתחול...' 
+                     : 'שגיאה')}
+              </span>
+            </div>
+
+            {/* PM2 Controls */}
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {waStatus.isOnline ? (
+                <>
+                  <button 
+                    onClick={() => handlePowerAction('stop')}
+                    disabled={togglingPower}
+                    className="btn-danger"
+                    style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.9rem', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', cursor: 'pointer' }}
+                    title="כיבוי שירות"
+                  >
+                    <Power size={16} />
+                    כבה
+                  </button>
+                  <button 
+                    onClick={() => handlePowerAction('restart')}
+                    disabled={togglingPower}
+                    style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.9rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', cursor: 'pointer' }}
+                    title="אתחול שירות"
+                  >
+                    <RefreshCw size={16} className={togglingPower ? 'animate-spin' : ''} />
+                    אתחל
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={() => handlePowerAction('start')}
+                  disabled={togglingPower}
+                  style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.9rem', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', cursor: 'pointer' }}
+                  title="הפעל שירות"
+                >
+                  <Power size={16} />
+                  הפעל שירות
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* QR Code section inside the panel if Needs Scan */}
+        {waStatus.isOnline && waStatus.status === 'NEEDS_SCAN' && waStatus.qr && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '2rem',
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px dashed rgba(255, 255, 255, 0.1)',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            flexWrap: 'wrap',
+            marginTop: '0.5rem',
+            direction: 'rtl'
+          }}>
+            <div style={{ maxWidth: '300px', textAlign: 'right' }}>
+              <h4 style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.5rem' }}>סריקת קוד QR לחיבור</h4>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                פתחו את אפליקציית WhatsApp בטלפון שלכם, היכנסו ל-<strong>מכשירים מקושרים</strong> וסרקו את הקוד המופיע משמאל. הנתונים יתעדכנו אוטומטית לאחר החיבור.
+              </p>
+            </div>
+            <div style={{
+              background: '#fff',
+              padding: '10px',
+              borderRadius: '12px',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <img src={waStatus.qr} alt="WhatsApp QR" style={{ width: '180px', height: '180px' }} />
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Stats Cards */}
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>

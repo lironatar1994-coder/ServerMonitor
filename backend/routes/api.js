@@ -282,4 +282,42 @@ router.get('/:id/visitors', (req, res) => {
     }
 });
 
+// GET WhatsApp status and PM2 status
+router.get('/:id/whatsapp-status', (req, res) => {
+    const app = db.prepare('SELECT * FROM apps WHERE id = ?').get(req.params.id);
+    if (!app) return res.status(404).json({ error: 'App not found' });
+    
+    if (app.pm2_name === 'vee-whatsapp-worker') {
+        const statusPath = '/root/Vee/backend/whatsapp_status.json';
+        let statusData = { status: 'UNKNOWN', qr: null, updatedAt: null };
+        
+        if (fs.existsSync(statusPath)) {
+            try {
+                statusData = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+            } catch (e) {
+                console.error('Failed to parse whatsapp_status.json:', e.message);
+            }
+        }
+        
+        // Check PM2 state
+        const pm2 = require('pm2');
+        pm2.connect((err) => {
+            if (err) {
+                return res.json({ ...statusData, isOnline: false, pm2Error: 'PM2 Connect Error' });
+            }
+            pm2.describe(app.pm2_name, (err2, desc) => {
+                pm2.disconnect();
+                const isOnline = !err2 && desc && desc.length > 0 && desc[0].pm2_env.status === 'online';
+                res.json({
+                    ...statusData,
+                    isOnline
+                });
+            });
+        });
+        return;
+    }
+    
+    res.status(400).json({ error: 'This app is not a WhatsApp worker' });
+});
+
 module.exports = router;
