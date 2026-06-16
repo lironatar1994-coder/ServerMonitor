@@ -41,5 +41,26 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
+router.post('/change-password', authenticateToken, (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+        return res.status(400).json({ error: 'יש להזין סיסמה ישנה וחדשה' });
+    }
+
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+    if (!user) {
+        return res.status(404).json({ error: 'משתמש לא נמצא' });
+    }
+
+    if (!bcrypt.compareSync(oldPassword, user.password)) {
+        return res.status(400).json({ error: 'הסיסמה הנוכחית אינה נכונה' });
+    }
+
+    const hash = bcrypt.hashSync(newPassword, 10);
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hash, req.user.id);
+
+    res.json({ message: 'הסיסמה שונתה בהצלחה!' });
+});
+
 module.exports = router;
 module.exports.authenticateToken = authenticateToken;

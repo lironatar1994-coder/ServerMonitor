@@ -44,4 +44,33 @@ if (!adminExists) {
     console.log('Default admin user created (admin/admin123)');
 }
 
+// Programmatic Migrations for schema updates
+try {
+    db.exec(`ALTER TABLE apps ADD COLUMN last_alerted_at DATETIME`);
+    console.log('Added column last_alerted_at to apps table');
+} catch (e) {
+    // Column already exists or table doesn't exist
+}
+
+try {
+    db.exec(`ALTER TABLE apps ADD COLUMN health_port INTEGER`);
+    console.log('Added column health_port to apps table');
+} catch (e) {
+    // Column already exists
+}
+
+try {
+    db.exec(`ALTER TABLE apps ADD COLUMN health_path TEXT`);
+    console.log('Added column health_path to apps table');
+} catch (e) {
+    // Column already exists
+}
+
+try {
+    db.exec(`ALTER TABLE apps ADD COLUMN log_filter TEXT`);
+    console.log('Added column log_filter to apps table');
+} catch (e) {
+    // Column already exists
+}
+
 module.exports = db;

@@ -41,12 +41,12 @@ router.get('/', (req, res) => {
 
 // Add new app
 router.post('/', (req, res) => {
-    const { name, url, pm2_name, log_path } = req.body;
+    const { name, url, pm2_name, log_path, health_port, health_path, log_filter } = req.body;
     
     if (!name) return res.status(400).json({ error: 'App name is required' });
     
-    const info = db.prepare('INSERT INTO apps (name, url, pm2_name, log_path) VALUES (?, ?, ?, ?)')
-                   .run(name, url || null, pm2_name || null, log_path || null);
+    const info = db.prepare('INSERT INTO apps (name, url, pm2_name, log_path, health_port, health_path, log_filter) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                   .run(name, url || null, pm2_name || null, log_path || null, health_port || null, health_path || null, log_filter || null);
                    
     res.json({ id: info.lastInsertRowid, message: 'App added successfully' });
 });

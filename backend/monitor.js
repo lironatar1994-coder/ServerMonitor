@@ -8,7 +8,7 @@ console.log('Background Monitor Started...');
 
 const monitorInterval = 10 * 60 * 1000; // Check once every 10 minutes
 
-function parseNginxLog(logPath, appName) {
+function parseNginxLog(logPath, appName, logFilter) {
     if (!logPath || !fs.existsSync(logPath)) return { requests: 0, attacks: 0, visitors: 0 };
     
     try {
@@ -31,7 +31,11 @@ function parseNginxLog(logPath, appName) {
         lines.forEach(line => {
             let isTargetApp = false;
             
-            if (appName === 'PDF Generator') {
+            if (logFilter) {
+                if (line.includes(logFilter)) {
+                    isTargetApp = true;
+                }
+            } else if (appName === 'PDF Generator') {
                 if (line.includes('/text-to-pdf')) {
                     isTargetApp = true;
                 }
@@ -174,7 +178,9 @@ async function runMonitorCycle() {
                 
                 // 2. If PM2 is online, verify HTTP health check if applicable
                 if (status === 'online') {
-                    if (app.pm2_name === 'vee-app') {
+                    if (app.health_port) {
+                        status = await checkHttpHealth(app.health_port, app.health_path || '/');
+                    } else if (app.pm2_name === 'vee-app') {
                         status = await checkHttpHealth(3001, '/api/health');
                     } else if (app.pm2_name === 'text-to-pdf') {
                         status = await checkHttpHealth(3002, '/text-to-pdf');
@@ -184,7 +190,7 @@ async function runMonitorCycle() {
             
             // 3. Parse logs
             if (app.log_path) {
-                metrics = parseNginxLog(app.log_path, app.name);
+                metrics = parseNginxLog(app.log_path, app.name, app.log_filter);
             } else if (app.name === 'SSH Security') {
                 metrics.attacks = getFail2banBannedCount();
                 status = 'online';
@@ -195,19 +201,28 @@ async function runMonitorCycle() {
             }
             
             // 4. Status Transition Check & Alerts (Skip alerting on first load if old status is unknown)
-            const oldApp = db.prepare('SELECT status FROM apps WHERE id = ?').get(app.id);
+            const oldApp = db.prepare('SELECT status, last_alerted_at FROM apps WHERE id = ?').get(app.id);
             const oldStatus = oldApp ? oldApp.status : 'unknown';
+            const lastAlertedAt = oldApp ? oldApp.last_alerted_at : null;
             
             const isNewOnline = status === 'online';
             const isOldOnline = oldStatus === 'online';
             
             if (oldStatus !== 'unknown') {
                 if (!isNewOnline) {
-                    // Send/repeat warning alert every 10 minutes while offline
-                    sendWhatsAppAlert(app.name, status, true);
+                    // Send/repeat warning alert every 1 hour (60 minutes cooldown)
+                    const now = Date.now();
+                    const cooldDownTime = 60 * 60 * 1000; // 1 hour
+                    const shouldAlert = !lastAlertedAt || (now - new Date(lastAlertedAt).getTime() > cooldDownTime);
+                    
+                    if (shouldAlert) {
+                        sendWhatsAppAlert(app.name, status, true);
+                        db.prepare('UPDATE apps SET last_alerted_at = CURRENT_TIMESTAMP WHERE id = ?').run(app.id);
+                    }
                 } else if (!isOldOnline && isNewOnline) {
                     // Send recovery alert when transitioning back to online
                     sendWhatsAppAlert(app.name, 'online', false);
+                    db.prepare('UPDATE apps SET last_alerted_at = NULL WHERE id = ?').run(app.id);
                 }
             }
             
