@@ -19,6 +19,15 @@ function normalizeWhatsappStatus(rawStatus) {
     };
 }
 
+function normalizeWhatsappMessageStatus(rawStatus) {
+    const status = (rawStatus || '').toString().trim().toLowerCase();
+
+    if (['sent', 'success', 'delivered', 'ok', 'complete', 'completed'].includes(status)) return 'sent';
+    if (['failed', 'error', 'rejected', 'unsent'].includes(status)) return 'failed';
+    if (['pending', 'queued', 'sending', 'waiting', 'processing'].includes(status)) return 'pending';
+    return status || 'pending';
+}
+
 function getLivePm2Status(pm2Name) {
     if (!pm2Name) return null;
 
@@ -223,7 +232,10 @@ router.get('/:id/visitors', (req, res) => {
                 SELECT id, to_phone AS phone, message, status, NULL AS error, created_at FROM whatsapp_outbox WHERE status = 'pending'
                 ORDER BY created_at DESC LIMIT 100
             `;
-            const logs = veeDb.prepare(query).all();
+            const logs = veeDb.prepare(query).all().map(row => ({
+                ...row,
+                status: normalizeWhatsappMessageStatus(row.status)
+            }));
             veeDb.close();
             return res.json({ is_whatsapp: true, visitors: logs });
         } catch (e) {

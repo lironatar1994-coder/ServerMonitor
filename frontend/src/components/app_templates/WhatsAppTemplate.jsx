@@ -17,6 +17,10 @@ const WhatsAppTemplate = ({ app }) => {
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [togglingPower, setTogglingPower] = useState(false);
 
+  const refreshWhatsAppData = async () => {
+    await Promise.all([fetchVisitors(), fetchWhatsAppStatus()]);
+  };
+
   const fetchVisitors = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -98,7 +102,8 @@ const WhatsAppTemplate = ({ app }) => {
       const data = await res.json();
       if (res.ok) {
         alert(data.message || 'הודעת בדיקה נשלחה בהצלחה');
-        fetchVisitors();
+        setTimeout(refreshWhatsAppData, 1500);
+        setTimeout(refreshWhatsAppData, 4000);
       } else {
         alert(data.error || 'שגיאה בשליחת הודעת בדיקה');
       }
@@ -110,13 +115,24 @@ const WhatsAppTemplate = ({ app }) => {
   };
 
   useEffect(() => {
-    fetchVisitors();
-    fetchWhatsAppStatus();
-    const interval = setInterval(() => {
-      fetchVisitors();
-      fetchWhatsAppStatus();
-    }, 5000);
-    return () => clearInterval(interval);
+    refreshWhatsAppData();
+
+    const interval = setInterval(refreshWhatsAppData, 2000);
+    const handleFocus = () => refreshWhatsAppData();
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        refreshWhatsAppData();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [app.id]);
 
   const sentCount = visitors.filter(v => v.status === 'sent').length;
