@@ -60,7 +60,7 @@ const Dashboard = () => {
           <h1 style={{ fontSize: '2.2rem', color: 'var(--text-primary)', marginBottom: '0.3rem', fontWeight: '800' }}>סקירת שרת</h1>
           <p style={{ color: 'var(--text-secondary)' }}>מצב כללי של השרת והאפליקציות שלך</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div className="dashboard-top-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           {/* Subtle Alerts Badge instead of giant purple box */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: '#eff6ff', borderRadius: '12px', color: 'var(--accent-primary)', fontSize: '0.9rem', fontWeight: '600' }}>
             <BellRing size={16} />

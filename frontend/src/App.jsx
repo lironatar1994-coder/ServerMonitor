@@ -25,7 +25,7 @@ const Navbar = ({ onChangePassword }) => {
         <Activity size={28} color="var(--accent-primary)" />
         <span>Vee Monitor</span>
       </div>
-      <div style={{ display: 'flex', gap: '10px' }}>
+      <div className="nav-actions" style={{ display: 'flex', gap: '10px' }}>
         <button onClick={onChangePassword} className="btn-icon" style={{ borderColor: '#e2e8f0', color: 'var(--text-secondary)' }} title="שינוי סיסמה">
           שינוי סיסמה
         </button>
@@ -181,7 +181,7 @@ const SettingsModal = ({ onClose }) => {
                 onChange={e => setConfirmPassword(e.target.value)}
               />
             </div>
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+            <div className="modal-actions" style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
               <button type="submit" className="btn-primary" style={{ flex: 1 }} disabled={loading}>
                 {loading ? 'משנה...' : 'שנה סיסמה'}
               </button>
@@ -212,7 +212,7 @@ const SettingsModal = ({ onClose }) => {
                 onChange={e => setMessage(e.target.value)}
               />
             </div>
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+            <div className="modal-actions" style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
               <button type="submit" className="btn-primary" style={{ flex: 1 }} disabled={loading}>
                 {loading ? 'שולח...' : 'שלח הודעת בדיקה'}
               </button>

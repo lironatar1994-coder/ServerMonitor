@@ -41,26 +41,26 @@ const SystemStats = () => {
       <button
         type="button"
         onClick={() => navigate('/')}
-        className="btn-icon"
+        className="btn-icon stats-back-button"
         style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}
       >
         <ArrowLeft size={18} />
         Back
       </button>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', marginBottom: '2rem', gap: '1rem' }}>
-        <div>
+      <div className="stats-hero" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', marginBottom: '2rem', gap: '1rem' }}>
+        <div className="stats-hero-copy">
           <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.35rem' }}>System Snapshot</h1>
           <p style={{ color: 'var(--text-secondary)' }}>Lightweight process snapshot updated every 15 seconds.</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>
+        <div className="stats-refresh-chip" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>
           <RefreshCw size={16} />
           Auto refresh
         </div>
       </div>
 
       <div className="stats-grid">
-        <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="glass-card stats-summary-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '15px', borderRadius: '12px', color: 'var(--accent-primary)' }}>
             <Server size={28} />
           </div>
@@ -75,7 +75,7 @@ const SystemStats = () => {
           </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="glass-card stats-summary-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '15px', borderRadius: '12px', color: 'var(--success)' }}>
             <MemoryStick size={28} />
           </div>
@@ -90,12 +90,12 @@ const SystemStats = () => {
           </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.5rem' }}>
+        <div className="glass-card stats-process-card" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
             <Cpu size={20} />
             <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>Top Processes</h3>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="stats-process-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {topProcesses.slice(0, 6).map(proc => (
               <div key={`${proc.pid}-${proc.command}`} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', fontSize: '0.9rem' }}>
                 <span style={{ color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
