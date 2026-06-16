@@ -29,7 +29,10 @@ const WhatsAppTemplate = ({ app }) => {
       });
       if (res.ok) {
         const data = await res.json();
-        setVisitors(data.visitors || []);
+        setVisitors((data.visitors || []).map((visitor) => ({
+          ...visitor,
+          status: normalizeMessageStatus(visitor.status)
+        })));
       }
     } catch (e) {
       console.error(e);
@@ -135,9 +138,17 @@ const WhatsAppTemplate = ({ app }) => {
     };
   }, [app.id]);
 
-  const sentCount = visitors.filter(v => v.status === 'sent').length;
-  const failedCount = visitors.filter(v => v.status === 'failed').length;
-  const pendingCount = visitors.filter(v => v.status === 'pending' || v.status === 'pending').length;
+  const normalizeMessageStatus = (rawStatus) => {
+    const status = (rawStatus || '').toString().trim().toLowerCase();
+    if (['sent', 'success', 'delivered', 'ok', 'complete', 'completed'].includes(status)) return 'sent';
+    if (['failed', 'error', 'rejected', 'unsent'].includes(status)) return 'failed';
+    if (['pending', 'queued', 'sending', 'waiting', 'processing'].includes(status)) return 'pending';
+    return status || 'pending';
+  };
+
+  const sentCount = visitors.filter(v => normalizeMessageStatus(v.status) === 'sent').length;
+  const failedCount = visitors.filter(v => normalizeMessageStatus(v.status) === 'failed').length;
+  const pendingCount = visitors.filter(v => normalizeMessageStatus(v.status) === 'pending').length;
   const qrImage = waStatus.qr || waStatus.qrCode || waStatus.qr_code;
   const hasActiveWhatsappState = waStatus.status === 'READY' || waStatus.status === 'NEEDS_SCAN' || waStatus.status === 'INITIALIZING';
   const shouldShowQr = qrImage && waStatus.status !== 'READY';
@@ -331,10 +342,11 @@ const WhatsAppTemplate = ({ app }) => {
                     };
                     let statusBg = '#fef3c7'; // pending
                     let statusText = '#92400e';
-                    if (v.status === 'sent') {
+                    const normalizedStatus = normalizeMessageStatus(v.status);
+                    if (normalizedStatus === 'sent') {
                       statusBg = '#d1fae5';
                       statusText = '#065f46';
-                    } else if (v.status === 'failed') {
+                    } else if (normalizedStatus === 'failed') {
                       statusBg = '#fee2e2';
                       statusText = '#991b1b';
                     }
@@ -351,7 +363,7 @@ const WhatsAppTemplate = ({ app }) => {
                             background: statusBg,
                             color: statusText
                           }}>
-                            {v.status === 'sent' ? 'נשלח' : v.status === 'failed' ? 'נכשל' : 'ממתין'}
+                            {normalizedStatus === 'sent' ? 'נשלח' : normalizedStatus === 'failed' ? 'נכשל' : 'ממתין'}
                           </span>
                         </td>
                         <td style={{ padding: '10px 8px', color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={v.message}>

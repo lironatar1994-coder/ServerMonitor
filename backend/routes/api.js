@@ -226,19 +226,31 @@ router.get('/:id/visitors', (req, res) => {
         }
         try {
             const veeDb = new (require('better-sqlite3'))(veeDbPath);
-            const query = `
-                SELECT id, phone, message, status, error, created_at FROM whatsapp_logs
-                UNION ALL
-                SELECT id, to_phone AS phone, message, status, NULL AS error, created_at FROM whatsapp_outbox
-                ORDER BY datetime(created_at) DESC, id DESC
-                LIMIT 100
-            `;
-            const logs = veeDb.prepare(query).all().map(row => ({
+            const logs = veeDb.prepare(`
+                SELECT id, phone, message, status, error, created_at
+                FROM whatsapp_logs
+            `).all().map(row => ({
                 ...row,
                 status: normalizeWhatsappMessageStatus(row.status)
             }));
+
+            const outbox = veeDb.prepare(`
+                SELECT id, to_phone AS phone, message, status, NULL AS error, created_at
+                FROM whatsapp_outbox
+            `).all().map(row => ({
+                ...row,
+                status: normalizeWhatsappMessageStatus(row.status)
+            }));
+
+            const combined = [...logs, ...outbox].sort((left, right) => {
+                const leftTime = new Date(left.created_at || 0).getTime();
+                const rightTime = new Date(right.created_at || 0).getTime();
+                if (rightTime !== leftTime) return rightTime - leftTime;
+                return Number(right.id || 0) - Number(left.id || 0);
+            }).slice(0, 100);
+
             veeDb.close();
-            return res.json({ is_whatsapp: true, visitors: logs });
+            return res.json({ is_whatsapp: true, visitors: combined });
         } catch (e) {
             console.error(e);
             return res.status(500).json({ error: `Failed to query WhatsApp database: ${e.message}` });
