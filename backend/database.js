@@ -44,6 +44,19 @@ if (!adminExists) {
     console.log('Default admin user created (admin/admin123)');
 }
 
+// Insert Pixel Dungeon app if not exists
+const pdExists = db.prepare('SELECT id FROM apps WHERE name = ?').get('Pixel Dungeon');
+if (!pdExists) {
+    db.prepare('INSERT INTO apps (name, url, pm2_name, log_path, log_filter) VALUES (?, ?, ?, ?, ?)').run(
+        'Pixel Dungeon',
+        'https://vee-app.co.il/pixel-dungeon/',
+        null,
+        '/var/log/nginx/access.log',
+        '/pixel-dungeon/'
+    );
+    console.log('Pixel Dungeon app entry created in database.');
+}
+
 // Programmatic Migrations for schema updates
 try {
     db.exec(`ALTER TABLE apps ADD COLUMN last_alerted_at DATETIME`);

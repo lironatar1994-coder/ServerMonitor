@@ -76,16 +76,24 @@ function checkPm2Status(pm2Name) {
             env: { ...process.env, PM2_HOME: '/root/.pm2' }
         }, (err, stdout) => {
             if (err) {
-                resolve('offline');
+                resolve({ status: 'offline', cpu: 0, memory: 0 });
                 return;
             }
 
             try {
                 const processes = JSON.parse((stdout || '').trim() || '[]');
                 const match = processes.find(process => process?.name === pm2Name);
-                resolve(match?.pm2_env?.status === 'online' ? 'online' : 'offline');
+                if (match) {
+                    resolve({
+                        status: match?.pm2_env?.status === 'online' ? 'online' : 'offline',
+                        cpu: match?.monit?.cpu || 0,
+                        memory: match?.monit?.memory || 0
+                    });
+                } else {
+                    resolve({ status: 'offline', cpu: 0, memory: 0 });
+                }
             } catch (parseErr) {
-                resolve('offline');
+                resolve({ status: 'offline', cpu: 0, memory: 0 });
             }
         });
     });
@@ -175,14 +183,18 @@ async function runMonitorCycle() {
         for (const app of apps) {
             let status = 'online';
             let metrics = { visitors: 0, requests: 0, attacks: 0 };
+            let appCpu = 0;
+            let appMemory = 0;
             
             // 1. Check PM2 status
             if (app.pm2_name) {
-                const pm2Status = await checkPm2Status(app.pm2_name);
-                status = pm2Status;
+                const pm2Info = await checkPm2Status(app.pm2_name);
+                status = pm2Info.status;
+                appCpu = pm2Info.cpu;
+                appMemory = pm2Info.memory;
 
                 // Health checks are advisory for PM2-backed apps; do not mark them offline if PM2 is up.
-                if (pm2Status === 'online') {
+                if (status === 'online') {
                     if (app.health_port) {
                         const healthStatus = await checkHttpHealth(app.health_port, app.health_path || '/');
                         if (healthStatus !== 'online') {
@@ -243,7 +255,7 @@ async function runMonitorCycle() {
             // Save to DB
             db.prepare('UPDATE apps SET status = ?, last_checked = CURRENT_TIMESTAMP WHERE id = ?').run(status, app.id);
             db.prepare('INSERT INTO metrics (app_id, visitors, requests, attacks, cpu_usage, ram_usage) VALUES (?, ?, ?, ?, ?, ?)')
-              .run(app.id, metrics.visitors, metrics.requests, metrics.attacks, os.loadavg()[0], os.freemem() / os.totalmem());
+              .run(app.id, metrics.visitors, metrics.requests, metrics.attacks, appCpu, appMemory);
         }
     } catch (err) {
         console.error('Monitor cycle error:', err);

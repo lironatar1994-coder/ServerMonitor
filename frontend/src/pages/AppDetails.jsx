@@ -139,13 +139,41 @@ const AppDetails = () => {
         )}
       </div>
 
-      <div className="stats-grid details-metrics" style={{ marginBottom: '2rem' }}>
+      <div className="stats-grid details-metrics" style={{ marginBottom: '2rem', gridTemplateColumns: app.pm2_name ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)' }}>
+        {app.pm2_name && (
+          <>
+            <div className="glass-card" style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '14px', borderRadius: '12px', color: 'rgb(99, 102, 241)' }}>
+                <Server size={26} />
+              </div>
+              <div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '600' }}>מעבד אפליקציה</p>
+                <h3 style={{ fontSize: '1.35rem', marginTop: '0.25rem', fontWeight: '800' }}>
+                  {(app.cpu || 0).toFixed(1)}%
+                </h3>
+              </div>
+            </div>
+
+            <div className="glass-card" style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '14px', borderRadius: '12px', color: 'var(--success)' }}>
+                <MemoryStick size={26} />
+              </div>
+              <div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '600' }}>זיכרון אפליקציה</p>
+                <h3 style={{ fontSize: '1.35rem', marginTop: '0.25rem', fontWeight: '800' }}>
+                  {((app.memory || 0) / 1024 / 1024).toFixed(1)} MB
+                </h3>
+              </div>
+            </div>
+          </>
+        )}
+
         <div className="glass-card" style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '14px', borderRadius: '12px', color: 'var(--accent-primary)' }}>
             <Server size={26} />
           </div>
           <div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '600' }}>CPU Load</p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '600' }}>עומס שרת (מעבד)</p>
             <h3 style={{ fontSize: '1.35rem', marginTop: '0.25rem', fontWeight: '800' }}>
               {(stats.cpu?.load || 0).toFixed(2)}
             </h3>
@@ -157,7 +185,7 @@ const AppDetails = () => {
             <MemoryStick size={26} />
           </div>
           <div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '600' }}>RAM Usage</p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '600' }}>זיכרון שרת כללי</p>
             <h3 style={{ fontSize: '1.35rem', marginTop: '0.25rem', fontWeight: '800' }}>
               {stats.ram?.percentage?.toFixed(1) || 0}%
             </h3>

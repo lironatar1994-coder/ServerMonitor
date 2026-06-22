@@ -30,8 +30,8 @@ function normalizeWhatsappMessageStatus(rawStatus) {
     return status || 'pending';
 }
 
-function getLivePm2Status(pm2Name) {
-    if (!pm2Name) return null;
+function getLivePm2Metrics(pm2Name) {
+    if (!pm2Name) return { status: 'offline', cpu: 0, memory: 0 };
 
     const { execFileSync } = require('child_process');
     try {
@@ -48,9 +48,16 @@ function getLivePm2Status(pm2Name) {
         }
 
         const match = pm2SnapshotCache.processes.find(process => process?.name === pm2Name);
-        return match?.pm2_env?.status === 'online' ? 'online' : 'offline';
+        if (match) {
+            return {
+                status: match?.pm2_env?.status === 'online' ? 'online' : 'offline',
+                cpu: match?.monit?.cpu || 0,
+                memory: match?.monit?.memory || 0
+            };
+        }
+        return { status: 'offline', cpu: 0, memory: 0 };
     } catch (e) {
-        return 'offline';
+        return { status: 'offline', cpu: 0, memory: 0 };
     }
 }
 
@@ -111,9 +118,17 @@ function getCpuSnapshot() {
 }
 
 function enrichAppStatus(app) {
-    if (!app?.pm2_name) return app;
+    if (!app?.pm2_name) {
+        return { ...app, status: app.status || 'online', cpu: 0, memory: 0 };
+    }
 
-    const enriched = { ...app, status: getLivePm2Status(app.pm2_name) };
+    const pm2Data = getLivePm2Metrics(app.pm2_name);
+    const enriched = { 
+        ...app, 
+        status: pm2Data.status,
+        cpu: pm2Data.cpu,
+        memory: pm2Data.memory 
+    };
 
     if (app.pm2_name === 'vee-whatsapp-worker') {
         try {
@@ -418,7 +433,7 @@ router.get('/:id/whatsapp-status', (req, res) => {
             }
         }
         
-        const isOnline = getLivePm2Status(app.pm2_name) === 'online';
+        const isOnline = getLivePm2Metrics(app.pm2_name).status === 'online';
         const hasActiveWhatsAppState = ['INITIALIZING', 'NEEDS_SCAN', 'READY'].includes(statusData.status) || !!statusData.qr;
 
         res.json({

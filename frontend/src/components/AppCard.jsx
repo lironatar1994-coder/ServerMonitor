@@ -82,6 +82,19 @@ const AppCard = ({ app }) => {
         </ResponsiveContainer>
       </div>
 
+      {app.pm2_name && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.5rem 0', padding: '0.5rem 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>מעבד:</span>
+            <strong style={{ color: 'var(--text-primary)' }}>{(app.cpu || 0).toFixed(1)}%</strong>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>זיכרון:</span>
+            <strong style={{ color: 'var(--text-primary)' }}>{((app.memory || 0) / 1024 / 1024).toFixed(1)} MB</strong>
+          </div>
+        </div>
+      )}
+
       <div className="app-card-metrics" style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #f1f5f9', paddingTop: '1rem', marginTop: 'auto' }}>
         <div style={{ textAlign: 'center' }}>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}><Globe size={12}/> מבקרים</p>
