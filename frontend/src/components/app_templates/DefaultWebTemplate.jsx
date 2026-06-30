@@ -12,7 +12,7 @@ const DefaultWebTemplate = ({ app }) => {
     method: 'all',
     status: 'all'
   });
-  const [visitorSort, setVisitorSort] = useState({ key: 'timestamp', direction: 'desc' });
+  const [visitorSort, setVisitorSort] = useState({ key: null, direction: 'desc' });
 
   const fetchVisitors = useCallback(async () => {
     try {
@@ -69,6 +69,8 @@ const DefaultWebTemplate = ({ app }) => {
     });
   }, [visitors, visitorFilters]);
   const sortedVisitors = useMemo(() => {
+    if (!visitorSort.key) return filteredVisitors;
+
     const monthMap = {
       Jan: 0,
       Feb: 1,
@@ -85,13 +87,14 @@ const DefaultWebTemplate = ({ app }) => {
     };
     const getTimestampValue = (timestamp) => {
       if (!timestamp) return 0;
-      const accessLogMatch = timestamp.match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2})/);
+      const timestampValue = timestamp.toString();
+      const accessLogMatch = timestampValue.match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2})/);
       if (accessLogMatch) {
         const [, day, month, year, hour, minute, second] = accessLogMatch;
         return Date.UTC(Number(year), monthMap[month] ?? 0, Number(day), Number(hour), Number(minute), Number(second));
       }
 
-      const parsed = Date.parse(timestamp);
+      const parsed = Date.parse(timestampValue);
       return Number.isNaN(parsed) ? 0 : parsed;
     };
     const getSortValue = (visitor) => {
