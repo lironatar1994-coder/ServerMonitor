@@ -1,13 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Globe, Activity, ShieldAlert } from 'lucide-react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
+import { Globe, Activity, ShieldAlert, Search, RotateCcw } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import LiveTerminal from '../LiveTerminal';
 
 const DefaultWebTemplate = ({ app }) => {
   const [visitors, setVisitors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [visitorFilters, setVisitorFilters] = useState({
+    search: '',
+    agent: 'all',
+    method: 'all',
+    status: 'all'
+  });
 
-  const fetchVisitors = async () => {
+  const fetchVisitors = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`/serve-monitor/api/apps/${app.id}/visitors`, {
@@ -21,16 +27,55 @@ const DefaultWebTemplate = ({ app }) => {
       console.error(e);
     }
     setLoading(false);
-  };
+  }, [app.id]);
 
   useEffect(() => {
-    fetchVisitors();
+    const initialLoad = setTimeout(fetchVisitors, 0);
     const interval = setInterval(fetchVisitors, 5000);
-    return () => clearInterval(interval);
-  }, [app.id]);
+    return () => {
+      clearTimeout(initialLoad);
+      clearInterval(interval);
+    };
+  }, [fetchVisitors]);
 
   const chartData = app.history && app.history.length > 0 ? app.history : [{visitors:0, requests:0, attacks:0}];
   const currentMetrics = chartData[chartData.length - 1] || { visitors: 0, requests: 0, attacks: 0 };
+  const availableMethods = useMemo(() => {
+    return Array.from(new Set(visitors.map((visitor) => visitor.method).filter(Boolean))).sort();
+  }, [visitors]);
+  const filteredVisitors = useMemo(() => {
+    const searchTerm = visitorFilters.search.trim().toLowerCase();
+
+    return visitors.filter((visitor) => {
+      const status = Number(visitor.status);
+      const matchesSearch = !searchTerm || [
+        visitor.ip,
+        visitor.path,
+        visitor.method,
+        visitor.agent,
+        visitor.status?.toString()
+      ].some((value) => (value || '').toString().toLowerCase().includes(searchTerm));
+
+      const matchesAgent = visitorFilters.agent === 'all' || visitor.agent === visitorFilters.agent;
+      const matchesMethod = visitorFilters.method === 'all' || visitor.method === visitorFilters.method;
+      const matchesStatus = visitorFilters.status === 'all'
+        || (visitorFilters.status === 'success' && status >= 200 && status < 300)
+        || (visitorFilters.status === 'redirect' && status >= 300 && status < 400)
+        || (visitorFilters.status === 'client-error' && status >= 400 && status < 500)
+        || (visitorFilters.status === 'server-error' && status >= 500);
+
+      return matchesSearch && matchesAgent && matchesMethod && matchesStatus;
+    });
+  }, [visitors, visitorFilters]);
+  const hasActiveVisitorFilters = Object.values(visitorFilters).some((value) => value !== '' && value !== 'all');
+
+  const updateVisitorFilter = (key, value) => {
+    setVisitorFilters((current) => ({ ...current, [key]: value }));
+  };
+
+  const resetVisitorFilters = () => {
+    setVisitorFilters({ search: '', agent: 'all', method: 'all', status: 'all' });
+  };
 
   return (
     <div className="animate-fade-in">
@@ -117,6 +162,79 @@ const DefaultWebTemplate = ({ app }) => {
       {/* Access Logs List */}
       <div className="glass-card" style={{ padding: '2rem', marginTop: '2rem' }}>
         <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold' }}>כניסות אחרונות (100 כניסות אחרונות בזמן אמת)</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700' }}>
+            מציג {filteredVisitors.length} מתוך {visitors.length} כניסות
+          </p>
+          {hasActiveVisitorFilters && (
+            <button
+              type="button"
+              onClick={resetVisitorFilters}
+              className="btn-icon"
+              style={{ gap: '8px', fontWeight: '700' }}
+              title="איפוס סינונים"
+            >
+              <RotateCcw size={16} />
+              איפוס
+            </button>
+          )}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem', marginBottom: '1rem', alignItems: 'end' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', color: 'var(--text-secondary)', fontWeight: '700', fontSize: '0.85rem' }}>
+            חיפוש
+            <div style={{ position: 'relative' }}>
+              <Search size={16} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+              <input
+                className="input-field"
+                value={visitorFilters.search}
+                onChange={(event) => updateVisitorFilter('search', event.target.value)}
+                placeholder="IP, נתיב, מתודה, סטטוס"
+                style={{ paddingRight: '38px' }}
+              />
+            </div>
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', color: 'var(--text-secondary)', fontWeight: '700', fontSize: '0.85rem' }}>
+            סוג מכשיר
+            <select
+              className="input-field"
+              value={visitorFilters.agent}
+              onChange={(event) => updateVisitorFilter('agent', event.target.value)}
+            >
+              <option value="all">הכל</option>
+              <option value="Mobile">נייד</option>
+              <option value="Desktop">מחשב</option>
+              <option value="Bot">בוט</option>
+              <option value="Unknown">לא ידוע</option>
+            </select>
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', color: 'var(--text-secondary)', fontWeight: '700', fontSize: '0.85rem' }}>
+            מתודה
+            <select
+              className="input-field"
+              value={visitorFilters.method}
+              onChange={(event) => updateVisitorFilter('method', event.target.value)}
+            >
+              <option value="all">הכל</option>
+              {availableMethods.map((method) => (
+                <option key={method} value={method}>{method}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', color: 'var(--text-secondary)', fontWeight: '700', fontSize: '0.85rem' }}>
+            סטטוס
+            <select
+              className="input-field"
+              value={visitorFilters.status}
+              onChange={(event) => updateVisitorFilter('status', event.target.value)}
+            >
+              <option value="all">הכל</option>
+              <option value="success">2xx תקין</option>
+              <option value="redirect">3xx הפניה</option>
+              <option value="client-error">4xx שגיאת לקוח</option>
+              <option value="server-error">5xx שגיאת שרת</option>
+            </select>
+          </label>
+        </div>
         <div style={{ overflowX: 'auto', maxHeight: '400px', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', direction: 'rtl' }}>
             <thead>
@@ -138,8 +256,12 @@ const DefaultWebTemplate = ({ app }) => {
                 <tr>
                   <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>אין כניסות זמינות להצגה כעת</td>
                 </tr>
+              ) : filteredVisitors.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>אין תוצאות שמתאימות לסינון הנוכחי</td>
+                </tr>
               ) : (
-                visitors.map((v, i) => {
+                filteredVisitors.map((v, i) => {
                   const formatTime = (ts) => {
                     if (!ts) return '';
                     const parts = ts.split(':');
