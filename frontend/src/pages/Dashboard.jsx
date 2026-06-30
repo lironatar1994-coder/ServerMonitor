@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Server, Users, ShieldAlert, Cpu, BellRing, HardDrive, ShieldCheck } from 'lucide-react';
+import { Plus, Server, Users, ShieldAlert, BellRing, HardDrive, ShieldCheck } from 'lucide-react';
 import AppCard from '../components/AppCard';
 import AddAppModal from '../components/AddAppModal';
 
@@ -8,41 +8,65 @@ const Dashboard = () => {
   const [apps, setApps] = useState([]);
   const [stats, setStats] = useState({ ram: {}, cpu: {} });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [appsLoading, setAppsLoading] = useState(true);
+  const [appsError, setAppsError] = useState('');
   const navigate = useNavigate();
 
-  const fetchApps = async () => {
+  const handleAuthFailure = useCallback(() => {
+    localStorage.removeItem('token');
+    navigate('/login', { replace: true });
+  }, [navigate]);
+
+  const fetchApps = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const appsRes = await fetch('/serve-monitor/api/apps', { headers: { 'Authorization': `Bearer ${token}` } });
-      if (appsRes.ok) setApps(await appsRes.json());
+      if (appsRes.status === 401 || appsRes.status === 403) {
+        handleAuthFailure();
+        return;
+      }
+      if (!appsRes.ok) {
+        throw new Error(`Failed to load apps (${appsRes.status})`);
+      }
+
+      setApps(await appsRes.json());
+      setAppsError('');
     } catch (e) {
       console.error(e);
+      setAppsError(e.message || 'Failed to load monitored apps');
+    } finally {
+      setAppsLoading(false);
     }
-  };
+  }, [handleAuthFailure]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const statsRes = await fetch('/serve-monitor/api/apps/server-stats', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (statsRes.status === 401 || statsRes.status === 403) {
+        handleAuthFailure();
+        return;
+      }
       if (statsRes.ok) setStats(await statsRes.json());
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [handleAuthFailure]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     await Promise.all([fetchApps(), fetchStats()]);
-  };
+  }, [fetchApps, fetchStats]);
 
   useEffect(() => {
-    fetchData();
+    const initialLoad = setTimeout(fetchData, 0);
     const appsInterval = setInterval(fetchApps, 5000);
     const statsInterval = setInterval(fetchStats, 15000);
     return () => {
+      clearTimeout(initialLoad);
       clearInterval(appsInterval);
       clearInterval(statsInterval);
     };
-  }, []);
+  }, [fetchApps, fetchData, fetchStats]);
 
   const topCpuProcess = stats.cpu?.snapshot?.topProcesses?.[0];
   const snapshotUpdatedAt = stats.cpu?.snapshot?.updatedAt
@@ -164,7 +188,17 @@ const Dashboard = () => {
         {apps.map(app => (
           <AppCard key={app.id} app={app} />
         ))}
-        {apps.length === 0 && (
+        {appsLoading && apps.length === 0 && (
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>
+            Loading monitored apps...
+          </div>
+        )}
+        {!appsLoading && appsError && (
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: 'var(--danger)', fontWeight: '700' }}>
+            {appsError}
+          </div>
+        )}
+        {!appsLoading && !appsError && apps.length === 0 && (
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>
             אין אפליקציות מנוטרות. הוסף אחת כעת!
           </div>

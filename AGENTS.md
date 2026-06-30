@@ -80,4 +80,6 @@ When the user requests a durable behavior change, record it here or in the relev
 
 ## Child DOX Index
 
-This project is not yet indexed. Before continuing you must scan the project, build the DOX tree and replace this message with the actual index. Go deep and scan files recursively to properly evaluate complexity and create nested DOX files where needed.
+- `backend/AGENTS.md` - Express API, SQLite monitor database, PM2/system monitoring logic, authentication routes, and background checks.
+- `frontend/AGENTS.md` - Vite React dashboard, routing, app cards, detail pages, static assets, and production frontend build.
+- Root-owned deployment and host files: `deploy.ps1`, `deploy_linux.sh`, `monitor.vee-app.co.il.conf`, `start.bat`, `.gitignore`, and repository-level operational artifacts.
