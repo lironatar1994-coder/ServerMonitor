@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { Globe, Activity, ShieldAlert, Search, RotateCcw } from 'lucide-react';
+import { Globe, Activity, ShieldAlert, Search, RotateCcw, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import LiveTerminal from '../LiveTerminal';
 
@@ -12,6 +12,7 @@ const DefaultWebTemplate = ({ app }) => {
     method: 'all',
     status: 'all'
   });
+  const [visitorSort, setVisitorSort] = useState({ key: 'timestamp', direction: 'desc' });
 
   const fetchVisitors = useCallback(async () => {
     try {
@@ -67,6 +68,48 @@ const DefaultWebTemplate = ({ app }) => {
       return matchesSearch && matchesAgent && matchesMethod && matchesStatus;
     });
   }, [visitors, visitorFilters]);
+  const sortedVisitors = useMemo(() => {
+    const monthMap = {
+      Jan: 0,
+      Feb: 1,
+      Mar: 2,
+      Apr: 3,
+      May: 4,
+      Jun: 5,
+      Jul: 6,
+      Aug: 7,
+      Sep: 8,
+      Oct: 9,
+      Nov: 10,
+      Dec: 11
+    };
+    const getTimestampValue = (timestamp) => {
+      if (!timestamp) return 0;
+      const accessLogMatch = timestamp.match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2})/);
+      if (accessLogMatch) {
+        const [, day, month, year, hour, minute, second] = accessLogMatch;
+        return Date.UTC(Number(year), monthMap[month] ?? 0, Number(day), Number(hour), Number(minute), Number(second));
+      }
+
+      const parsed = Date.parse(timestamp);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    };
+    const getSortValue = (visitor) => {
+      if (visitorSort.key === 'timestamp') return getTimestampValue(visitor.timestamp);
+      if (visitorSort.key === 'status') return Number(visitor.status) || 0;
+      return (visitor[visitorSort.key] || '').toString().toLowerCase();
+    };
+
+    return [...filteredVisitors].sort((left, right) => {
+      const leftValue = getSortValue(left);
+      const rightValue = getSortValue(right);
+      const result = typeof leftValue === 'number' && typeof rightValue === 'number'
+        ? leftValue - rightValue
+        : leftValue.localeCompare(rightValue, 'he', { numeric: true, sensitivity: 'base' });
+
+      return visitorSort.direction === 'asc' ? result : -result;
+    });
+  }, [filteredVisitors, visitorSort]);
   const hasActiveVisitorFilters = Object.values(visitorFilters).some((value) => value !== '' && value !== 'all');
 
   const updateVisitorFilter = (key, value) => {
@@ -75,6 +118,40 @@ const DefaultWebTemplate = ({ app }) => {
 
   const resetVisitorFilters = () => {
     setVisitorFilters({ search: '', agent: 'all', method: 'all', status: 'all' });
+  };
+
+  const updateVisitorSort = (key) => {
+    setVisitorSort((current) => ({
+      key,
+      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const renderSortHeader = (key, label) => {
+    const isActive = visitorSort.key === key;
+    const Icon = isActive ? (visitorSort.direction === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
+
+    return (
+      <button
+        type="button"
+        onClick={() => updateVisitorSort(key)}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          color: isActive ? 'var(--accent-primary)' : 'inherit',
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontWeight: '800',
+          padding: 0
+        }}
+        title={`מיון לפי ${label}`}
+      >
+        <span>{label}</span>
+        <Icon size={14} strokeWidth={2.4} />
+      </button>
+    );
   };
 
   return (
@@ -239,12 +316,12 @@ const DefaultWebTemplate = ({ app }) => {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', direction: 'rtl' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #e2e8f0', color: 'var(--text-secondary)' }}>
-                <th style={{ padding: '12px 8px' }}>זמן</th>
-                <th style={{ padding: '12px 8px' }}>כתובת IP</th>
-                <th style={{ padding: '12px 8px' }}>מתודה</th>
-                <th style={{ padding: '12px 8px' }}>נתיב</th>
-                <th style={{ padding: '12px 8px' }}>סוג</th>
-                <th style={{ padding: '12px 8px' }}>סטטוס</th>
+                <th style={{ padding: '12px 8px' }}>{renderSortHeader('timestamp', 'זמן')}</th>
+                <th style={{ padding: '12px 8px' }}>{renderSortHeader('ip', 'כתובת IP')}</th>
+                <th style={{ padding: '12px 8px' }}>{renderSortHeader('method', 'מתודה')}</th>
+                <th style={{ padding: '12px 8px' }}>{renderSortHeader('path', 'נתיב')}</th>
+                <th style={{ padding: '12px 8px' }}>{renderSortHeader('agent', 'סוג')}</th>
+                <th style={{ padding: '12px 8px' }}>{renderSortHeader('status', 'סטטוס')}</th>
               </tr>
             </thead>
             <tbody>
@@ -256,12 +333,12 @@ const DefaultWebTemplate = ({ app }) => {
                 <tr>
                   <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>אין כניסות זמינות להצגה כעת</td>
                 </tr>
-              ) : filteredVisitors.length === 0 ? (
+              ) : sortedVisitors.length === 0 ? (
                 <tr>
                   <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>אין תוצאות שמתאימות לסינון הנוכחי</td>
                 </tr>
               ) : (
-                filteredVisitors.map((v, i) => {
+                sortedVisitors.map((v, i) => {
                   const formatTime = (ts) => {
                     if (!ts) return '';
                     const parts = ts.split(':');
