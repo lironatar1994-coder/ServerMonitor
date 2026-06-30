@@ -241,10 +241,10 @@ const DefaultWebTemplate = ({ app }) => {
 
       {/* Access Logs List */}
       <div className="glass-card" style={{ padding: '2rem', marginTop: '2rem' }}>
-        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold' }}>כניסות אחרונות (100 כניסות אחרונות בזמן אמת)</h2>
+        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold' }}>כניסות אחרונות (עד 100 כניסות אחרונות בזמן אמת)</h2>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700' }}>
-            מציג {filteredVisitors.length} מתוך {visitors.length} כניסות
+            מציג {filteredVisitors.length} מתוך {visitors.length} כניסות שנמצאו
           </p>
           {hasActiveVisitorFilters && (
             <button

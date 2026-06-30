@@ -347,8 +347,8 @@ router.get('/:id/visitors', (req, res) => {
     try {
         const fd = fs.openSync(app.log_path, 'r');
         const stat = fs.fstatSync(fd);
-        // Read last 256KB to ensure we can find up to 100 hits
-        const bufferSize = Math.min(stat.size, 262144); 
+        // Read a larger tail window so busy shared logs still yield up to 100 matching hits.
+        const bufferSize = Math.min(stat.size, 2097152);
         const buffer = Buffer.alloc(bufferSize);
         const position = Math.max(0, stat.size - bufferSize);
         
@@ -378,7 +378,7 @@ router.get('/:id/visitors', (req, res) => {
             if (isTargetApp) {
                 // Regex to parse Nginx log line
                 // Format: IP - - [date] "method path proto" status bytes "referrer" "user-agent"
-                const match = line.match(/^(\d+\.\d+\.\d+\.\d+)\s+-\s+-\s+\[([^\]]+)\]\s+\"(\w+)\s+([^\s?]+)[^\"]*\"\s+(\d+)/);
+                const match = line.match(/^(\S+)\s+-\s+-\s+\[([^\]]+)\]\s+\"(\w+)\s+([^\s?]+)[^\"]*\"\s+(\d+)/);
                 if (match) {
                     const [_, ip, timestamp, method, path, status] = match;
                     
