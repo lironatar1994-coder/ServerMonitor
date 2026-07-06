@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { Globe, Activity, ShieldAlert, Search, RotateCcw, ArrowUp, ArrowDown, ArrowUpDown, Users, X, Clock, MousePointerClick, RefreshCw } from 'lucide-react';
+import { Globe, Activity, ShieldAlert, Search, RotateCcw, ArrowUp, ArrowDown, ArrowUpDown, Users, Clock, MousePointerClick, RefreshCw } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import LiveTerminal from '../LiveTerminal';
 
@@ -406,20 +406,25 @@ const DefaultWebTemplate = ({ app }) => {
       <div className="glass-card" style={{ padding: '2rem', marginTop: '2rem' }}>
         <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold' }}>כניסות אחרונות (עד 100 כניסות אחרונות בזמן אמת)</h2>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700', display: uniqueOpen ? 'none' : 'block' }}>
             מציג {filteredVisitors.length} מתוך {visitors.length} כניסות שנמצאו
           </p>
+          {uniqueOpen && (
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700' }}>
+              Showing {sortedUniqueVisitors.length} of {uniqueVisitors.length} unique visitors - {uniqueFilterLabel}
+            </p>
+          )}
           <button
             type="button"
-            onClick={openUniqueVisitors}
-            className="btn-primary"
+            onClick={uniqueOpen ? () => setUniqueOpen(false) : openUniqueVisitors}
+            className={uniqueOpen ? 'btn-icon' : 'btn-primary'}
             style={{ padding: '9px 14px', gap: '8px', fontWeight: '800' }}
-            title="Grouped unique visitor metrics"
+            title={uniqueOpen ? 'Show recent entries' : 'Grouped unique visitor metrics'}
           >
-            <Users size={16} />
-            Unique visitors
+            {uniqueOpen ? <Activity size={16} /> : <Users size={16} />}
+            {uniqueOpen ? 'Recent entries' : 'Unique visitors'}
           </button>
-          {hasActiveVisitorFilters && (
+          {!uniqueOpen && hasActiveVisitorFilters && (
             <button
               type="button"
               onClick={resetVisitorFilters}
@@ -432,6 +437,8 @@ const DefaultWebTemplate = ({ app }) => {
             </button>
           )}
         </div>
+        {!uniqueOpen && (
+          <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem', marginBottom: '1rem', alignItems: 'end' }}>
           <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', color: 'var(--text-secondary)', fontWeight: '700', fontSize: '0.85rem' }}>
             חיפוש
@@ -549,205 +556,141 @@ const DefaultWebTemplate = ({ app }) => {
             </tbody>
           </table>
         </div>
-      </div>
-
-      {uniqueOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Unique visitors"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1000,
-            background: 'rgba(15, 23, 42, 0.42)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px'
-          }}
-          onClick={() => setUniqueOpen(false)}
-        >
-          <div
-            className="glass-card"
-            style={{
-              width: 'min(1120px, 100%)',
-              maxHeight: '86vh',
-              overflow: 'hidden',
-              padding: 0,
-              background: 'rgba(255,255,255,0.98)',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.35rem', fontWeight: '900', marginBottom: '0.25rem', color: 'var(--text-primary)' }}>Unique visitors</h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700' }}>
-                  Grouped by IP from the app access-log window. Human and bot traffic use the same classifier as dashboard metrics.
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <button
-                  type="button"
-                  onClick={fetchUniqueVisitors}
-                  className="btn-icon"
-                  style={{ padding: '9px', borderRadius: '8px' }}
-                  title="Refresh unique visitors"
-                >
-                  <RefreshCw size={17} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUniqueOpen(false)}
-                  className="btn-icon"
-                  style={{ padding: '9px', borderRadius: '8px' }}
-                  title="Close"
-                >
-                  <X size={18} />
-                </button>
-              </div>
+          </>
+        )}
+        {uniqueOpen && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700' }}>
+                Grouped by IP from the app access-log window. Human and bot traffic use the same classifier as dashboard metrics.
+              </p>
+              <button
+                type="button"
+                onClick={fetchUniqueVisitors}
+                className="btn-icon"
+                style={{ gap: '8px', fontWeight: '800' }}
+                title="Refresh unique visitors"
+              >
+                <RefreshCw size={16} />
+                Refresh
+              </button>
             </div>
 
-            <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: '0.8rem', marginBottom: '1rem' }}>
-                {[
-                  { key: 'all', label: 'Total unique', value: uniqueSummary.total_unique, Icon: Users, color: 'var(--accent-primary)', sortKey: 'last_seen' },
-                  { key: 'human', label: 'Human IPs', value: uniqueSummary.human_unique, Icon: Globe, color: 'var(--success)', sortKey: 'last_seen' },
-                  { key: 'bot', label: 'Bot IPs', value: uniqueSummary.bot_unique, Icon: ShieldAlert, color: 'var(--danger)', sortKey: 'last_seen' },
-                  { key: 'mixed', label: 'Mixed IPs', value: uniqueSummary.mixed_unique, Icon: Activity, color: 'var(--warning)', sortKey: 'last_seen' },
-                  { key: 'total_requests', label: 'Total requests', value: uniqueSummary.total_requests, Icon: MousePointerClick, color: 'var(--accent-secondary)', sortKey: 'requests' },
-                  { key: 'human_requests', label: 'Human requests', value: uniqueSummary.human_requests, Icon: Activity, color: 'var(--success)', sortKey: 'human_requests' },
-                  { key: 'bot_requests', label: 'Bot requests', value: uniqueSummary.bot_requests, Icon: ShieldAlert, color: 'var(--danger)', sortKey: 'bot_requests' }
-                ].map(({ key, label, value, Icon, color, sortKey }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => {
-                      setUniqueFilter(key);
-                      setUniqueSort({ key: sortKey, direction: 'desc' });
-                    }}
-                    style={{
-                      border: uniqueFilter === key ? '2px solid var(--accent-primary)' : '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      padding: uniqueFilter === key ? '0.84rem 0.94rem' : '0.9rem 1rem',
-                      background: uniqueFilter === key ? '#eff6ff' : '#fff',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      boxShadow: uniqueFilter === key ? '0 8px 18px rgba(59, 130, 246, 0.12)' : 'none'
-                    }}
-                    title={`Show ${label}`}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color, fontWeight: '800', fontSize: '0.78rem', marginBottom: '0.35rem' }}>
-                      <Icon size={15} />
-                      {label}
-                    </div>
-                    <div style={{ fontSize: '1.45rem', fontWeight: '900', color: 'var(--text-primary)' }}>{value || 0}</div>
-                  </button>
-                ))}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: '0.8rem', marginBottom: '1rem' }}>
+              {[
+                { key: 'all', label: 'Total unique', value: uniqueSummary.total_unique, Icon: Users, color: 'var(--accent-primary)', sortKey: 'last_seen' },
+                { key: 'human', label: 'Human IPs', value: uniqueSummary.human_unique, Icon: Globe, color: 'var(--success)', sortKey: 'last_seen' },
+                { key: 'bot', label: 'Bot IPs', value: uniqueSummary.bot_unique, Icon: ShieldAlert, color: 'var(--danger)', sortKey: 'last_seen' },
+                { key: 'mixed', label: 'Mixed IPs', value: uniqueSummary.mixed_unique, Icon: Activity, color: 'var(--warning)', sortKey: 'last_seen' },
+                { key: 'total_requests', label: 'Total requests', value: uniqueSummary.total_requests, Icon: MousePointerClick, color: 'var(--accent-secondary)', sortKey: 'requests' },
+                { key: 'human_requests', label: 'Human requests', value: uniqueSummary.human_requests, Icon: Activity, color: 'var(--success)', sortKey: 'human_requests' },
+                { key: 'bot_requests', label: 'Bot requests', value: uniqueSummary.bot_requests, Icon: ShieldAlert, color: 'var(--danger)', sortKey: 'bot_requests' }
+              ].map(({ key, label, value, Icon, color, sortKey }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => {
+                    setUniqueFilter(key);
+                    setUniqueSort({ key: sortKey, direction: 'desc' });
+                  }}
+                  style={{
+                    border: uniqueFilter === key ? '2px solid var(--accent-primary)' : '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: uniqueFilter === key ? '0.84rem 0.94rem' : '0.9rem 1rem',
+                    background: uniqueFilter === key ? '#eff6ff' : '#fff',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    boxShadow: uniqueFilter === key ? '0 8px 18px rgba(59, 130, 246, 0.12)' : 'none'
+                  }}
+                  title={`Show ${label}`}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color, fontWeight: '800', fontSize: '0.78rem', marginBottom: '0.35rem' }}>
+                    <Icon size={15} />
+                    {label}
+                  </div>
+                  <div style={{ fontSize: '1.45rem', fontWeight: '900', color: 'var(--text-primary)' }}>{value || 0}</div>
+                </button>
+              ))}
+            </div>
+
+            {uniqueError && (
+              <div style={{ padding: '0.9rem 1rem', borderRadius: '8px', background: '#fee2e2', color: '#991b1b', fontWeight: '800', marginBottom: '1rem' }}>
+                {uniqueError}
               </div>
+            )}
 
-              {uniqueError && (
-                <div style={{ padding: '0.9rem 1rem', borderRadius: '8px', background: '#fee2e2', color: '#991b1b', fontWeight: '800', marginBottom: '1rem' }}>
-                  {uniqueError}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', fontWeight: '800' }}>
-                  Showing {sortedUniqueVisitors.length} of {uniqueVisitors.length} unique visitors - {uniqueFilterLabel}
-                </p>
-                {uniqueFilter !== 'all' && (
-                  <button
-                    type="button"
-                    className="btn-icon"
-                    onClick={() => {
-                      setUniqueFilter('all');
-                      setUniqueSort({ key: 'last_seen', direction: 'desc' });
-                    }}
-                    style={{ gap: '8px', fontWeight: '800' }}
-                    title="Clear unique visitor filter"
-                  >
-                    <RotateCcw size={15} />
-                    Reset filter
-                  </button>
-                )}
-              </div>
-
-              <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '920px' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid #e2e8f0', color: 'var(--text-secondary)', background: '#f8fafc' }}>
-                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('ip', 'IP')}</th>
-                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('classification', 'Type')}</th>
-                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('requests', 'Requests')}</th>
-                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('first_seen', 'First seen')}</th>
-                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('last_seen', 'Last seen')}</th>
-                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('agent', 'Device')}</th>
-                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('path', 'Top paths')}</th>
-                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('status', 'Status')}</th>
+            <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '920px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #e2e8f0', color: 'var(--text-secondary)', background: '#f8fafc' }}>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('ip', 'IP')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('classification', 'Type')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('requests', 'Requests')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('first_seen', 'First seen')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('last_seen', 'Last seen')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('agent', 'Device')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('path', 'Top paths')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('status', 'Status')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {uniqueLoading && uniqueVisitors.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" style={{ padding: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700' }}>Loading unique visitors...</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {uniqueLoading && uniqueVisitors.length === 0 ? (
-                      <tr>
-                        <td colSpan="8" style={{ padding: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700' }}>Loading unique visitors...</td>
-                      </tr>
-                    ) : uniqueVisitors.length === 0 ? (
-                      <tr>
-                        <td colSpan="8" style={{ padding: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700' }}>No unique visitors found in the current log window.</td>
-                      </tr>
-                    ) : sortedUniqueVisitors.length === 0 ? (
-                      <tr>
-                        <td colSpan="8" style={{ padding: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700' }}>No unique visitors match the selected filter.</td>
-                      </tr>
-                    ) : (
-                      sortedUniqueVisitors.map((visitor) => {
-                        const classificationStyle = getClassificationStyle(visitor.classification);
-                        return (
-                          <tr key={visitor.ip} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '11px 10px', fontFamily: 'monospace', fontWeight: '800' }}>{visitor.ip}</td>
-                            <td style={{ padding: '11px 10px' }}>
-                              <span style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '900', ...classificationStyle }}>
-                                {visitor.classification}
-                              </span>
-                              {visitor.bot_reason && (
-                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.72rem', marginTop: '4px' }}>{visitor.bot_reason}</div>
-                              )}
-                            </td>
-                            <td style={{ padding: '11px 10px' }}>
-                              <div style={{ fontWeight: '900' }}>{visitor.requests}</div>
-                              <div style={{ color: 'var(--text-secondary)', fontSize: '0.76rem' }}>
-                                H {visitor.human_requests} / B {visitor.bot_requests}
-                              </div>
-                            </td>
-                            <td style={{ padding: '11px 10px', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
-                              <Clock size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
-                              {formatAccessTime(visitor.first_seen)}
-                            </td>
-                            <td style={{ padding: '11px 10px', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
-                              <Clock size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
-                              {formatAccessTime(visitor.last_seen)}
-                            </td>
-                            <td style={{ padding: '11px 10px', fontWeight: '800' }}>{visitor.agent}</td>
-                            <td style={{ padding: '11px 10px', color: 'var(--text-secondary)', fontSize: '0.78rem', maxWidth: '260px' }}>
-                              {(visitor.paths || []).map((path) => `${path.value} (${path.count})`).join(', ') || '-'}
-                            </td>
-                            <td style={{ padding: '11px 10px', color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
-                              {(visitor.statuses || []).map((status) => `${status.value} (${status.count})`).join(', ') || '-'}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                  ) : uniqueVisitors.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" style={{ padding: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700' }}>No unique visitors found in the current log window.</td>
+                    </tr>
+                  ) : sortedUniqueVisitors.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" style={{ padding: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700' }}>No unique visitors match the selected filter.</td>
+                    </tr>
+                  ) : (
+                    sortedUniqueVisitors.map((visitor) => {
+                      const classificationStyle = getClassificationStyle(visitor.classification);
+                      return (
+                        <tr key={visitor.ip} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '11px 10px', fontFamily: 'monospace', fontWeight: '800' }}>{visitor.ip}</td>
+                          <td style={{ padding: '11px 10px' }}>
+                            <span style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '900', ...classificationStyle }}>
+                              {visitor.classification}
+                            </span>
+                            {visitor.bot_reason && (
+                              <div style={{ color: 'var(--text-secondary)', fontSize: '0.72rem', marginTop: '4px' }}>{visitor.bot_reason}</div>
+                            )}
+                          </td>
+                          <td style={{ padding: '11px 10px' }}>
+                            <div style={{ fontWeight: '900' }}>{visitor.requests}</div>
+                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.76rem' }}>
+                              H {visitor.human_requests} / B {visitor.bot_requests}
+                            </div>
+                          </td>
+                          <td style={{ padding: '11px 10px', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                            <Clock size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
+                            {formatAccessTime(visitor.first_seen)}
+                          </td>
+                          <td style={{ padding: '11px 10px', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                            <Clock size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
+                            {formatAccessTime(visitor.last_seen)}
+                          </td>
+                          <td style={{ padding: '11px 10px', fontWeight: '800' }}>{visitor.agent}</td>
+                          <td style={{ padding: '11px 10px', color: 'var(--text-secondary)', fontSize: '0.78rem', maxWidth: '260px' }}>
+                            {(visitor.paths || []).map((path) => `${path.value} (${path.count})`).join(', ') || '-'}
+                          </td>
+                          <td style={{ padding: '11px 10px', color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+                            {(visitor.statuses || []).map((status) => `${status.value} (${status.count})`).join(', ') || '-'}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Terminal logs */}
       <div style={{ marginTop: '2rem', height: '400px' }}>
