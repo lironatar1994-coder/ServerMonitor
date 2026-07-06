@@ -55,6 +55,19 @@ const getClassificationStyle = (classification) => {
   return { background: '#d1fae5', color: '#065f46' };
 };
 
+const getClassificationLabel = (classification) => {
+  if (classification === 'Bot') return 'בוט';
+  if (classification === 'Mixed') return 'מעורב';
+  return 'אנושי';
+};
+
+const getBotReasonLabel = (reason) => {
+  if (reason === 'missing user agent') return 'חסר User-Agent';
+  if (reason === 'bot user agent') return 'User-Agent של בוט';
+  if (reason === 'scanner path') return 'נתיב סריקה חשוד';
+  return reason;
+};
+
 const DefaultWebTemplate = ({ app }) => {
   const [visitors, setVisitors] = useState([]);
   const [uniqueVisitors, setUniqueVisitors] = useState([]);
@@ -235,14 +248,14 @@ const DefaultWebTemplate = ({ app }) => {
     });
   }, [filteredUniqueVisitors, uniqueSort]);
   const uniqueFilterLabel = {
-    all: 'Total unique',
-    human: 'Human IPs',
-    bot: 'Bot IPs',
-    mixed: 'Mixed IPs',
-    total_requests: 'Total requests',
-    human_requests: 'Human requests',
-    bot_requests: 'Bot requests'
-  }[uniqueFilter] || 'Total unique';
+    all: 'כל המבקרים הייחודיים',
+    human: 'מבקרים אנושיים',
+    bot: 'בוטים',
+    mixed: 'מעורבים',
+    total_requests: 'כל הבקשות',
+    human_requests: 'בקשות אנושיות',
+    bot_requests: 'בקשות בוטים'
+  }[uniqueFilter] || 'כל המבקרים הייחודיים';
 
   const updateVisitorFilter = (key, value) => {
     setVisitorFilters((current) => ({ ...current, [key]: value }));
@@ -312,7 +325,7 @@ const DefaultWebTemplate = ({ app }) => {
           fontWeight: '900',
           padding: 0
         }}
-        title={`Sort by ${label}`}
+        title={`מיון לפי ${label}`}
       >
         <span>{label}</span>
         <Icon size={14} strokeWidth={2.4} />
@@ -404,14 +417,16 @@ const DefaultWebTemplate = ({ app }) => {
 
       {/* Access Logs List */}
       <div className="glass-card" style={{ padding: '2rem', marginTop: '2rem' }}>
-        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold' }}>כניסות אחרונות (עד 100 כניסות אחרונות בזמן אמת)</h2>
+        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold' }}>
+          {uniqueOpen ? 'מבקרים ייחודיים' : 'כניסות אחרונות (עד 100 כניסות אחרונות בזמן אמת)'}
+        </h2>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700', display: uniqueOpen ? 'none' : 'block' }}>
             מציג {filteredVisitors.length} מתוך {visitors.length} כניסות שנמצאו
           </p>
           {uniqueOpen && (
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700' }}>
-              Showing {sortedUniqueVisitors.length} of {uniqueVisitors.length} unique visitors - {uniqueFilterLabel}
+              מציג {sortedUniqueVisitors.length} מתוך {uniqueVisitors.length} מבקרים ייחודיים - {uniqueFilterLabel}
             </p>
           )}
           <button
@@ -419,10 +434,10 @@ const DefaultWebTemplate = ({ app }) => {
             onClick={uniqueOpen ? () => setUniqueOpen(false) : openUniqueVisitors}
             className={uniqueOpen ? 'btn-icon' : 'btn-primary'}
             style={{ padding: '9px 14px', gap: '8px', fontWeight: '800' }}
-            title={uniqueOpen ? 'Show recent entries' : 'Grouped unique visitor metrics'}
+            title={uniqueOpen ? 'הצג כניסות אחרונות' : 'הצג מדדי מבקרים ייחודיים'}
           >
             {uniqueOpen ? <Activity size={16} /> : <Users size={16} />}
-            {uniqueOpen ? 'Recent entries' : 'Unique visitors'}
+            {uniqueOpen ? 'כניסות אחרונות' : 'מבקרים ייחודיים'}
           </button>
           {!uniqueOpen && hasActiveVisitorFilters && (
             <button
@@ -560,31 +575,31 @@ const DefaultWebTemplate = ({ app }) => {
         )}
         {uniqueOpen && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', direction: 'rtl', textAlign: 'right' }}>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700' }}>
-                Grouped by IP from the app access-log window. Human and bot traffic use the same classifier as dashboard metrics.
+                מקובץ לפי כתובת IP מתוך חלון לוג הכניסות של האפליקציה. תעבורה אנושית ובוטים מסווגים באותה שיטה של מדדי הדשבורד.
               </p>
               <button
                 type="button"
                 onClick={fetchUniqueVisitors}
                 className="btn-icon"
                 style={{ gap: '8px', fontWeight: '800' }}
-                title="Refresh unique visitors"
+                title="רענון מבקרים ייחודיים"
               >
                 <RefreshCw size={16} />
-                Refresh
+                רענון
               </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: '0.8rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: '0.8rem', marginBottom: '1rem', direction: 'rtl' }}>
               {[
-                { key: 'all', label: 'Total unique', value: uniqueSummary.total_unique, Icon: Users, color: 'var(--accent-primary)', sortKey: 'last_seen' },
-                { key: 'human', label: 'Human IPs', value: uniqueSummary.human_unique, Icon: Globe, color: 'var(--success)', sortKey: 'last_seen' },
-                { key: 'bot', label: 'Bot IPs', value: uniqueSummary.bot_unique, Icon: ShieldAlert, color: 'var(--danger)', sortKey: 'last_seen' },
-                { key: 'mixed', label: 'Mixed IPs', value: uniqueSummary.mixed_unique, Icon: Activity, color: 'var(--warning)', sortKey: 'last_seen' },
-                { key: 'total_requests', label: 'Total requests', value: uniqueSummary.total_requests, Icon: MousePointerClick, color: 'var(--accent-secondary)', sortKey: 'requests' },
-                { key: 'human_requests', label: 'Human requests', value: uniqueSummary.human_requests, Icon: Activity, color: 'var(--success)', sortKey: 'human_requests' },
-                { key: 'bot_requests', label: 'Bot requests', value: uniqueSummary.bot_requests, Icon: ShieldAlert, color: 'var(--danger)', sortKey: 'bot_requests' }
+                { key: 'all', label: 'סה״כ ייחודיים', value: uniqueSummary.total_unique, Icon: Users, color: 'var(--accent-primary)', sortKey: 'last_seen' },
+                { key: 'human', label: 'אנושיים', value: uniqueSummary.human_unique, Icon: Globe, color: 'var(--success)', sortKey: 'last_seen' },
+                { key: 'bot', label: 'בוטים', value: uniqueSummary.bot_unique, Icon: ShieldAlert, color: 'var(--danger)', sortKey: 'last_seen' },
+                { key: 'mixed', label: 'מעורבים', value: uniqueSummary.mixed_unique, Icon: Activity, color: 'var(--warning)', sortKey: 'last_seen' },
+                { key: 'total_requests', label: 'כל הבקשות', value: uniqueSummary.total_requests, Icon: MousePointerClick, color: 'var(--accent-secondary)', sortKey: 'requests' },
+                { key: 'human_requests', label: 'בקשות אנושיות', value: uniqueSummary.human_requests, Icon: Activity, color: 'var(--success)', sortKey: 'human_requests' },
+                { key: 'bot_requests', label: 'בקשות בוטים', value: uniqueSummary.bot_requests, Icon: ShieldAlert, color: 'var(--danger)', sortKey: 'bot_requests' }
               ].map(({ key, label, value, Icon, color, sortKey }) => (
                 <button
                   key={key}
@@ -599,10 +614,10 @@ const DefaultWebTemplate = ({ app }) => {
                     padding: uniqueFilter === key ? '0.84rem 0.94rem' : '0.9rem 1rem',
                     background: uniqueFilter === key ? '#eff6ff' : '#fff',
                     cursor: 'pointer',
-                    textAlign: 'left',
+                    textAlign: 'right',
                     boxShadow: uniqueFilter === key ? '0 8px 18px rgba(59, 130, 246, 0.12)' : 'none'
                   }}
-                  title={`Show ${label}`}
+                  title={`הצג ${label}`}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color, fontWeight: '800', fontSize: '0.78rem', marginBottom: '0.35rem' }}>
                     <Icon size={15} />
@@ -619,32 +634,32 @@ const DefaultWebTemplate = ({ app }) => {
               </div>
             )}
 
-            <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '920px' }}>
+            <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', direction: 'rtl' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', minWidth: '920px' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #e2e8f0', color: 'var(--text-secondary)', background: '#f8fafc' }}>
-                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('ip', 'IP')}</th>
-                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('classification', 'Type')}</th>
-                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('requests', 'Requests')}</th>
-                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('first_seen', 'First seen')}</th>
-                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('last_seen', 'Last seen')}</th>
-                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('agent', 'Device')}</th>
-                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('path', 'Top paths')}</th>
-                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('status', 'Status')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('ip', 'כתובת IP')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('classification', 'סוג')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('requests', 'בקשות')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('first_seen', 'נראה לראשונה')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('last_seen', 'נראה לאחרונה')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('agent', 'מכשיר')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('path', 'נתיבים מובילים')}</th>
+                    <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('status', 'סטטוס')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {uniqueLoading && uniqueVisitors.length === 0 ? (
                     <tr>
-                      <td colSpan="8" style={{ padding: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700' }}>Loading unique visitors...</td>
+                      <td colSpan="8" style={{ padding: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700' }}>טוען מבקרים ייחודיים...</td>
                     </tr>
                   ) : uniqueVisitors.length === 0 ? (
                     <tr>
-                      <td colSpan="8" style={{ padding: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700' }}>No unique visitors found in the current log window.</td>
+                      <td colSpan="8" style={{ padding: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700' }}>לא נמצאו מבקרים ייחודיים בחלון הלוג הנוכחי.</td>
                     </tr>
                   ) : sortedUniqueVisitors.length === 0 ? (
                     <tr>
-                      <td colSpan="8" style={{ padding: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700' }}>No unique visitors match the selected filter.</td>
+                      <td colSpan="8" style={{ padding: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700' }}>אין מבקרים ייחודיים שמתאימים לסינון הנבחר.</td>
                     </tr>
                   ) : (
                     sortedUniqueVisitors.map((visitor) => {
@@ -654,16 +669,16 @@ const DefaultWebTemplate = ({ app }) => {
                           <td style={{ padding: '11px 10px', fontFamily: 'monospace', fontWeight: '800' }}>{visitor.ip}</td>
                           <td style={{ padding: '11px 10px' }}>
                             <span style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '900', ...classificationStyle }}>
-                              {visitor.classification}
+                              {getClassificationLabel(visitor.classification)}
                             </span>
                             {visitor.bot_reason && (
-                              <div style={{ color: 'var(--text-secondary)', fontSize: '0.72rem', marginTop: '4px' }}>{visitor.bot_reason}</div>
+                              <div style={{ color: 'var(--text-secondary)', fontSize: '0.72rem', marginTop: '4px' }}>{getBotReasonLabel(visitor.bot_reason)}</div>
                             )}
                           </td>
                           <td style={{ padding: '11px 10px' }}>
                             <div style={{ fontWeight: '900' }}>{visitor.requests}</div>
                             <div style={{ color: 'var(--text-secondary)', fontSize: '0.76rem' }}>
-                              H {visitor.human_requests} / B {visitor.bot_requests}
+                              אנושי {visitor.human_requests} / בוט {visitor.bot_requests}
                             </div>
                           </td>
                           <td style={{ padding: '11px 10px', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
