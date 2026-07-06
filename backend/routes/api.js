@@ -4,7 +4,7 @@ const { authenticateToken } = require('./auth');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
-const { getRecentVisitors } = require('../logParser');
+const { getRecentVisitors, getUniqueVisitors } = require('../logParser');
 
 const router = express.Router();
 const WHATSAPP_STATUS_PATH = process.env.WHATSAPP_STATUS_PATH || '/root/Vee/backend/whatsapp_status.json';
@@ -348,6 +348,52 @@ router.get('/:id/visitors', (req, res) => {
     try {
         const visitors = getRecentVisitors(app.log_path, app.name, app.log_filter, 100);
         res.json({ is_whatsapp: false, visitors });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET grouped unique visitors for app
+router.get('/:id/unique-visitors', (req, res) => {
+    const app = db.prepare('SELECT * FROM apps WHERE id = ?').get(req.params.id);
+    if (!app) return res.status(404).json({ error: 'App not found' });
+
+    if (app.pm2_name === 'vee-whatsapp-worker') {
+        return res.json({
+            is_whatsapp: true,
+            summary: {
+                total_unique: 0,
+                human_unique: 0,
+                bot_unique: 0,
+                mixed_unique: 0,
+                total_requests: 0,
+                human_requests: 0,
+                bot_requests: 0
+            },
+            visitors: []
+        });
+    }
+
+    if (!app.log_path || !fs.existsSync(app.log_path)) {
+        return res.json({
+            is_whatsapp: false,
+            summary: {
+                total_unique: 0,
+                human_unique: 0,
+                bot_unique: 0,
+                mixed_unique: 0,
+                total_requests: 0,
+                human_requests: 0,
+                bot_requests: 0
+            },
+            visitors: []
+        });
+    }
+
+    try {
+        const uniqueVisitors = getUniqueVisitors(app.log_path, app.name, app.log_filter, 250);
+        res.json({ is_whatsapp: false, ...uniqueVisitors });
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: e.message });
