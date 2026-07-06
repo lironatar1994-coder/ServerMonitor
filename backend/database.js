@@ -20,7 +20,11 @@ db.exec(`
         pm2_name TEXT,
         log_path TEXT,
         status TEXT DEFAULT 'unknown',
-        last_checked DATETIME DEFAULT CURRENT_TIMESTAMP
+        last_checked DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_alerted_at DATETIME,
+        health_port INTEGER,
+        health_path TEXT,
+        log_filter TEXT
     );
 
     CREATE TABLE IF NOT EXISTS metrics (
@@ -42,19 +46,6 @@ if (!adminExists) {
     const hash = bcrypt.hashSync('admin123', 10);
     db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run('admin', hash);
     console.log('Default admin user created (admin/admin123)');
-}
-
-// Insert Pixel Dungeon app if not exists
-const pdExists = db.prepare('SELECT id FROM apps WHERE name = ?').get('Pixel Dungeon');
-if (!pdExists) {
-    db.prepare('INSERT INTO apps (name, url, pm2_name, log_path, log_filter) VALUES (?, ?, ?, ?, ?)').run(
-        'Pixel Dungeon',
-        'https://vee-app.co.il/pixel-dungeon/',
-        null,
-        '/var/log/nginx/access.log',
-        '/pixel-dungeon/'
-    );
-    console.log('Pixel Dungeon app entry created in database.');
 }
 
 // Programmatic Migrations for schema updates
@@ -84,6 +75,32 @@ try {
     console.log('Added column log_filter to apps table');
 } catch (e) {
     // Column already exists
+}
+
+// Insert Pixel Dungeon app if not exists
+const pdExists = db.prepare('SELECT id FROM apps WHERE name = ?').get('Pixel Dungeon');
+if (!pdExists) {
+    db.prepare('INSERT INTO apps (name, url, pm2_name, log_path, log_filter) VALUES (?, ?, ?, ?, ?)').run(
+        'Pixel Dungeon',
+        'https://vee-app.co.il/pixel-dungeon/',
+        null,
+        '/var/log/nginx/access.log',
+        '/pixel-dungeon/'
+    );
+    console.log('Pixel Dungeon app entry created in database.');
+}
+
+// Insert Miryam Zelig static site if not exists
+const miryamExists = db.prepare('SELECT id FROM apps WHERE name = ?').get('Miryam Zelig');
+if (!miryamExists) {
+    db.prepare('INSERT INTO apps (name, url, pm2_name, log_path, log_filter) VALUES (?, ?, ?, ?, ?)').run(
+        'Miryam Zelig',
+        'https://vee-app.co.il/Miryam_Zelig/',
+        null,
+        '/var/log/nginx/access.log',
+        '/Miryam_Zelig|/miryam_zelig'
+    );
+    console.log('Miryam Zelig app entry created in database.');
 }
 
 module.exports = db;

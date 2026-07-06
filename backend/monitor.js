@@ -3,71 +3,11 @@ const fs = require('fs');
 const db = require('./database');
 const pm2 = require('pm2');
 const http = require('http');
+const { parseNginxLogMetrics } = require('./logParser');
 
 console.log('Background Monitor Started...');
 
 const monitorInterval = 10 * 60 * 1000; // Check once every 10 minutes
-
-function parseNginxLog(logPath, appName, logFilter) {
-    if (!logPath || !fs.existsSync(logPath)) return { requests: 0, attacks: 0, visitors: 0 };
-    
-    try {
-        const fd = fs.openSync(logPath, 'r');
-        const stat = fs.fstatSync(fd);
-        const bufferSize = Math.min(stat.size, 65536); // Read last 64KB
-        const buffer = Buffer.alloc(bufferSize);
-        const position = Math.max(0, stat.size - bufferSize);
-        
-        fs.readSync(fd, buffer, 0, bufferSize, position);
-        fs.closeSync(fd);
-        
-        const logData = buffer.toString('utf-8');
-        const lines = logData.split('\n').filter(l => l.trim().length > 0);
-        
-        let requests = 0;
-        let attacks = 0;
-        const ips = new Set();
-        
-        lines.forEach(line => {
-            let isTargetApp = false;
-            
-            if (logFilter) {
-                if (line.includes(logFilter)) {
-                    isTargetApp = true;
-                }
-            } else if (appName === 'PDF Generator') {
-                if (line.includes('/text-to-pdf')) {
-                    isTargetApp = true;
-                }
-            } else if (appName === 'Vee Main App') {
-                if (!line.includes('/text-to-pdf') && !line.includes('/serve-monitor')) {
-                    isTargetApp = true;
-                }
-            } else {
-                isTargetApp = true;
-            }
-            
-            if (isTargetApp) {
-                requests++;
-                const ipMatch = line.match(/^(\d+\.\d+\.\d+\.\d+)/);
-                if (ipMatch) ips.add(ipMatch[1]);
-                
-                if (line.includes('PROPFIND') || line.includes('sql') || line.includes('eval(') || line.includes('etc/passwd')) {
-                    attacks++;
-                }
-            }
-        });
-        
-        return {
-            requests: requests,
-            attacks: attacks,
-            visitors: ips.size
-        };
-    } catch (error) {
-        console.error('Error parsing log:', error.message);
-        return { requests: 0, attacks: 0, visitors: 0 };
-    }
-}
 
 function checkPm2Status(pm2Name) {
     return new Promise((resolve) => {
@@ -216,7 +156,7 @@ async function runMonitorCycle() {
             
             // 3. Parse logs
             if (app.log_path) {
-                metrics = parseNginxLog(app.log_path, app.name, app.log_filter);
+                metrics = parseNginxLogMetrics(app.log_path, app.name, app.log_filter);
             } else if (app.name === 'SSH Security') {
                 metrics.attacks = getFail2banBannedCount();
                 status = 'online';

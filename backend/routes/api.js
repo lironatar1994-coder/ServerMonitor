@@ -4,6 +4,7 @@ const { authenticateToken } = require('./auth');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
+const { getRecentVisitors } = require('../logParser');
 
 const router = express.Router();
 const WHATSAPP_STATUS_PATH = process.env.WHATSAPP_STATUS_PATH || '/root/Vee/backend/whatsapp_status.json';
@@ -345,71 +346,7 @@ router.get('/:id/visitors', (req, res) => {
     }
     
     try {
-        const fd = fs.openSync(app.log_path, 'r');
-        const stat = fs.fstatSync(fd);
-        // Read a larger tail window so busy shared logs still yield up to 100 matching hits.
-        const bufferSize = Math.min(stat.size, 2097152);
-        const buffer = Buffer.alloc(bufferSize);
-        const position = Math.max(0, stat.size - bufferSize);
-        
-        fs.readSync(fd, buffer, 0, bufferSize, position);
-        fs.closeSync(fd);
-        
-        const logData = buffer.toString('utf-8');
-        const lines = logData.split('\n').filter(Boolean);
-        
-        const visitors = [];
-        
-        // Parse from bottom to top (newest first)
-        for (let i = lines.length - 1; i >= 0; i--) {
-            const line = lines[i];
-            let isTargetApp = false;
-            
-            if (app.log_filter) {
-                if (line.includes(app.log_filter)) isTargetApp = true;
-            } else if (app.name === 'PDF Generator') {
-                if (line.includes('/text-to-pdf')) isTargetApp = true;
-            } else if (app.name === 'Vee Main App') {
-                if (!line.includes('/text-to-pdf') && !line.includes('/serve-monitor')) isTargetApp = true;
-            } else {
-                isTargetApp = true;
-            }
-            
-            if (isTargetApp) {
-                // Regex to parse Nginx log line
-                // Format: IP - - [date] "method path proto" status bytes "referrer" "user-agent"
-                const match = line.match(/^(\S+)\s+-\s+-\s+\[([^\]]+)\]\s+\"(\w+)\s+([^\s?]+)[^\"]*\"\s+(\d+)/);
-                if (match) {
-                    const [_, ip, timestamp, method, path, status] = match;
-                    
-                    // Simple user agent parse
-                    let agent = 'Unknown';
-                    const uaMatch = line.match(/\"[^\"]*\"\s+\"([^\"]+)\"$/);
-                    if (uaMatch && uaMatch[1]) {
-                        const ua = uaMatch[1];
-                        if (ua.includes('Mobile') || ua.includes('Android') || ua.includes('iPhone')) {
-                            agent = 'Mobile';
-                        } else if (ua.includes('Windows') || ua.includes('Macintosh') || ua.includes('Linux')) {
-                            agent = 'Desktop';
-                        } else if (ua.includes('bot') || ua.includes('crawler') || ua.includes('Spider')) {
-                            agent = 'Bot';
-                        }
-                    }
-                    
-                    visitors.push({
-                        ip,
-                        timestamp,
-                        method,
-                        path,
-                        status: parseInt(status, 10),
-                        agent
-                    });
-                    
-                    if (visitors.length >= 100) break;
-                }
-            }
-        }
-        
+        const visitors = getRecentVisitors(app.log_path, app.name, app.log_filter, 100);
         res.json({ is_whatsapp: false, visitors });
     } catch (e) {
         console.error(e);

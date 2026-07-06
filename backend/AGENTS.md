@@ -10,6 +10,7 @@
 - `server.js` owns middleware, API mounting, frontend static serving, and process startup.
 - `database.js` owns schema creation, migrations, default users, and seed monitor records.
 - `monitor.js` owns background health, PM2, log, metric, and alert collection.
+- `logParser.js` owns Nginx access-log filtering, visitor parsing, and heuristic bot classification.
 - `routes/` owns HTTP route handlers and request/response contracts.
 - `monitor.db` is runtime state and must not be treated as a source schema definition.
 
@@ -19,6 +20,7 @@
 - Keep schema migrations idempotent and safe against existing production databases.
 - Do not hard-code local-only paths into server monitoring logic unless they are explicitly production paths.
 - Avoid logging secrets or authentication tokens.
+- For web apps, `metrics.visitors` and `metrics.requests` are human-looking traffic only; bot-looking traffic should remain visible in live visitor rows as `agent: "Bot"` rather than being counted as visitors.
 
 ## Work Guidance
 
