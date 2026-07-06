@@ -13,40 +13,63 @@ const emptyUniqueSummary = {
   bot_requests: 0
 };
 
-const formatAccessTime = (timestamp) => {
-  if (!timestamp) return '-';
-  const parts = timestamp.split(':');
-  if (parts.length >= 4) {
-    return `${parts[0]} ${parts[1]}:${parts[2]}:${parts[3].split(' ')[0]}`;
+const accessLogMonthMap = {
+  Jan: 0,
+  Feb: 1,
+  Mar: 2,
+  Apr: 3,
+  May: 4,
+  Jun: 5,
+  Jul: 6,
+  Aug: 7,
+  Sep: 8,
+  Oct: 9,
+  Nov: 10,
+  Dec: 11
+};
+
+const parseAccessTimestamp = (timestamp) => {
+  if (!timestamp) return null;
+  const timestampValue = timestamp.toString();
+  const accessLogMatch = timestampValue.match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2})(?:\s+([+-])(\d{2})(\d{2}))?/);
+  if (accessLogMatch) {
+    const [, day, month, year, hour, minute, second, offsetSign, offsetHour, offsetMinute] = accessLogMatch;
+    let utcValue = Date.UTC(Number(year), accessLogMonthMap[month] ?? 0, Number(day), Number(hour), Number(minute), Number(second));
+    if (offsetSign && offsetHour && offsetMinute) {
+      const offsetMs = ((Number(offsetHour) * 60) + Number(offsetMinute)) * 60 * 1000;
+      utcValue += offsetSign === '+' ? -offsetMs : offsetMs;
+    }
+    return new Date(utcValue);
   }
-  return timestamp;
+
+  const parsed = new Date(timestampValue);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatAccessDateTimeParts = (timestamp) => {
+  const date = parseAccessTimestamp(timestamp);
+  if (!date) return null;
+
+  return {
+    date: date.toLocaleDateString('he-IL', {
+      timeZone: 'Asia/Jerusalem',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }),
+    time: date.toLocaleTimeString('he-IL', {
+      timeZone: 'Asia/Jerusalem',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
+  };
 };
 
 const getAccessTimestampValue = (timestamp) => {
-  if (!timestamp) return 0;
-  const monthMap = {
-    Jan: 0,
-    Feb: 1,
-    Mar: 2,
-    Apr: 3,
-    May: 4,
-    Jun: 5,
-    Jul: 6,
-    Aug: 7,
-    Sep: 8,
-    Oct: 9,
-    Nov: 10,
-    Dec: 11
-  };
-  const timestampValue = timestamp.toString();
-  const accessLogMatch = timestampValue.match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2})/);
-  if (accessLogMatch) {
-    const [, day, month, year, hour, minute, second] = accessLogMatch;
-    return Date.UTC(Number(year), monthMap[month] ?? 0, Number(day), Number(hour), Number(minute), Number(second));
-  }
-
-  const parsed = Date.parse(timestampValue);
-  return Number.isNaN(parsed) ? 0 : parsed;
+  const date = parseAccessTimestamp(timestamp);
+  return date ? date.getTime() : 0;
 };
 
 const getClassificationStyle = (classification) => {
@@ -66,6 +89,18 @@ const getBotReasonLabel = (reason) => {
   if (reason === 'bot user agent') return 'User-Agent של בוט';
   if (reason === 'scanner path') return 'נתיב סריקה חשוד';
   return reason;
+};
+
+const renderAccessDateTime = (timestamp) => {
+  const parts = formatAccessDateTimeParts(timestamp);
+  if (!parts) return '-';
+
+  return (
+    <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '2px', lineHeight: 1.25 }}>
+      <span style={{ fontWeight: '800', color: 'var(--text-primary)' }}>{parts.date}</span>
+      <span style={{ fontFamily: 'monospace', direction: 'ltr', unicodeBidi: 'plaintext' }}>{parts.time}</span>
+    </div>
+  );
 };
 
 const DefaultWebTemplate = ({ app }) => {
@@ -683,11 +718,11 @@ const DefaultWebTemplate = ({ app }) => {
                           </td>
                           <td style={{ padding: '11px 10px', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
                             <Clock size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
-                            {formatAccessTime(visitor.first_seen)}
+                            {renderAccessDateTime(visitor.first_seen)}
                           </td>
                           <td style={{ padding: '11px 10px', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
                             <Clock size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
-                            {formatAccessTime(visitor.last_seen)}
+                            {renderAccessDateTime(visitor.last_seen)}
                           </td>
                           <td style={{ padding: '11px 10px', fontWeight: '800' }}>{visitor.agent}</td>
                           <td style={{ padding: '11px 10px', color: 'var(--text-secondary)', fontSize: '0.78rem', maxWidth: '260px' }}>
