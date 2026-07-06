@@ -22,6 +22,33 @@ const formatAccessTime = (timestamp) => {
   return timestamp;
 };
 
+const getAccessTimestampValue = (timestamp) => {
+  if (!timestamp) return 0;
+  const monthMap = {
+    Jan: 0,
+    Feb: 1,
+    Mar: 2,
+    Apr: 3,
+    May: 4,
+    Jun: 5,
+    Jul: 6,
+    Aug: 7,
+    Sep: 8,
+    Oct: 9,
+    Nov: 10,
+    Dec: 11
+  };
+  const timestampValue = timestamp.toString();
+  const accessLogMatch = timestampValue.match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2})/);
+  if (accessLogMatch) {
+    const [, day, month, year, hour, minute, second] = accessLogMatch;
+    return Date.UTC(Number(year), monthMap[month] ?? 0, Number(day), Number(hour), Number(minute), Number(second));
+  }
+
+  const parsed = Date.parse(timestampValue);
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
 const getClassificationStyle = (classification) => {
   if (classification === 'Bot') return { background: '#fee2e2', color: '#991b1b' };
   if (classification === 'Mixed') return { background: '#fef3c7', color: '#92400e' };
@@ -35,6 +62,8 @@ const DefaultWebTemplate = ({ app }) => {
   const [uniqueOpen, setUniqueOpen] = useState(false);
   const [uniqueLoading, setUniqueLoading] = useState(false);
   const [uniqueError, setUniqueError] = useState('');
+  const [uniqueFilter, setUniqueFilter] = useState('all');
+  const [uniqueSort, setUniqueSort] = useState({ key: 'last_seen', direction: 'desc' });
   const [loading, setLoading] = useState(true);
   const [visitorFilters, setVisitorFilters] = useState({
     search: '',
@@ -171,6 +200,49 @@ const DefaultWebTemplate = ({ app }) => {
     });
   }, [filteredVisitors, visitorSort]);
   const hasActiveVisitorFilters = Object.values(visitorFilters).some((value) => value !== '' && value !== 'all');
+  const filteredUniqueVisitors = useMemo(() => {
+    return uniqueVisitors.filter((visitor) => {
+      if (uniqueFilter === 'human') return visitor.human_requests > 0;
+      if (uniqueFilter === 'bot') return visitor.bot_requests > 0;
+      if (uniqueFilter === 'mixed') return visitor.classification === 'Mixed';
+      if (uniqueFilter === 'human_requests') return visitor.human_requests > 0;
+      if (uniqueFilter === 'bot_requests') return visitor.bot_requests > 0;
+      return true;
+    });
+  }, [uniqueFilter, uniqueVisitors]);
+  const sortedUniqueVisitors = useMemo(() => {
+    const getPrimaryPath = (visitor) => visitor.paths?.[0]?.value || '';
+    const getPrimaryStatus = (visitor) => visitor.statuses?.[0]?.value || '';
+    const getSortValue = (visitor) => {
+      if (uniqueSort.key === 'requests') return Number(visitor.requests) || 0;
+      if (uniqueSort.key === 'human_requests') return Number(visitor.human_requests) || 0;
+      if (uniqueSort.key === 'bot_requests') return Number(visitor.bot_requests) || 0;
+      if (uniqueSort.key === 'first_seen') return getAccessTimestampValue(visitor.first_seen);
+      if (uniqueSort.key === 'last_seen') return getAccessTimestampValue(visitor.last_seen);
+      if (uniqueSort.key === 'path') return getPrimaryPath(visitor).toLowerCase();
+      if (uniqueSort.key === 'status') return getPrimaryStatus(visitor).toLowerCase();
+      return (visitor[uniqueSort.key] || '').toString().toLowerCase();
+    };
+
+    return [...filteredUniqueVisitors].sort((left, right) => {
+      const leftValue = getSortValue(left);
+      const rightValue = getSortValue(right);
+      const result = typeof leftValue === 'number' && typeof rightValue === 'number'
+        ? leftValue - rightValue
+        : leftValue.localeCompare(rightValue, 'en', { numeric: true, sensitivity: 'base' });
+
+      return uniqueSort.direction === 'asc' ? result : -result;
+    });
+  }, [filteredUniqueVisitors, uniqueSort]);
+  const uniqueFilterLabel = {
+    all: 'Total unique',
+    human: 'Human IPs',
+    bot: 'Bot IPs',
+    mixed: 'Mixed IPs',
+    total_requests: 'Total requests',
+    human_requests: 'Human requests',
+    bot_requests: 'Bot requests'
+  }[uniqueFilter] || 'Total unique';
 
   const updateVisitorFilter = (key, value) => {
     setVisitorFilters((current) => ({ ...current, [key]: value }));
@@ -207,6 +279,40 @@ const DefaultWebTemplate = ({ app }) => {
           padding: 0
         }}
         title={`מיון לפי ${label}`}
+      >
+        <span>{label}</span>
+        <Icon size={14} strokeWidth={2.4} />
+      </button>
+    );
+  };
+
+  const updateUniqueSort = (key) => {
+    setUniqueSort((current) => ({
+      key,
+      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const renderUniqueSortHeader = (key, label) => {
+    const isActive = uniqueSort.key === key;
+    const Icon = isActive ? (uniqueSort.direction === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
+
+    return (
+      <button
+        type="button"
+        onClick={() => updateUniqueSort(key)}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          color: isActive ? 'var(--accent-primary)' : 'inherit',
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontWeight: '900',
+          padding: 0
+        }}
+        title={`Sort by ${label}`}
       >
         <span>{label}</span>
         <Icon size={14} strokeWidth={2.4} />
@@ -507,20 +613,38 @@ const DefaultWebTemplate = ({ app }) => {
             <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: '0.8rem', marginBottom: '1rem' }}>
                 {[
-                  ['Total unique', uniqueSummary.total_unique, Users, 'var(--accent-primary)'],
-                  ['Human IPs', uniqueSummary.human_unique, Globe, 'var(--success)'],
-                  ['Bot IPs', uniqueSummary.bot_unique, ShieldAlert, 'var(--danger)'],
-                  ['Total requests', uniqueSummary.total_requests, MousePointerClick, 'var(--accent-secondary)'],
-                  ['Human requests', uniqueSummary.human_requests, Activity, 'var(--success)'],
-                  ['Bot requests', uniqueSummary.bot_requests, ShieldAlert, 'var(--danger)']
-                ].map(([label, value, Icon, color]) => (
-                  <div key={label} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.9rem 1rem', background: '#fff' }}>
+                  { key: 'all', label: 'Total unique', value: uniqueSummary.total_unique, Icon: Users, color: 'var(--accent-primary)', sortKey: 'last_seen' },
+                  { key: 'human', label: 'Human IPs', value: uniqueSummary.human_unique, Icon: Globe, color: 'var(--success)', sortKey: 'last_seen' },
+                  { key: 'bot', label: 'Bot IPs', value: uniqueSummary.bot_unique, Icon: ShieldAlert, color: 'var(--danger)', sortKey: 'last_seen' },
+                  { key: 'mixed', label: 'Mixed IPs', value: uniqueSummary.mixed_unique, Icon: Activity, color: 'var(--warning)', sortKey: 'last_seen' },
+                  { key: 'total_requests', label: 'Total requests', value: uniqueSummary.total_requests, Icon: MousePointerClick, color: 'var(--accent-secondary)', sortKey: 'requests' },
+                  { key: 'human_requests', label: 'Human requests', value: uniqueSummary.human_requests, Icon: Activity, color: 'var(--success)', sortKey: 'human_requests' },
+                  { key: 'bot_requests', label: 'Bot requests', value: uniqueSummary.bot_requests, Icon: ShieldAlert, color: 'var(--danger)', sortKey: 'bot_requests' }
+                ].map(({ key, label, value, Icon, color, sortKey }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      setUniqueFilter(key);
+                      setUniqueSort({ key: sortKey, direction: 'desc' });
+                    }}
+                    style={{
+                      border: uniqueFilter === key ? '2px solid var(--accent-primary)' : '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: uniqueFilter === key ? '0.84rem 0.94rem' : '0.9rem 1rem',
+                      background: uniqueFilter === key ? '#eff6ff' : '#fff',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      boxShadow: uniqueFilter === key ? '0 8px 18px rgba(59, 130, 246, 0.12)' : 'none'
+                    }}
+                    title={`Show ${label}`}
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color, fontWeight: '800', fontSize: '0.78rem', marginBottom: '0.35rem' }}>
                       <Icon size={15} />
                       {label}
                     </div>
                     <div style={{ fontSize: '1.45rem', fontWeight: '900', color: 'var(--text-primary)' }}>{value || 0}</div>
-                  </div>
+                  </button>
                 ))}
               </div>
 
@@ -530,18 +654,39 @@ const DefaultWebTemplate = ({ app }) => {
                 </div>
               )}
 
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', fontWeight: '800' }}>
+                  Showing {sortedUniqueVisitors.length} of {uniqueVisitors.length} unique visitors - {uniqueFilterLabel}
+                </p>
+                {uniqueFilter !== 'all' && (
+                  <button
+                    type="button"
+                    className="btn-icon"
+                    onClick={() => {
+                      setUniqueFilter('all');
+                      setUniqueSort({ key: 'last_seen', direction: 'desc' });
+                    }}
+                    style={{ gap: '8px', fontWeight: '800' }}
+                    title="Clear unique visitor filter"
+                  >
+                    <RotateCcw size={15} />
+                    Reset filter
+                  </button>
+                )}
+              </div>
+
               <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '920px' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid #e2e8f0', color: 'var(--text-secondary)', background: '#f8fafc' }}>
-                      <th style={{ padding: '12px 10px' }}>IP</th>
-                      <th style={{ padding: '12px 10px' }}>Type</th>
-                      <th style={{ padding: '12px 10px' }}>Requests</th>
-                      <th style={{ padding: '12px 10px' }}>First seen</th>
-                      <th style={{ padding: '12px 10px' }}>Last seen</th>
-                      <th style={{ padding: '12px 10px' }}>Device</th>
-                      <th style={{ padding: '12px 10px' }}>Top paths</th>
-                      <th style={{ padding: '12px 10px' }}>Status</th>
+                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('ip', 'IP')}</th>
+                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('classification', 'Type')}</th>
+                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('requests', 'Requests')}</th>
+                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('first_seen', 'First seen')}</th>
+                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('last_seen', 'Last seen')}</th>
+                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('agent', 'Device')}</th>
+                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('path', 'Top paths')}</th>
+                      <th style={{ padding: '12px 10px' }}>{renderUniqueSortHeader('status', 'Status')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -553,8 +698,12 @@ const DefaultWebTemplate = ({ app }) => {
                       <tr>
                         <td colSpan="8" style={{ padding: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700' }}>No unique visitors found in the current log window.</td>
                       </tr>
+                    ) : sortedUniqueVisitors.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" style={{ padding: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '700' }}>No unique visitors match the selected filter.</td>
+                      </tr>
                     ) : (
-                      uniqueVisitors.map((visitor) => {
+                      sortedUniqueVisitors.map((visitor) => {
                         const classificationStyle = getClassificationStyle(visitor.classification);
                         return (
                           <tr key={visitor.ip} style={{ borderBottom: '1px solid #f1f5f9' }}>
