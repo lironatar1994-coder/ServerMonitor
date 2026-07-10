@@ -485,6 +485,22 @@ body {
     margin-bottom: 1rem !important;
   }
 
+  .static-app .details-metrics {
+    display: none;
+  }
+
+  .static-app .details-header {
+    margin-bottom: 1rem !important;
+  }
+
+  .static-app .details-title {
+    align-items: center !important;
+  }
+
+  .static-app .details-title h1 {
+    font-size: 1.8rem !important;
+  }
+
   .web-overview-grid {
     grid-template-columns: 1fr !important;
     gap: 1rem !important;

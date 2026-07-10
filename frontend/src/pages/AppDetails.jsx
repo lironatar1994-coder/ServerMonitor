@@ -87,7 +87,7 @@ const AppDetails = () => {
   };
 
   return (
-    <div className="animate-fade-in">
+    <div className={`animate-fade-in app-detail-page ${app.pm2_name ? 'pm2-app' : 'static-app'}`}>
       <button onClick={() => navigate('/')} className="btn-icon details-back-button" style={{ display: 'inline-flex', marginBottom: '2rem' }}>
         <ArrowRight size={20} style={{ marginLeft: '8px' }} />
         חזרה לדשבורד
@@ -104,7 +104,9 @@ const AppDetails = () => {
               <span className={`status-dot ${app.status === 'online' ? 'online' : 'offline'}`} style={{ width: '16px', height: '16px' }}></span>
             </div>
             <p className="details-meta" style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', marginTop: '4px' }}>
-              {app.url || 'ללא URL'} | מנוהל ע״י PM2: {app.pm2_name || 'לא'} 
+              {app.pm2_name
+                ? `${app.url || 'ללא URL'} | מנוהל ע״י PM2: ${app.pm2_name}`
+                : (app.url || 'ללא URL')}
             </p>
           </div>
         </div>
