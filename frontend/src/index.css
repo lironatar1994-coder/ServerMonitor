@@ -380,7 +380,7 @@ body {
   }
 
   .terminal-section {
-    height: 260px !important;
+    display: none;
   }
 
   .app-card {

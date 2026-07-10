@@ -710,7 +710,7 @@ const DefaultWebTemplate = ({ app }) => {
           ) : sortedVisitors.length === 0 ? (
             <div className="mobile-empty-state">אין תוצאות שמתאימות לסינון הנוכחי</div>
           ) : (
-            sortedVisitors.slice(0, 25).map((visitor, index) => (
+            sortedVisitors.slice(0, 10).map((visitor, index) => (
               <div key={`${visitor.ip}-${visitor.timestamp}-${index}`} className="visitor-mobile-card">
                 <div className="visitor-mobile-card-top">
                   <span className="visitor-mobile-ip">{visitor.ip}</span>
@@ -725,8 +725,8 @@ const DefaultWebTemplate = ({ app }) => {
               </div>
             ))
           )}
-          {sortedVisitors.length > 25 && (
-            <div className="mobile-empty-state">מוצגות 25 הכניסות הראשונות מתוך {sortedVisitors.length}</div>
+          {sortedVisitors.length > 10 && (
+            <div className="mobile-empty-state">מוצגות 10 הכניסות הראשונות מתוך {sortedVisitors.length}</div>
           )}
         </div>
           </>
@@ -869,7 +869,7 @@ const DefaultWebTemplate = ({ app }) => {
               ) : sortedUniqueVisitors.length === 0 ? (
                 <div className="mobile-empty-state">אין מבקרים ייחודיים שמתאימים לסינון הנבחר.</div>
               ) : (
-                sortedUniqueVisitors.slice(0, 25).map((visitor) => {
+                sortedUniqueVisitors.slice(0, 10).map((visitor) => {
                   const classificationStyle = getClassificationStyle(visitor.classification);
                   return (
                     <div key={visitor.ip} className="visitor-mobile-card">
@@ -895,8 +895,8 @@ const DefaultWebTemplate = ({ app }) => {
                   );
                 })
               )}
-              {sortedUniqueVisitors.length > 25 && (
-                <div className="mobile-empty-state">מוצגים 25 המבקרים הראשונים מתוך {sortedUniqueVisitors.length}</div>
+              {sortedUniqueVisitors.length > 10 && (
+                <div className="mobile-empty-state">מוצגים 10 המבקרים הראשונים מתוך {sortedUniqueVisitors.length}</div>
               )}
             </div>
           </div>
