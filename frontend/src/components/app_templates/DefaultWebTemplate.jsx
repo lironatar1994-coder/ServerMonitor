@@ -82,6 +82,18 @@ const formatTrafficDateLabel = (dateKey, full = false) => {
   });
 };
 
+const knownHttpMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
+
+const normalizeMethod = (method) => {
+  const value = (method || '').toString().trim().toUpperCase();
+  return knownHttpMethods.includes(value) ? value : 'OTHER';
+};
+
+const getMethodLabel = (method) => {
+  const value = normalizeMethod(method);
+  return value === 'OTHER' ? 'אחר' : value;
+};
+
 const getAccessTimestampValue = (timestamp) => {
   const date = parseAccessTimestamp(timestamp);
   return date ? date.getTime() : 0;
@@ -223,12 +235,21 @@ const DefaultWebTemplate = ({ app }) => {
   const trafficChartData = trafficHistory.length > 0
     ? trafficHistory
     : Array.from({ length: trafficRange }, (_, index) => ({ date: `${index + 1}`, visitors: 0, requests: 0, attacks: 0 }));
+  const activeTrafficDays = trafficHistory.filter((bucket) => Number(bucket.requests) > 0 || Number(bucket.visitors) > 0).length;
+  const peakTrafficDay = trafficHistory.reduce((peak, bucket) => {
+    if (!peak) return bucket;
+    return (Number(bucket.visitors) || 0) > (Number(peak.visitors) || 0) ? bucket : peak;
+  }, null);
   const trafficTotals = trafficHistory.reduce((totals, bucket) => ({
     visitors: totals.visitors + (Number(bucket.visitors) || 0),
     requests: totals.requests + (Number(bucket.requests) || 0)
   }), { visitors: 0, requests: 0 });
   const availableMethods = useMemo(() => {
-    return Array.from(new Set(visitors.map((visitor) => visitor.method).filter(Boolean))).sort();
+    return Array.from(new Set(visitors.map((visitor) => normalizeMethod(visitor.method)).filter(Boolean))).sort((left, right) => {
+      if (left === 'OTHER') return 1;
+      if (right === 'OTHER') return -1;
+      return knownHttpMethods.indexOf(left) - knownHttpMethods.indexOf(right);
+    });
   }, [visitors]);
   const filteredVisitors = useMemo(() => {
     const searchTerm = visitorFilters.search.trim().toLowerCase();
@@ -244,7 +265,7 @@ const DefaultWebTemplate = ({ app }) => {
       ].some((value) => (value || '').toString().toLowerCase().includes(searchTerm));
 
       const matchesAgent = visitorFilters.agent === 'all' || visitor.agent === visitorFilters.agent;
-      const matchesMethod = visitorFilters.method === 'all' || visitor.method === visitorFilters.method;
+      const matchesMethod = visitorFilters.method === 'all' || normalizeMethod(visitor.method) === visitorFilters.method;
       const matchesStatus = visitorFilters.status === 'all'
         || (visitorFilters.status === 'success' && status >= 200 && status < 300)
         || (visitorFilters.status === 'redirect' && status >= 300 && status < 400)
@@ -505,39 +526,22 @@ const DefaultWebTemplate = ({ app }) => {
           </div>
         </div>
 
-        <div className="glass-card traffic-sources-card" style={{ padding: '2rem' }}>
+        <div className="glass-card traffic-summary-card" style={{ padding: '2rem' }}>
           <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Globe size={20} color="var(--accent-primary)" />
-            מקורות תנועה
+            <Activity size={20} color="var(--accent-primary)" />
+            תקציר תקופה
           </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '2rem' }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontWeight: '600' }}>ישראל 🇮🇱</span>
-                <span style={{ fontWeight: 'bold' }}>78%</span>
+          <div className="traffic-summary-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {[
+              { label: 'ימים עם תנועה', value: `${activeTrafficDays}/${trafficRange}` },
+              { label: 'שיא מבקרים ביום', value: peakTrafficDay ? `${peakTrafficDay.visitors} - ${formatTrafficDateLabel(peakTrafficDay.date)}` : '0' },
+              { label: 'בקשות ממוצעות ליום', value: activeTrafficDays ? Math.round(trafficTotals.requests / activeTrafficDays) : 0 }
+            ].map((item) => (
+              <div key={item.label} style={{ paddingBottom: '0.9rem', borderBottom: '1px solid #f1f5f9' }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '800', marginBottom: '0.25rem' }}>{item.label}</div>
+                <div style={{ color: 'var(--text-primary)', fontSize: '1.3rem', fontWeight: '900' }}>{item.value}</div>
               </div>
-              <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: '78%', height: '100%', background: 'var(--accent-gradient)' }}></div>
-              </div>
-            </div>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontWeight: '600' }}>ארצות הברית 🇺🇸</span>
-                <span style={{ fontWeight: 'bold' }}>12%</span>
-              </div>
-              <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: '12%', height: '100%', background: 'var(--success)' }}></div>
-              </div>
-            </div>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontWeight: '600' }}>אירופה 🇪🇺</span>
-                <span style={{ fontWeight: 'bold' }}>8%</span>
-              </div>
-              <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: '8%', height: '100%', background: 'var(--warning)' }}></div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -545,7 +549,7 @@ const DefaultWebTemplate = ({ app }) => {
       {/* Access Logs List */}
       <div className="glass-card visitor-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
         <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold' }}>
-          {uniqueOpen ? 'מבקרים ייחודיים' : 'כניסות אחרונות (עד 100 כניסות אחרונות בזמן אמת)'}
+          {uniqueOpen ? 'מבקרים ייחודיים' : 'כניסות אחרונות'}
         </h2>
         <div className="visitor-panel-toolbar" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
           <p className="desktop-helper-text" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700', display: uniqueOpen ? 'none' : 'block' }}>
@@ -618,7 +622,7 @@ const DefaultWebTemplate = ({ app }) => {
             >
               <option value="all">הכל</option>
               {availableMethods.map((method) => (
-                <option key={method} value={method}>{method}</option>
+                <option key={method} value={method}>{getMethodLabel(method)}</option>
               ))}
             </select>
           </label>
@@ -676,7 +680,7 @@ const DefaultWebTemplate = ({ app }) => {
                     <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '10px 8px', fontFamily: 'monospace', fontSize: '0.9rem' }}>{formatTime(v.timestamp)}</td>
                       <td style={{ padding: '10px 8px', fontWeight: '600' }}>{v.ip}</td>
-                      <td style={{ padding: '10px 8px' }}><span style={{ padding: '2px 6px', borderRadius: '4px', background: '#f1f5f9', fontSize: '0.8rem', fontWeight: 'bold' }}>{v.method}</span></td>
+                      <td style={{ padding: '10px 8px' }}><span style={{ padding: '2px 6px', borderRadius: '4px', background: '#f1f5f9', fontSize: '0.8rem', fontWeight: 'bold' }}>{getMethodLabel(v.method)}</span></td>
                       <td style={{ padding: '10px 8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{v.path}</td>
                       <td style={{ padding: '10px 8px' }}>{v.agent === 'Mobile' ? '📱 נייד' : v.agent === 'Desktop' ? '💻 מחשב' : v.agent === 'Bot' ? '🤖 בוט' : '❓ לא ידוע'}</td>
                       <td style={{ padding: '10px 8px' }}>
@@ -706,20 +710,23 @@ const DefaultWebTemplate = ({ app }) => {
           ) : sortedVisitors.length === 0 ? (
             <div className="mobile-empty-state">אין תוצאות שמתאימות לסינון הנוכחי</div>
           ) : (
-            sortedVisitors.map((visitor, index) => (
+            sortedVisitors.slice(0, 25).map((visitor, index) => (
               <div key={`${visitor.ip}-${visitor.timestamp}-${index}`} className="visitor-mobile-card">
                 <div className="visitor-mobile-card-top">
                   <span className="visitor-mobile-ip">{visitor.ip}</span>
                   <span className="visitor-mobile-status">{visitor.status}</span>
                 </div>
                 <div className="visitor-mobile-meta">
-                  <span>{visitor.method}</span>
+                  <span>{getMethodLabel(visitor.method)}</span>
                   <span>{visitor.agent}</span>
                   <span>{formatAccessDateTimeParts(visitor.timestamp)?.time || visitor.timestamp}</span>
                 </div>
                 <div className="visitor-mobile-path">{visitor.path}</div>
               </div>
             ))
+          )}
+          {sortedVisitors.length > 25 && (
+            <div className="mobile-empty-state">מוצגות 25 הכניסות הראשונות מתוך {sortedVisitors.length}</div>
           )}
         </div>
           </>
@@ -862,7 +869,7 @@ const DefaultWebTemplate = ({ app }) => {
               ) : sortedUniqueVisitors.length === 0 ? (
                 <div className="mobile-empty-state">אין מבקרים ייחודיים שמתאימים לסינון הנבחר.</div>
               ) : (
-                sortedUniqueVisitors.map((visitor) => {
+                sortedUniqueVisitors.slice(0, 25).map((visitor) => {
                   const classificationStyle = getClassificationStyle(visitor.classification);
                   return (
                     <div key={visitor.ip} className="visitor-mobile-card">
@@ -887,6 +894,9 @@ const DefaultWebTemplate = ({ app }) => {
                     </div>
                   );
                 })
+              )}
+              {sortedUniqueVisitors.length > 25 && (
+                <div className="mobile-empty-state">מוצגים 25 המבקרים הראשונים מתוך {sortedUniqueVisitors.length}</div>
               )}
             </div>
           </div>
