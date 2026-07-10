@@ -67,6 +67,21 @@ const formatAccessDateTimeParts = (timestamp) => {
   };
 };
 
+const formatTrafficDateLabel = (dateKey, full = false) => {
+  if (!dateKey) return '';
+  const [year, month, day] = dateKey.split('-').map(Number);
+  if (!year || !month || !day) return dateKey;
+
+  if (!full) return `${day}.${month}`;
+
+  return new Date(Date.UTC(year, month - 1, day, 12)).toLocaleDateString('he-IL', {
+    timeZone: 'Asia/Jerusalem',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+};
+
 const getAccessTimestampValue = (timestamp) => {
   const date = parseAccessTimestamp(timestamp);
   return date ? date.getTime() : 0;
@@ -112,6 +127,10 @@ const DefaultWebTemplate = ({ app }) => {
   const [uniqueError, setUniqueError] = useState('');
   const [uniqueFilter, setUniqueFilter] = useState('all');
   const [uniqueSort, setUniqueSort] = useState({ key: 'last_seen', direction: 'desc' });
+  const [trafficRange, setTrafficRange] = useState(7);
+  const [trafficHistory, setTrafficHistory] = useState([]);
+  const [trafficLoading, setTrafficLoading] = useState(false);
+  const [trafficError, setTrafficError] = useState('');
   const [loading, setLoading] = useState(true);
   const [visitorFilters, setVisitorFilters] = useState({
     search: '',
@@ -164,6 +183,27 @@ const DefaultWebTemplate = ({ app }) => {
     fetchUniqueVisitors();
   };
 
+  const fetchTrafficHistory = useCallback(async () => {
+    setTrafficLoading(true);
+    setTrafficError('');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/serve-monitor/api/apps/${app.id}/traffic-history?days=${trafficRange}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to load traffic history (${res.status})`);
+      }
+      const data = await res.json();
+      setTrafficHistory(data.buckets || []);
+    } catch (e) {
+      console.error(e);
+      setTrafficError(e.message || 'Failed to load traffic history');
+    } finally {
+      setTrafficLoading(false);
+    }
+  }, [app.id, trafficRange]);
+
   useEffect(() => {
     const initialLoad = setTimeout(fetchVisitors, 0);
     const interval = setInterval(fetchVisitors, 5000);
@@ -173,8 +213,20 @@ const DefaultWebTemplate = ({ app }) => {
     };
   }, [fetchVisitors]);
 
+  useEffect(() => {
+    const initialLoad = setTimeout(fetchTrafficHistory, 0);
+    return () => clearTimeout(initialLoad);
+  }, [fetchTrafficHistory]);
+
   const chartData = app.history && app.history.length > 0 ? app.history : [{visitors:0, requests:0, attacks:0}];
   const currentMetrics = chartData[chartData.length - 1] || { visitors: 0, requests: 0, attacks: 0 };
+  const trafficChartData = trafficHistory.length > 0
+    ? trafficHistory
+    : Array.from({ length: trafficRange }, (_, index) => ({ date: `${index + 1}`, visitors: 0, requests: 0, attacks: 0 }));
+  const trafficTotals = trafficHistory.reduce((totals, bucket) => ({
+    visitors: totals.visitors + (Number(bucket.visitors) || 0),
+    requests: totals.requests + (Number(bucket.requests) || 0)
+  }), { visitors: 0, requests: 0 });
   const availableMethods = useMemo(() => {
     return Array.from(new Set(visitors.map((visitor) => visitor.method).filter(Boolean))).sort();
   }, [visitors]);
@@ -390,30 +442,70 @@ const DefaultWebTemplate = ({ app }) => {
       </div>
 
       {/* Chart and traffic sources */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginTop: '2rem' }}>
-        <div className="glass-card" style={{ padding: '2rem' }}>
-          <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold' }}>היסטוריית תעבורה (24 דגימות אחרונות)</h2>
-          <div style={{ height: '300px' }}>
+      <div className="web-overview-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginTop: '2rem' }}>
+        <div className="glass-card traffic-history-card" style={{ padding: '2rem' }}>
+          <div className="traffic-history-header" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+            <div>
+              <h2 style={{ marginBottom: '0.35rem', fontSize: '1.3rem', fontWeight: 'bold' }}>תנועת מבקרים</h2>
+              <p className="desktop-helper-text" style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', fontWeight: '700' }}>
+                היסטוריה לפי דגימות המוניטור. לא ספירה יומית ייחודית מדויקת.
+              </p>
+            </div>
+            <div className="segmented-control" style={{ display: 'inline-flex', padding: '4px', borderRadius: '10px', background: '#f1f5f9', gap: '4px' }}>
+              {[7, 30].map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => setTrafficRange(days)}
+                  style={{
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    fontWeight: '900',
+                    color: trafficRange === days ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    background: trafficRange === days ? '#fff' : 'transparent',
+                    boxShadow: trafficRange === days ? '0 2px 10px rgba(15, 23, 42, 0.08)' : 'none'
+                  }}
+                >
+                  {days} ימים
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="traffic-summary-strip" style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', fontWeight: '800', fontSize: '0.9rem' }}>
+            <span>מבקרים: <strong style={{ color: 'var(--text-primary)' }}>{trafficTotals.visitors}</strong></span>
+            <span>בקשות: <strong style={{ color: 'var(--text-primary)' }}>{trafficTotals.requests}</strong></span>
+            {trafficLoading && <span>מרענן...</span>}
+          </div>
+          {trafficError && (
+            <div style={{ padding: '0.8rem 1rem', borderRadius: '8px', background: '#fee2e2', color: '#991b1b', fontWeight: '800', marginBottom: '1rem' }}>
+              {trafficError}
+            </div>
+          )}
+          <div className="traffic-chart-wrap" style={{ height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+              <AreaChart data={trafficChartData}>
                 <defs>
                   <linearGradient id="colorReq" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.3}/>
                     <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="timestamp" tickFormatter={(t) => t ? new Date(t).toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'}) : ''} />
+                <XAxis dataKey="date" tickFormatter={(date) => formatTrafficDateLabel(date)} />
                 <YAxis />
-                <Tooltip />
-                <Area type="monotone" dataKey="requests" stroke="var(--accent-primary)" strokeWidth={2} fillOpacity={1} fill="url(#colorReq)" name="בקשות" />
-                <Area type="monotone" dataKey="visitors" stroke="var(--success)" strokeWidth={2} fill="transparent" name="מבקרים" />
-                <Area type="monotone" dataKey="attacks" stroke="var(--danger)" strokeWidth={2} fill="transparent" name="התקפות" />
+                <Tooltip
+                  labelFormatter={(date) => formatTrafficDateLabel(date, true)}
+                  formatter={(value, name) => [value, { visitors: 'מבקרים', requests: 'בקשות', attacks: 'התקפות' }[name] || name]}
+                />
+                <Area type="monotone" dataKey="requests" stroke="var(--accent-primary)" strokeWidth={2} fillOpacity={1} fill="url(#colorReq)" name="requests" />
+                <Area type="monotone" dataKey="visitors" stroke="var(--success)" strokeWidth={3} fill="transparent" name="visitors" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '2rem' }}>
+        <div className="glass-card traffic-sources-card" style={{ padding: '2rem' }}>
           <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Globe size={20} color="var(--accent-primary)" />
             מקורות תנועה
@@ -451,16 +543,16 @@ const DefaultWebTemplate = ({ app }) => {
       </div>
 
       {/* Access Logs List */}
-      <div className="glass-card" style={{ padding: '2rem', marginTop: '2rem' }}>
+      <div className="glass-card visitor-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
         <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', fontWeight: 'bold' }}>
           {uniqueOpen ? 'מבקרים ייחודיים' : 'כניסות אחרונות (עד 100 כניסות אחרונות בזמן אמת)'}
         </h2>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700', display: uniqueOpen ? 'none' : 'block' }}>
+        <div className="visitor-panel-toolbar" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <p className="desktop-helper-text" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700', display: uniqueOpen ? 'none' : 'block' }}>
             מציג {filteredVisitors.length} מתוך {visitors.length} כניסות שנמצאו
           </p>
           {uniqueOpen && (
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700' }}>
+            <p className="desktop-helper-text" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700' }}>
               מציג {sortedUniqueVisitors.length} מתוך {uniqueVisitors.length} מבקרים ייחודיים - {uniqueFilterLabel}
             </p>
           )}
@@ -489,7 +581,7 @@ const DefaultWebTemplate = ({ app }) => {
         </div>
         {!uniqueOpen && (
           <>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem', marginBottom: '1rem', alignItems: 'end' }}>
+        <div className="visitor-filters" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem', marginBottom: '1rem', alignItems: 'end' }}>
           <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', color: 'var(--text-secondary)', fontWeight: '700', fontSize: '0.85rem' }}>
             חיפוש
             <div style={{ position: 'relative' }}>
@@ -545,7 +637,7 @@ const DefaultWebTemplate = ({ app }) => {
             </select>
           </label>
         </div>
-        <div style={{ overflowX: 'auto', maxHeight: '400px', overflowY: 'auto' }}>
+        <div className="desktop-visitors-table" style={{ overflowX: 'auto', maxHeight: '400px', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', direction: 'rtl' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #e2e8f0', color: 'var(--text-secondary)' }}>
@@ -606,12 +698,36 @@ const DefaultWebTemplate = ({ app }) => {
             </tbody>
           </table>
         </div>
+        <div className="mobile-visitors-list">
+          {loading && visitors.length === 0 ? (
+            <div className="mobile-empty-state">טוען נתונים...</div>
+          ) : visitors.length === 0 ? (
+            <div className="mobile-empty-state">אין כניסות זמינות להצגה כעת</div>
+          ) : sortedVisitors.length === 0 ? (
+            <div className="mobile-empty-state">אין תוצאות שמתאימות לסינון הנוכחי</div>
+          ) : (
+            sortedVisitors.map((visitor, index) => (
+              <div key={`${visitor.ip}-${visitor.timestamp}-${index}`} className="visitor-mobile-card">
+                <div className="visitor-mobile-card-top">
+                  <span className="visitor-mobile-ip">{visitor.ip}</span>
+                  <span className="visitor-mobile-status">{visitor.status}</span>
+                </div>
+                <div className="visitor-mobile-meta">
+                  <span>{visitor.method}</span>
+                  <span>{visitor.agent}</span>
+                  <span>{formatAccessDateTimeParts(visitor.timestamp)?.time || visitor.timestamp}</span>
+                </div>
+                <div className="visitor-mobile-path">{visitor.path}</div>
+              </div>
+            ))
+          )}
+        </div>
           </>
         )}
         {uniqueOpen && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', direction: 'rtl', textAlign: 'right' }}>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700' }}>
+            <div className="unique-toolbar" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', direction: 'rtl', textAlign: 'right' }}>
+              <p className="desktop-helper-text" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '700' }}>
                 מקובץ לפי כתובת IP מתוך חלון לוג הכניסות של האפליקציה. תעבורה אנושית ובוטים מסווגים באותה שיטה של מדדי הדשבורד.
               </p>
               <button
@@ -626,7 +742,7 @@ const DefaultWebTemplate = ({ app }) => {
               </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: '0.8rem', marginBottom: '1rem', direction: 'rtl' }}>
+            <div className="unique-metric-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: '0.8rem', marginBottom: '1rem', direction: 'rtl' }}>
               {[
                 { key: 'all', label: 'סה״כ ייחודיים', value: uniqueSummary.total_unique, Icon: Users, color: 'var(--accent-primary)', sortKey: 'last_seen' },
                 { key: 'human', label: 'אנושיים', value: uniqueSummary.human_unique, Icon: Globe, color: 'var(--success)', sortKey: 'last_seen' },
@@ -669,7 +785,7 @@ const DefaultWebTemplate = ({ app }) => {
               </div>
             )}
 
-            <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', direction: 'rtl' }}>
+            <div className="desktop-visitors-table" style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', direction: 'rtl' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', minWidth: '920px' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #e2e8f0', color: 'var(--text-secondary)', background: '#f8fafc' }}>
@@ -738,12 +854,47 @@ const DefaultWebTemplate = ({ app }) => {
                 </tbody>
               </table>
             </div>
+            <div className="mobile-visitors-list">
+              {uniqueLoading && uniqueVisitors.length === 0 ? (
+                <div className="mobile-empty-state">טוען מבקרים ייחודיים...</div>
+              ) : uniqueVisitors.length === 0 ? (
+                <div className="mobile-empty-state">לא נמצאו מבקרים ייחודיים בחלון הלוג הנוכחי.</div>
+              ) : sortedUniqueVisitors.length === 0 ? (
+                <div className="mobile-empty-state">אין מבקרים ייחודיים שמתאימים לסינון הנבחר.</div>
+              ) : (
+                sortedUniqueVisitors.map((visitor) => {
+                  const classificationStyle = getClassificationStyle(visitor.classification);
+                  return (
+                    <div key={visitor.ip} className="visitor-mobile-card">
+                      <div className="visitor-mobile-card-top">
+                        <span className="visitor-mobile-ip">{visitor.ip}</span>
+                        <span className="visitor-mobile-badge" style={classificationStyle}>
+                          {getClassificationLabel(visitor.classification)}
+                        </span>
+                      </div>
+                      <div className="visitor-mobile-meta">
+                        <span>{visitor.requests} בקשות</span>
+                        <span>אנושי {visitor.human_requests}</span>
+                        <span>בוט {visitor.bot_requests}</span>
+                      </div>
+                      <div className="visitor-mobile-time">
+                        <Clock size={13} />
+                        {renderAccessDateTime(visitor.last_seen)}
+                      </div>
+                      <div className="visitor-mobile-path">
+                        {(visitor.paths || []).map((path) => `${path.value} (${path.count})`).join(', ') || '-'}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         )}
       </div>
 
       {/* Terminal logs */}
-      <div style={{ marginTop: '2rem', height: '400px' }}>
+      <div className="terminal-section" style={{ marginTop: '2rem', height: '400px' }}>
         <LiveTerminal appId={app.id} />
       </div>
     </div>

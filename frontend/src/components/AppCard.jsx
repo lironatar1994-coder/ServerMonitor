@@ -1,6 +1,5 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, ArrowUpRight, Globe, Shield, RefreshCw } from 'lucide-react';
+import { ArrowUpRight, Globe, Shield, RefreshCw } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
 
 const AppCard = ({ app }) => {
@@ -52,7 +51,7 @@ const AppCard = ({ app }) => {
             <span className={`status-dot ${isOnline ? 'online' : 'offline'}`}></span>
             <h3 style={{ fontSize: '1.4rem', fontWeight: '800' }}>{app.name}</h3>
           </div>
-          {app.url && <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{app.url}</p>}
+          {app.url && <p className="app-card-url" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{app.url}</p>}
         </div>
         
         {app.pm2_name && (
@@ -83,7 +82,7 @@ const AppCard = ({ app }) => {
       </div>
 
       {app.pm2_name && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.5rem 0', padding: '0.5rem 0' }}>
+        <div className="app-card-runtime" style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.5rem 0', padding: '0.5rem 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span>מעבד:</span>
             <strong style={{ color: 'var(--text-primary)' }}>{(app.cpu || 0).toFixed(1)}%</strong>

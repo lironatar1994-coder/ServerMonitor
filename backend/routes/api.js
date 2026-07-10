@@ -149,6 +149,56 @@ function enrichAppStatus(app) {
     return enriched;
 }
 
+function getIsraelDateKey(date) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Jerusalem',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(date).reduce((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+    }, {});
+
+    return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function getTrafficHistory(appId, days) {
+    const dayKeys = [];
+    const now = Date.now();
+
+    for (let offset = days - 1; offset >= 0; offset--) {
+        dayKeys.push(getIsraelDateKey(new Date(now - (offset * 24 * 60 * 60 * 1000))));
+    }
+
+    const dayMap = new Map(dayKeys.map(date => [date, {
+        date,
+        visitors: 0,
+        requests: 0,
+        attacks: 0
+    }]));
+
+    const rows = db.prepare(`
+        SELECT visitors, requests, attacks, timestamp
+        FROM metrics
+        WHERE app_id = ?
+          AND timestamp >= datetime('now', ?)
+        ORDER BY timestamp ASC
+    `).all(appId, `-${days + 2} days`);
+
+    rows.forEach(row => {
+        const date = getIsraelDateKey(new Date(row.timestamp));
+        const bucket = dayMap.get(date);
+        if (!bucket) return;
+
+        bucket.visitors = Math.max(bucket.visitors, Number(row.visitors) || 0);
+        bucket.requests = Math.max(bucket.requests, Number(row.requests) || 0);
+        bucket.attacks = Math.max(bucket.attacks, Number(row.attacks) || 0);
+    });
+
+    return Array.from(dayMap.values());
+}
+
 router.use(authenticateToken);
 
 // Get Server General Stats
@@ -207,6 +257,27 @@ router.get('/:id', (req, res) => {
         ...enrichAppStatus(app),
         history: history.reverse()
     });
+});
+
+// GET sampled daily traffic history for charts
+router.get('/:id/traffic-history', (req, res) => {
+    const app = db.prepare('SELECT id FROM apps WHERE id = ?').get(req.params.id);
+    if (!app) return res.status(404).json({ error: 'App not found' });
+
+    const requestedDays = Number(req.query.days);
+    const days = requestedDays === 30 ? 30 : 7;
+
+    try {
+        res.json({
+            days,
+            timezone: 'Asia/Jerusalem',
+            source: 'sampled_metrics',
+            buckets: getTrafficHistory(app.id, days)
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // POST action on application (restart / stop / start)

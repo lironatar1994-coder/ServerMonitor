@@ -79,14 +79,14 @@ const Dashboard = () => {
   return (
     <div className="animate-fade-in">
       {/* Top Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-        <div>
+      <div className="dashboard-hero" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+        <div className="dashboard-hero-copy">
           <h1 style={{ fontSize: '2.2rem', color: 'var(--text-primary)', marginBottom: '0.3rem', fontWeight: '800' }}>סקירת שרת</h1>
           <p style={{ color: 'var(--text-secondary)' }}>מצב כללי של השרת והאפליקציות שלך</p>
         </div>
         <div className="dashboard-top-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           {/* Subtle Alerts Badge instead of giant purple box */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: '#eff6ff', borderRadius: '12px', color: 'var(--accent-primary)', fontSize: '0.9rem', fontWeight: '600' }}>
+          <div className="dashboard-alert-chip" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: '#eff6ff', borderRadius: '12px', color: 'var(--accent-primary)', fontSize: '0.9rem', fontWeight: '600' }}>
             <BellRing size={16} />
             התראות פעילות
           </div>
@@ -173,11 +173,11 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3.5rem' }}>
+      <div className="dashboard-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3.5rem' }}>
         <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)' }}>אפליקציות מנוטרות</h2>
         
         {/* Subtle SSL Warning next to title instead of huge card */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success)', fontSize: '0.9rem', fontWeight: '600' }}>
+        <div className="dashboard-ssl-chip" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success)', fontSize: '0.9rem', fontWeight: '600' }}>
           <ShieldCheck size={18} />
           תעודות SSL תקינות (64 ימים נותרו)
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowRight, Server, RefreshCw, Power, MemoryStick } from 'lucide-react';
 import DefaultWebTemplate from '../components/app_templates/DefaultWebTemplate';
@@ -11,7 +11,7 @@ const AppDetails = () => {
   const [app, setApp] = useState(null);
   const [stats, setStats] = useState({ ram: {}, cpu: {} });
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`/serve-monitor/api/apps/${id}`, {
@@ -21,9 +21,9 @@ const AppDetails = () => {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [id]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const res = await fetch('/serve-monitor/api/apps/server-stats', {
@@ -33,7 +33,7 @@ const AppDetails = () => {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, []);
 
   const handleAction = async (action) => {
     if (!window.confirm(`האם אתה בטוח שברצונך לבצע ${action} לאפליקציה?`)) return;
@@ -61,15 +61,18 @@ const AppDetails = () => {
   };
 
   useEffect(() => {
-    fetchData();
-    fetchStats();
+    const initialLoad = setTimeout(() => {
+      fetchData();
+      fetchStats();
+    }, 0);
     const appInterval = setInterval(fetchData, 5000);
     const statsInterval = setInterval(fetchStats, 15000);
     return () => {
+      clearTimeout(initialLoad);
       clearInterval(appInterval);
       clearInterval(statsInterval);
     };
-  }, [id]);
+  }, [fetchData, fetchStats]);
 
   if (!app) return <div style={{ padding: '3rem', textAlign: 'center' }}>טוען נתונים...</div>;
 
@@ -85,14 +88,14 @@ const AppDetails = () => {
 
   return (
     <div className="animate-fade-in">
-      <button onClick={() => navigate('/')} className="btn-icon" style={{ display: 'inline-flex', marginBottom: '2rem' }}>
+      <button onClick={() => navigate('/')} className="btn-icon details-back-button" style={{ display: 'inline-flex', marginBottom: '2rem' }}>
         <ArrowRight size={20} style={{ marginLeft: '8px' }} />
         חזרה לדשבורד
       </button>
 
       <div className="details-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
         <div className="details-title" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ background: 'var(--accent-gradient)', padding: '20px', borderRadius: '20px', color: 'white', boxShadow: '0 8px 16px rgba(59, 130, 246, 0.3)' }}>
+          <div className="details-title-icon" style={{ background: 'var(--accent-gradient)', padding: '20px', borderRadius: '20px', color: 'white', boxShadow: '0 8px 16px rgba(59, 130, 246, 0.3)' }}>
             <Server size={40} />
           </div>
           <div>
@@ -100,7 +103,7 @@ const AppDetails = () => {
               <h1 style={{ fontSize: '2.8rem', fontWeight: '800', margin: 0 }}>{app.name}</h1>
               <span className={`status-dot ${app.status === 'online' ? 'online' : 'offline'}`} style={{ width: '16px', height: '16px' }}></span>
             </div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', marginTop: '4px' }}>
+            <p className="details-meta" style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', marginTop: '4px' }}>
               {app.url || 'ללא URL'} | מנוהל ע״י PM2: {app.pm2_name || 'לא'} 
             </p>
           </div>

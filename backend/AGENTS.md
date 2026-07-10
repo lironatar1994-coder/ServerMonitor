@@ -22,6 +22,7 @@
 - Avoid logging secrets or authentication tokens.
 - For web apps, `metrics.visitors` and `metrics.requests` are human-looking traffic only; bot-looking traffic should remain visible in live visitor rows as `agent: "Bot"` rather than being counted as visitors.
 - `/apps/:id/unique-visitors` groups the current access-log tail by IP and reports first seen, last seen, request counts, top paths, statuses, and human/bot/mixed classification; it is a bounded log-window view, not a permanent analytics ledger.
+- `/apps/:id/traffic-history?days=7|30` returns fixed daily buckets from sampled `metrics` rows for visitor charts; it is monitored traffic history, not exact per-visit or per-day unique analytics.
 
 ## Work Guidance
 
