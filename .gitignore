@@ -9,4 +9,6 @@ frontend/dist/
 *.sqlite
 *.sqlite-journal
 *.db
+*.db-wal
+*.db-shm
 adminspass.txt
