@@ -44,7 +44,9 @@ fi
 echo "[INFO] Starting PM2 process..."
 # We serve the frontend via Nginx or we can use the backend to serve it
 # In our architecture, we can just run the backend.
-PORT="$BACKEND_PORT" GEOIP_DB_PATH="$GEOIP_DB_PATH" pm2 start "backend/server.js" --name "$APP_NAME" --cwd "$(pwd)" --update-env || PORT="$BACKEND_PORT" GEOIP_DB_PATH="$GEOIP_DB_PATH" pm2 restart "$APP_NAME" --update-env
+export PORT="$BACKEND_PORT"
+export GEOIP_DB_PATH
+pm2 start "backend/server.js" --name "$APP_NAME" --cwd "$(pwd)" --update-env || pm2 restart "$APP_NAME" --update-env
 pm2 save > /dev/null
 
 echo "[SUCCESS] DEPLOYMENT COMPLETE"
