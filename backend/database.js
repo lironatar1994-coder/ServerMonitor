@@ -2,8 +2,10 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
-const dbPath = path.join(__dirname, 'monitor.db');
-const db = new Database(dbPath, { verbose: console.log });
+const dbPath = process.env.MONITOR_DB_PATH || path.join(__dirname, 'monitor.db');
+const db = new Database(dbPath, { verbose: process.env.NODE_ENV === 'test' ? undefined : console.log });
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
 
 // Initialize schema
 db.exec(`
@@ -38,6 +40,47 @@ db.exec(`
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (app_id) REFERENCES apps (id)
     );
+
+    CREATE TABLE IF NOT EXISTS visitor_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        app_id INTEGER NOT NULL,
+        source_file_id TEXT NOT NULL,
+        source_offset INTEGER NOT NULL,
+        occurred_at DATETIME NOT NULL,
+        ip TEXT NOT NULL,
+        method TEXT,
+        path TEXT,
+        status INTEGER,
+        referrer TEXT,
+        user_agent TEXT,
+        device_type TEXT DEFAULT 'Unknown',
+        is_bot INTEGER DEFAULT 0,
+        bot_reason TEXT,
+        country_code TEXT,
+        region TEXT,
+        city TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (app_id) REFERENCES apps (id) ON DELETE CASCADE,
+        UNIQUE (app_id, source_file_id, source_offset)
+    );
+
+    CREATE TABLE IF NOT EXISTS visitor_ingestion_state (
+        app_id INTEGER PRIMARY KEY,
+        log_path TEXT NOT NULL,
+        source_file_id TEXT,
+        byte_offset INTEGER DEFAULT 0,
+        partial_line TEXT DEFAULT '',
+        last_ingested_at DATETIME,
+        backfill_complete INTEGER DEFAULT 0,
+        FOREIGN KEY (app_id) REFERENCES apps (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_visitor_events_app_time
+        ON visitor_events (app_id, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_visitor_events_app_ip_time
+        ON visitor_events (app_id, ip, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_visitor_events_app_bot_time
+        ON visitor_events (app_id, is_bot, occurred_at DESC);
 `);
 
 // Insert default admin if not exists

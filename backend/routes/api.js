@@ -118,6 +118,26 @@ function getCpuSnapshot() {
     }
 }
 
+function getDiskStats() {
+    if (process.platform !== 'linux') return null;
+    const { execFileSync } = require('child_process');
+    try {
+        const output = execFileSync('/bin/df', ['-B1', '--output=size,used,avail,pcent', '/'], {
+            encoding: 'utf8', timeout: 3000
+        }).trim().split('\n').pop().trim();
+        const [total, used, available, percentage] = output.split(/\s+/);
+        return {
+            total: Number(total) || 0,
+            used: Number(used) || 0,
+            available: Number(available) || 0,
+            percentage: Number((percentage || '').replace('%', '')) || 0
+        };
+    } catch (error) {
+        console.error('Disk snapshot failed:', error.message);
+        return null;
+    }
+}
+
 function enrichAppStatus(app) {
     if (!app?.pm2_name) {
         return { ...app, status: app.status || 'online', cpu: 0, memory: 0 };
@@ -212,7 +232,8 @@ router.get('/server-stats', (req, res) => {
     res.json({
         ram: { total: totalMem, used: usedMem, percentage: (usedMem / totalMem) * 100 },
         cpu: { load: cpuLoad, cores: os.cpus().length, snapshot: cpuSnapshot },
-        uptime: os.uptime()
+        uptime: os.uptime(),
+        disk: getDiskStats()
     });
 });
 

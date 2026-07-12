@@ -10,6 +10,7 @@ APP_NAME="server-monitor"
 BACKEND_PORT=4010
 FRONTEND_DIR="frontend"
 BACKEND_DIR="backend"
+GEOIP_DB_PATH="${GEOIP_DB_PATH:-/usr/share/GeoIP/GeoLite2-City.mmdb}"
 
 echo "[INFO] Starting Deployment..."
 
@@ -33,11 +34,17 @@ npm install -s
 npm rebuild better-sqlite3
 cd ..
 
+if [ -r "$GEOIP_DB_PATH" ]; then
+  echo "[INFO] GeoIP city database found at $GEOIP_DB_PATH"
+else
+  echo "[WARN] GeoIP city database not found at $GEOIP_DB_PATH; visitor analytics will show unknown locations"
+fi
+
 # 4. PM2 Start
 echo "[INFO] Starting PM2 process..."
 # We serve the frontend via Nginx or we can use the backend to serve it
 # In our architecture, we can just run the backend.
-pm2 start "backend/server.js" --name "$APP_NAME" --cwd "$(pwd)" --update-env || pm2 restart "$APP_NAME"
+GEOIP_DB_PATH="$GEOIP_DB_PATH" pm2 start "backend/server.js" --name "$APP_NAME" --cwd "$(pwd)" --update-env || GEOIP_DB_PATH="$GEOIP_DB_PATH" pm2 restart "$APP_NAME" --update-env
 pm2 save > /dev/null
 
 echo "[SUCCESS] DEPLOYMENT COMPLETE"

@@ -118,14 +118,17 @@ function parseAccessLogTimestamp(timestamp) {
         Nov: 10,
         Dec: 11
     };
-    const match = timestamp.toString().match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2})/);
+    const match = timestamp.toString().match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2})(?:\s+([+-])(\d{2})(\d{2}))?/);
     if (!match) {
         const parsed = Date.parse(timestamp);
         return Number.isNaN(parsed) ? 0 : parsed;
     }
 
-    const [, day, month, year, hour, minute, second] = match;
-    return Date.UTC(Number(year), monthMap[month] ?? 0, Number(day), Number(hour), Number(minute), Number(second));
+    const [, day, month, year, hour, minute, second, sign, offsetHour, offsetMinute] = match;
+    const localTime = Date.UTC(Number(year), monthMap[month] ?? 0, Number(day), Number(hour), Number(minute), Number(second));
+    if (!sign) return localTime;
+    const offset = ((Number(offsetHour) * 60) + Number(offsetMinute)) * 60 * 1000;
+    return sign === '+' ? localTime - offset : localTime + offset;
 }
 
 function getBotReason(entry, rawLine = '') {

@@ -11,6 +11,7 @@
 - `database.js` owns schema creation, migrations, default users, and seed monitor records.
 - `monitor.js` owns background health, PM2, log, metric, and alert collection.
 - `logParser.js` owns Nginx access-log filtering, visitor parsing, and heuristic bot classification.
+- `visitorAnalytics.js` owns cursor-based access-log ingestion, initial bounded backfill, GeoIP enrichment, and raw-event retention.
 - `routes/` owns HTTP route handlers and request/response contracts.
 - `monitor.db` is runtime state and must not be treated as a source schema definition.
 
@@ -23,17 +24,24 @@
 - For web apps, `metrics.visitors` and `metrics.requests` are human-looking traffic only; bot-looking traffic should remain visible in live visitor rows as `agent: "Bot"` rather than being counted as visitors.
 - `/apps/:id/unique-visitors` groups the current access-log tail by IP and reports first seen, last seen, request counts, top paths, statuses, and human/bot/mixed classification; it is a bounded log-window view, not a permanent analytics ledger.
 - `/apps/:id/traffic-history?days=7|30` returns fixed daily buckets from sampled `metrics` rows for visitor charts; it is monitored traffic history, not exact per-visit or per-day unique analytics.
+- `visitor_events` is the persistent 90-day request ledger. It stores full IPs for private analysis and deduplicates by app, source-file identity, and byte offset.
+- Initial persistent ingestion backfills at most 30 days or 64 MB, then follows each log by cursor every 30 seconds and finishes an identifiable rotated file before switching.
+- `/visitor-analytics/overview` serves cross-site analytics; `/visitor-analytics/apps/:id`, `/visitors`, and `/timeline` serve per-site summary, paginated unique-IP rows, and IP request history.
+- Persistent analytics count unique visitors as distinct human-classified IPs in the selected range. GeoIP is local and optional via `GEOIP_DB_PATH`; missing data must remain an explicit unknown rather than failing ingestion.
+- Reject analytics ranges longer than 90 days, cap visitor pages at 100 rows, keep all analytics endpoints authenticated, and use parameterized SQL.
 
 ## Work Guidance
 
 - Prefer narrow changes in route handlers or monitor helpers before changing API shapes.
 - When changing database columns, update schema creation and migration paths together.
 - Preserve existing CommonJS style in backend files.
+- Keep SQLite WAL and foreign keys enabled. Schema additions and retention behavior must remain safe for existing production databases.
 
 ## Verification
 
 - Run backend syntax checks with `node --check <file>` for touched backend JavaScript files.
 - When API behavior changes, run the server or exercise the relevant endpoint when practical.
+- Run `npm test` for visitor parser, ingestion, deduplication, and retention behavior.
 
 ## Child DOX Index
 

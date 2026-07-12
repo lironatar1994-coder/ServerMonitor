@@ -6,6 +6,8 @@ const path = require('path');
 
 const authRoutes = require('./routes/auth');
 const apiRoutes = require('./routes/api');
+const visitorAnalyticsRoutes = require('./routes/visitorAnalytics');
+const { startVisitorIngestion } = require('./visitorAnalytics');
 require('./monitor'); // Start background monitor
 
 const app = express();
@@ -22,6 +24,7 @@ app.use(morgan('dev'));
 // Routes
 app.use('/serve-monitor/api/auth', authRoutes);
 app.use('/serve-monitor/api/apps', apiRoutes);
+app.use('/serve-monitor/api/visitor-analytics', visitorAnalyticsRoutes);
 
 // Serve frontend
 const distPath = path.join(__dirname, '../frontend/dist');
@@ -37,4 +40,5 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
     console.log(`Server Monitor API running on port ${PORT}`);
+    startVisitorIngestion();
 });

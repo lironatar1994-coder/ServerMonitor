@@ -78,8 +78,12 @@ Default section order:
 
 When the user requests a durable behavior change, record it here or in the relevant child AGENTS.md
 
+- Keep website visitor monitoring and server/resource monitoring as separate product workspaces. The default dashboard must prioritize a clear cross-site visitor picture with both quick and deep views; infrastructure data belongs under `שרת ומשאבים`.
+- Use a distinctive Hebrew/RTL editorial interface for visitor analytics and a separate industrial operational treatment for infrastructure. Do not fall back to generic SaaS cards, glass effects, or decorative dashboards.
+- Production city/region enrichment reads `GEOIP_DB_PATH`, defaulting to `/usr/share/GeoIP/GeoLite2-City.mmdb`; deployment must warn but continue when the local database is unavailable.
+
 ## Child DOX Index
 
-- `backend/AGENTS.md` - Express API, SQLite monitor database, PM2/system monitoring logic, authentication routes, and background checks.
-- `frontend/AGENTS.md` - Vite React dashboard, routing, app cards, detail pages, static assets, and production frontend build.
+- `backend/AGENTS.md` - Express API, persistent visitor analytics, SQLite monitor database, PM2/system monitoring logic, authentication routes, and background checks.
+- `frontend/AGENTS.md` - Vite React visitor, infrastructure, services, settings, authentication, responsive design, static assets, and production build.
 - Root-owned deployment and host files: `deploy.ps1`, `deploy_linux.sh`, `monitor.vee-app.co.il.conf`, `start.bat`, `.gitignore`, and repository-level operational artifacts.
