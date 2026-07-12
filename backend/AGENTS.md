@@ -12,6 +12,7 @@
 - `monitor.js` owns background health, PM2, log, metric, and alert collection.
 - `logParser.js` owns Nginx access-log filtering, visitor parsing, and heuristic bot classification.
 - `visitorAnalytics.js` owns cursor-based access-log ingestion, initial bounded backfill, GeoIP enrichment, and raw-event retention.
+- `emailReports.js` owns daily and weekly client comparison reports, Resend delivery, scheduling, and delivery deduplication.
 - `routes/` owns HTTP route handlers and request/response contracts.
 - `monitor.db` is runtime state and must not be treated as a source schema definition.
 
@@ -29,6 +30,9 @@
 - `/visitor-analytics/overview` serves cross-site analytics; `/visitor-analytics/apps/:id`, `/visitors`, and `/timeline` serve per-site summary, paginated unique-IP rows, and IP request history.
 - Persistent analytics count unique visitors as distinct human-classified IPs in the selected range. GeoIP is local and optional via `GEOIP_DB_PATH`; missing data must remain an explicit unknown rather than failing ingestion.
 - Reject analytics ranges longer than 90 days, cap visitor pages at 100 rows, keep all analytics endpoints authenticated, and use parameterized SQL.
+- Email reports use completed Israel calendar periods: daily compares yesterday with the day before; weekly compares the previous Monday–Sunday with the preceding week.
+- Daily delivery defaults to 08:00 and weekly delivery to Monday at 08:05 Israel time. `email_report_deliveries` prevents duplicate sends after restarts.
+- Keep mail credentials and `REPORT_EMAIL_TO` in `backend/.env`; never commit recipient configuration or provider secrets.
 
 ## Work Guidance
 
@@ -42,6 +46,7 @@
 - Run backend syntax checks with `node --check <file>` for touched backend JavaScript files.
 - When API behavior changes, run the server or exercise the relevant endpoint when practical.
 - Run `npm test` for visitor parser, ingestion, deduplication, and retention behavior.
+- Keep report period, comparison, and HTML escaping tests passing; production delivery uses the existing Resend configuration.
 
 ## Child DOX Index
 

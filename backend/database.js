@@ -75,6 +75,18 @@ db.exec(`
         FOREIGN KEY (app_id) REFERENCES apps (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS email_report_deliveries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        report_type TEXT NOT NULL,
+        period_key TEXT NOT NULL,
+        recipient TEXT NOT NULL,
+        provider_id TEXT,
+        status TEXT NOT NULL,
+        error TEXT,
+        sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (report_type, period_key, recipient)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_visitor_events_app_time
         ON visitor_events (app_id, occurred_at DESC);
     CREATE INDEX IF NOT EXISTS idx_visitor_events_app_ip_time

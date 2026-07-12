@@ -3,11 +3,13 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const authRoutes = require('./routes/auth');
 const apiRoutes = require('./routes/api');
 const visitorAnalyticsRoutes = require('./routes/visitorAnalytics');
 const { startVisitorIngestion } = require('./visitorAnalytics');
+const { startEmailReports } = require('./emailReports');
 require('./monitor'); // Start background monitor
 
 const app = express();
@@ -41,4 +43,5 @@ app.use((req, res) => {
 app.listen(PORT, () => {
     console.log(`Server Monitor API running on port ${PORT}`);
     startVisitorIngestion();
+    startEmailReports();
 });
