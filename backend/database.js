@@ -3,7 +3,9 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 
 const dbPath = process.env.MONITOR_DB_PATH || path.join(__dirname, 'monitor.db');
-const db = new Database(dbPath, { verbose: process.env.NODE_ENV === 'test' ? undefined : console.log });
+const db = new Database(dbPath, {
+    verbose: process.env.DB_VERBOSE === 'true' ? console.log : undefined
+});
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 

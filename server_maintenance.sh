@@ -113,8 +113,9 @@ if [ -r "$env_file" ] && command -v jq >/dev/null 2>&1; then
     resend_key="$(sed -n 's/^RESEND_API_KEY=//p' "$env_file" | tail -1 | tr -d '\r' | sed -e 's/^["'\'']//; s/["'\'']$//')"
     email_to="$(sed -n 's/^MAINTENANCE_EMAIL_TO=//p' "$env_file" | tail -1 | tr -d '\r' | sed -e 's/^["'\'']//; s/["'\'']$//')"
     if [ -z "$email_to" ]; then
-        email_to="$(sed -n 's/^REPORT_EMAIL_TO=//p' "$env_file" | tail -1 | tr -d '\r' | sed -e 's/^["'\'']//; s/["'\'']$//')"
+        email_to="$(sed -n 's/^REPORT_EMAIL_TO=//p' /root/ServerMonitor/backend/.env 2>/dev/null | tail -1 | tr -d '\r' | sed -e 's/^["'\'']//; s/["'\'']$//')"
     fi
+    email_to="${email_to:-lironatar94@gmail.com}"
 
     if [ -n "$resend_key" ] && [ -n "$email_to" ]; then
         email_html="<pre>$(sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' "$LOG_FILE")</pre>"
