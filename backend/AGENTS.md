@@ -29,6 +29,8 @@
 - Initial persistent ingestion backfills at most 30 days or 64 MB, then follows each log by cursor every 30 seconds and finishes an identifiable rotated file before switching.
 - `/visitor-analytics/overview` serves cross-site analytics; `/visitor-analytics/apps/:id`, `/visitors`, and `/timeline` serve per-site summary, paginated unique-IP rows, and IP request history.
 - Persistent analytics count unique visitors as distinct human-classified IPs in the selected range. GeoIP is local and optional via `GEOIP_DB_PATH`; missing data must remain an explicit unknown rather than failing ingestion.
+- `/apps/server-stats` reports Linux `MemAvailable`-based RAM use, swap details, root-filesystem usage, load, and top processes.
+- Sampled `metrics` rows are retained for 90 days; purge maintenance must run at most daily and remain indexed by timestamp.
 - Reject analytics ranges longer than 90 days, cap visitor pages at 100 rows, keep all analytics endpoints authenticated, and use parameterized SQL.
 - Email reports use completed Israel calendar periods: daily compares yesterday with the day before; weekly compares the previous Monday–Sunday with the preceding week.
 - Daily delivery defaults to 08:00 and weekly delivery to Monday at 08:05 Israel time. `email_report_deliveries` prevents duplicate sends after restarts.

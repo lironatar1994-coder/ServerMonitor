@@ -82,6 +82,7 @@ When the user requests a durable behavior change, record it here or in the relev
 - Use a distinctive Hebrew/RTL editorial interface for visitor analytics and a separate industrial operational treatment for infrastructure. Do not fall back to generic SaaS cards, glass effects, or decorative dashboards.
 - Production city/region enrichment reads `GEOIP_DB_PATH`, defaulting to `/usr/share/GeoIP/GeoLite2-City.mmdb`; deployment must warn but continue when the local database is unavailable.
 - Send one client-website comparison email daily and one weekly, using completed Israel calendar periods and the production recipient configured in `REPORT_EMAIL_TO`.
+- Install `server_maintenance.sh` as the daily 03:00 host-maintenance job. Keep seven days of compressed PM2 logs and SQLite backups, remove expired deployment/build caches, report disk thresholds, and never force Linux kernel cache drops.
 
 ## Child DOX Index
 
