@@ -22,17 +22,22 @@ git reset --hard origin/main
 # 2. Frontend Setup
 echo "[INFO] Processing Frontend..."
 cd "$FRONTEND_DIR"
-npm install -s
+npm ci -s
 npm run build
 cd ..
 
 # 3. Backend Setup
 echo "[INFO] Processing Backend..."
 cd "$BACKEND_DIR"
-npm install -s
+npm ci -s
 # Rebuild sqlite3 for Linux environment just in case
 npm rebuild better-sqlite3
 cd ..
+
+if [ -f "server_maintenance.sh" ]; then
+  install -m 700 "server_maintenance.sh" "/root/server_maintenance.sh"
+  echo "[INFO] Installed versioned daily maintenance script"
+fi
 
 if [ -r "$GEOIP_DB_PATH" ]; then
   echo "[INFO] GeoIP city database found at $GEOIP_DB_PATH"

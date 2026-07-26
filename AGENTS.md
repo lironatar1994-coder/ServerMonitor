@@ -87,4 +87,4 @@ When the user requests a durable behavior change, record it here or in the relev
 
 - `backend/AGENTS.md` - Express API, persistent visitor analytics, SQLite monitor database, PM2/system monitoring logic, authentication routes, and background checks.
 - `frontend/AGENTS.md` - Vite React visitor, infrastructure, services, settings, authentication, responsive design, static assets, and production build.
-- Root-owned deployment and host files: `deploy.ps1`, `deploy_linux.sh`, `monitor.vee-app.co.il.conf`, `start.bat`, `.gitignore`, and repository-level operational artifacts.
+- Root-owned deployment and host files: `deploy.ps1`, `deploy_linux.sh`, `server_maintenance.sh`, `monitor.vee-app.co.il.conf`, `start.bat`, `.gitignore`, and repository-level operational artifacts.

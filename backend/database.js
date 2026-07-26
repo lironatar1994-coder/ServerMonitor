@@ -93,6 +93,8 @@ db.exec(`
         ON visitor_events (app_id, ip, occurred_at DESC);
     CREATE INDEX IF NOT EXISTS idx_visitor_events_app_bot_time
         ON visitor_events (app_id, is_bot, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_metrics_timestamp
+        ON metrics (timestamp);
 `);
 
 // Insert default admin if not exists

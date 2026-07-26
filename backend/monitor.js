@@ -8,6 +8,17 @@ const { parseNginxLogMetrics } = require('./logParser');
 console.log('Background Monitor Started...');
 
 const monitorInterval = 10 * 60 * 1000; // Check once every 10 minutes
+const monitorDataRetentionDays = 90;
+let lastDataPurgeAt = 0;
+
+function purgeExpiredMonitorData() {
+    const now = Date.now();
+    if (now - lastDataPurgeAt < 24 * 60 * 60 * 1000) return;
+
+    db.prepare("DELETE FROM metrics WHERE timestamp < datetime('now', ?)").run(`-${monitorDataRetentionDays} days`);
+    db.prepare("DELETE FROM email_report_deliveries WHERE sent_at < datetime('now', '-400 days')").run();
+    lastDataPurgeAt = now;
+}
 
 function checkPm2Status(pm2Name) {
     return new Promise((resolve) => {
@@ -197,6 +208,7 @@ async function runMonitorCycle() {
             db.prepare('INSERT INTO metrics (app_id, visitors, requests, attacks, cpu_usage, ram_usage) VALUES (?, ?, ?, ?, ?, ?)')
               .run(app.id, metrics.visitors, metrics.requests, metrics.attacks, appCpu, appMemory);
         }
+        purgeExpiredMonitorData();
     } catch (err) {
         console.error('Monitor cycle error:', err);
     }

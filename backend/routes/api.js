@@ -138,6 +138,46 @@ function getDiskStats() {
     }
 }
 
+function getMemoryStats() {
+    const total = os.totalmem();
+    let available = os.freemem();
+    let swap = { total: 0, used: 0, available: 0, percentage: 0 };
+
+    if (process.platform === 'linux') {
+        try {
+            const values = Object.fromEntries(
+                fs.readFileSync('/proc/meminfo', 'utf8')
+                    .split('\n')
+                    .map(line => line.match(/^([^:]+):\s+(\d+)\s+kB$/))
+                    .filter(Boolean)
+                    .map(([, key, value]) => [key, Number(value) * 1024])
+            );
+
+            available = values.MemAvailable || available;
+            const swapTotal = values.SwapTotal || 0;
+            const swapAvailable = values.SwapFree || 0;
+            const swapUsed = Math.max(0, swapTotal - swapAvailable);
+            swap = {
+                total: swapTotal,
+                used: swapUsed,
+                available: swapAvailable,
+                percentage: swapTotal ? (swapUsed / swapTotal) * 100 : 0
+            };
+        } catch (error) {
+            console.error('Memory snapshot failed:', error.message);
+        }
+    }
+
+    const used = Math.max(0, total - available);
+    return {
+        total,
+        used,
+        available,
+        percentage: total ? (used / total) * 100 : 0,
+        swap
+    };
+}
+
 function enrichAppStatus(app) {
     if (!app?.pm2_name) {
         return { ...app, status: app.status || 'online', cpu: 0, memory: 0 };
@@ -223,14 +263,11 @@ router.use(authenticateToken);
 
 // Get Server General Stats
 router.get('/server-stats', (req, res) => {
-    const totalMem = os.totalmem();
-    const freeMem = os.freemem();
-    const usedMem = totalMem - freeMem;
     const cpuLoad = os.loadavg()[0]; // 1 min average
     const cpuSnapshot = getCpuSnapshot();
     
     res.json({
-        ram: { total: totalMem, used: usedMem, percentage: (usedMem / totalMem) * 100 },
+        ram: getMemoryStats(),
         cpu: { load: cpuLoad, cores: os.cpus().length, snapshot: cpuSnapshot },
         uptime: os.uptime(),
         disk: getDiskStats()
