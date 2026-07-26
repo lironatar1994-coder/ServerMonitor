@@ -6,6 +6,7 @@
 
 set -e
 
+APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="server-monitor"
 BACKEND_PORT=4010
 FRONTEND_DIR="frontend"
@@ -13,6 +14,7 @@ BACKEND_DIR="backend"
 GEOIP_DB_PATH="${GEOIP_DB_PATH:-/usr/share/GeoIP/GeoLite2-City.mmdb}"
 
 echo "[INFO] Starting Deployment..."
+cd "$APP_ROOT"
 
 # 1. Git Sync
 echo "[INFO] Pulling latest code..."
@@ -34,8 +36,8 @@ npm ci -s
 npm rebuild better-sqlite3
 cd ..
 
-if [ -f "server_maintenance.sh" ]; then
-  install -m 700 "server_maintenance.sh" "/root/server_maintenance.sh"
+if [ -f "$APP_ROOT/server_maintenance.sh" ]; then
+  install -m 700 "$APP_ROOT/server_maintenance.sh" "/root/server_maintenance.sh"
   echo "[INFO] Installed versioned daily maintenance script"
 fi
 
