@@ -13,6 +13,7 @@ FRONTEND_DIR="frontend"
 BACKEND_DIR="backend"
 GEOIP_DB_PATH="${GEOIP_DB_PATH:-/usr/share/GeoIP/GeoLite2-City.mmdb}"
 BACKUP_DIR="/root/server-monitor-backups"
+BACKUP_RETENTION_DAYS=7
 NGINX_LOG_CONFIG="/etc/nginx/conf.d/server-monitor-host-log.conf"
 
 echo "[INFO] Starting Deployment..."
@@ -29,7 +30,7 @@ mkdir -p "$BACKUP_DIR"
 if [ -f "$BACKEND_DIR/monitor.db" ]; then
   BACKUP_PATH="$BACKUP_DIR/monitor-$(date +%Y%m%d-%H%M%S).db"
   sqlite3 "$BACKEND_DIR/monitor.db" ".backup '$BACKUP_PATH'"
-  find "$BACKUP_DIR" -maxdepth 1 -type f -name 'monitor-*.db' -mtime +30 -delete
+  find "$BACKUP_DIR" -maxdepth 1 -type f -name 'monitor-*.db' -mtime +"$BACKUP_RETENTION_DAYS" -delete
   echo "[INFO] Database backup created at $BACKUP_PATH"
 fi
 
