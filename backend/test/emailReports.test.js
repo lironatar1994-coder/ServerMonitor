@@ -44,14 +44,15 @@ test('builds per-client comparisons and safe HTML', () => {
         previousFrom: '2026-07-10T00:00:00.000Z'
     };
     const row = buildReportData(period).find((item) => item.id === appId);
-    assert.equal(row.uniqueHumans, 2);
+    assert.equal(row.uniqueCandidates, 2);
     assert.equal(row.uniqueChange, 100);
-    assert.equal(row.humanRequests, 2);
+    assert.equal(row.candidateRequests, 2);
     assert.equal(row.botRequests, 1);
     assert.equal(row.topPage, '/pricing');
 
     const rendered = renderEmail('daily', period, [row]);
     assert.match(rendered.subject, /סיכום לקוחות יומי/);
+    assert.match(rendered.html, /זו הערכה ולא אימות של אדם/);
     assert.match(rendered.html, /Client &lt;One&gt;/);
     assert.doesNotMatch(rendered.html, /Client <One>/);
 });

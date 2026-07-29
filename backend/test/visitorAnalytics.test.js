@@ -10,12 +10,18 @@ process.env.MONITOR_DB_PATH = path.join(tempDir, 'test.db');
 process.env.GEOIP_DB_PATH = path.join(tempDir, 'missing.mmdb');
 
 const db = require('../database');
-const { parseAccessLogTimestamp, parseNginxAccessLine } = require('../logParser');
+const {
+    getBotReason,
+    isTargetAppLine,
+    parseAccessLogTimestamp,
+    parseNginxAccessLine
+} = require('../logParser');
 const { ingestApp, purgeExpiredEvents } = require('../visitorAnalytics');
 
 const humanLine = '1.2.3.4 - - [12/Jul/2026:12:00:00 +0300] "GET /site/ HTTP/1.1" 200 120 "https://google.com" "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"';
 const botLine = '5.6.7.8 - - [12/Jul/2026:12:01:00 +0300] "GET /site/wp-login.php HTTP/1.1" 404 12 "-" "curl/8.1"';
 const secondHumanLine = '1.2.3.4 - - [12/Jul/2026:12:02:00 +0300] "GET /site/about HTTP/1.1" 200 100 "-" "Mozilla/5.0 (Windows NT 10.0)"';
+const hostAwareLine = '1.2.3.4 - - [12/Jul/2026:12:03:00 +0300] "GET / HTTP/1.1" 200 100 "-" "Mozilla/5.0 (Windows NT 10.0)" "sosbaderech.co.il"';
 
 test.after(() => {
     db.close();
@@ -27,6 +33,43 @@ test('parses combined Nginx rows and honors numeric timezone offsets', () => {
     assert.equal(parsed.ip, '1.2.3.4');
     assert.equal(parsed.path, '/site/');
     assert.equal(new Date(parseAccessLogTimestamp(parsed.timestamp)).toISOString(), '2026-07-12T09:00:00.000Z');
+    assert.equal(parsed.host, null);
+    assert.equal(parseNginxAccessLine(hostAwareLine).host, 'sosbaderech.co.il');
+});
+
+test('requires an exact recorded host when an app has a host boundary', () => {
+    assert.equal(isTargetAppLine(
+        hostAwareLine,
+        'SOS Landing',
+        null,
+        'sosbaderech.co.il|www.sosbaderech.co.il',
+        null
+    ), true);
+    assert.equal(isTargetAppLine(
+        hostAwareLine,
+        'Vee Main App',
+        null,
+        'vee-app.co.il|www.vee-app.co.il',
+        null
+    ), false);
+    assert.equal(isTargetAppLine(
+        humanLine,
+        'SOS Landing',
+        null,
+        'sosbaderech.co.il|www.sosbaderech.co.il',
+        null
+    ), false);
+});
+
+test('catches production scanner signatures previously counted as candidates', () => {
+    const gobuster = parseNginxAccessLine(
+        '5.5.5.5 - - [12/Jul/2026:12:04:00 +0300] "GET /.git/config HTTP/1.1" 404 10 "-" "gobuster/3.8.2" "vee-app.co.il"'
+    );
+    const censys = parseNginxAccessLine(
+        '6.6.6.6 - - [12/Jul/2026:12:05:00 +0300] "GET / HTTP/1.1" 200 10 "-" "Mozilla/5.0 (compatible; CensysInspect/1.1)" "vee-app.co.il"'
+    );
+    assert.equal(getBotReason(gobuster), 'bot user agent');
+    assert.equal(getBotReason(censys), 'bot user agent');
 });
 
 test('backfills, classifies, deduplicates, and incrementally ingests', () => {

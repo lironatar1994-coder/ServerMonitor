@@ -31,9 +31,9 @@ function getSummary(appId, range) {
     const summary = db.prepare(`
         SELECT
             COUNT(*) AS total_requests,
-            SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) AS human_requests,
+            SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) AS candidate_requests,
             SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) AS bot_requests,
-            COUNT(DISTINCT CASE WHEN is_bot = 0 THEN ip END) AS unique_humans,
+            COUNT(DISTINCT CASE WHEN is_bot = 0 THEN ip END) AS unique_candidates,
             COUNT(DISTINCT CASE WHEN is_bot = 1 THEN ip END) AS unique_bots
         FROM visitor_events
         WHERE occurred_at >= ? AND occurred_at < ? ${appClause}
@@ -41,15 +41,15 @@ function getSummary(appId, range) {
     const activeParams = [new Date(Date.now() - 5 * 60 * 1000).toISOString()];
     if (appId) activeParams.push(appId);
     const active = db.prepare(`
-        SELECT COUNT(DISTINCT ip) AS active_humans
+        SELECT COUNT(DISTINCT ip) AS active_candidates
         FROM visitor_events
         WHERE is_bot = 0 AND occurred_at >= ?
         ${appId ? 'AND app_id = ?' : ''}
     `).get(...activeParams);
     const mix = db.prepare(`
         SELECT
-            SUM(CASE WHEN first_seen >= @from THEN 1 ELSE 0 END) AS new_humans,
-            SUM(CASE WHEN first_seen < @from THEN 1 ELSE 0 END) AS returning_humans
+            SUM(CASE WHEN first_seen >= @from THEN 1 ELSE 0 END) AS new_candidates,
+            SUM(CASE WHEN first_seen < @from THEN 1 ELSE 0 END) AS returning_candidates
         FROM (
             SELECT e.ip, (
                 SELECT MIN(previous.occurred_at) FROM visitor_events previous
@@ -64,13 +64,13 @@ function getSummary(appId, range) {
     `).get({ from: range.from, to: range.to, appId: appId || null });
     return {
         total_requests: Number(summary.total_requests) || 0,
-        human_requests: Number(summary.human_requests) || 0,
+        candidate_requests: Number(summary.candidate_requests) || 0,
         bot_requests: Number(summary.bot_requests) || 0,
-        unique_humans: Number(summary.unique_humans) || 0,
+        unique_candidates: Number(summary.unique_candidates) || 0,
         unique_bots: Number(summary.unique_bots) || 0,
-        active_humans: Number(active.active_humans) || 0,
-        new_humans: Number(mix.new_humans) || 0,
-        returning_humans: Number(mix.returning_humans) || 0
+        active_candidates: Number(active.active_candidates) || 0,
+        new_candidates: Number(mix.new_candidates) || 0,
+        returning_candidates: Number(mix.returning_candidates) || 0
     };
 }
 
@@ -83,8 +83,8 @@ function getComparison(appId, range, summary) {
     const previousSummary = getSummary(appId, previous);
     const delta = (current, before) => before > 0 ? ((current - before) / before) * 100 : current > 0 ? 100 : 0;
     return {
-        unique_humans_percent: delta(summary.unique_humans, previousSummary.unique_humans),
-        human_requests_percent: delta(summary.human_requests, previousSummary.human_requests),
+        unique_candidates_percent: delta(summary.unique_candidates, previousSummary.unique_candidates),
+        candidate_requests_percent: delta(summary.candidate_requests, previousSummary.candidate_requests),
         previous: previousSummary
     };
 }
@@ -97,8 +97,8 @@ function getSeries(appId, range) {
     const params = appId ? [range.from, range.to, appId] : [range.from, range.to];
     return db.prepare(`
         SELECT ${bucket} AS bucket,
-            COUNT(DISTINCT CASE WHEN is_bot = 0 THEN ip END) AS unique_humans,
-            SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) AS human_requests,
+            COUNT(DISTINCT CASE WHEN is_bot = 0 THEN ip END) AS unique_candidates,
+            SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) AS candidate_requests,
             SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) AS bot_requests
         FROM visitor_events
         WHERE occurred_at >= ? AND occurred_at < ? ${appId ? 'AND app_id = ?' : ''}
@@ -141,14 +141,14 @@ function getRecent(appId, range, limit = 12) {
 function getSiteRanking(range) {
     return db.prepare(`
         SELECT a.id AS app_id, a.name, a.url,
-            COUNT(DISTINCT CASE WHEN e.is_bot = 0 THEN e.ip END) AS unique_humans,
-            SUM(CASE WHEN e.is_bot = 0 THEN 1 ELSE 0 END) AS human_requests,
+            COUNT(DISTINCT CASE WHEN e.is_bot = 0 THEN e.ip END) AS unique_candidates,
+            SUM(CASE WHEN e.is_bot = 0 THEN 1 ELSE 0 END) AS candidate_requests,
             SUM(CASE WHEN e.is_bot = 1 THEN 1 ELSE 0 END) AS bot_requests
         FROM apps a
         LEFT JOIN visitor_events e ON e.app_id = a.id
             AND e.occurred_at >= ? AND e.occurred_at < ?
         WHERE a.log_path IS NOT NULL
-        GROUP BY a.id ORDER BY unique_humans DESC, human_requests DESC, a.name ASC
+        GROUP BY a.id ORDER BY unique_candidates DESC, candidate_requests DESC, a.name ASC
     `).all(range.from, range.to);
 }
 
@@ -233,7 +233,9 @@ router.get('/apps/:id/visitors', (req, res) => {
         const page = Math.max(1, Number(req.query.page) || 1);
         const limit = Math.min(100, Math.max(10, Number(req.query.limit) || 25));
         const search = (req.query.search || '').trim();
-        const classification = ['human', 'bot', 'all'].includes(req.query.classification) ? req.query.classification : 'human';
+        const classification = ['candidate', 'bot', 'all'].includes(req.query.classification)
+            ? req.query.classification
+            : 'candidate';
         const sortMap = {
             last_seen: 'last_seen', first_seen: 'first_seen', requests: 'requests', ip: 'ip'
         };
@@ -255,7 +257,7 @@ router.get('/apps/:id/visitors', (req, res) => {
         const rows = db.prepare(`
             SELECT ip, MIN(occurred_at) AS first_seen, MAX(occurred_at) AS last_seen,
                 COUNT(*) AS requests,
-                SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) AS human_requests,
+                SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) AS candidate_requests,
                 SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) AS bot_requests,
                 MAX(device_type) AS device_type, MAX(city) AS city, MAX(region) AS region,
                 (SELECT path FROM visitor_events p

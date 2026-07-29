@@ -28,7 +28,9 @@ db.exec(`
         last_alerted_at DATETIME,
         health_port INTEGER,
         health_path TEXT,
-        log_filter TEXT
+        log_filter TEXT,
+        log_host TEXT,
+        log_exclude TEXT
     );
 
     CREATE TABLE IF NOT EXISTS metrics (
@@ -54,6 +56,7 @@ db.exec(`
         path TEXT,
         status INTEGER,
         referrer TEXT,
+        host TEXT,
         user_agent TEXT,
         device_type TEXT DEFAULT 'Unknown',
         is_bot INTEGER DEFAULT 0,
@@ -136,6 +139,27 @@ try {
     // Column already exists
 }
 
+try {
+    db.exec(`ALTER TABLE apps ADD COLUMN log_host TEXT`);
+    console.log('Added column log_host to apps table');
+} catch (e) {
+    // Column already exists
+}
+
+try {
+    db.exec(`ALTER TABLE apps ADD COLUMN log_exclude TEXT`);
+    console.log('Added column log_exclude to apps table');
+} catch (e) {
+    // Column already exists
+}
+
+try {
+    db.exec(`ALTER TABLE visitor_events ADD COLUMN host TEXT`);
+    console.log('Added column host to visitor_events table');
+} catch (e) {
+    // Column already exists
+}
+
 // Insert Pixel Dungeon app if not exists
 const pdExists = db.prepare('SELECT id FROM apps WHERE name = ?').get('Pixel Dungeon');
 if (!pdExists) {
@@ -161,5 +185,71 @@ if (!miryamExists) {
     );
     console.log('Miryam Zelig app entry created in database.');
 }
+
+const hostAwareLogPath = '/var/log/nginx/monitor_host_access.log';
+const hostAwareAppConfig = [
+    {
+        name: 'Vee Main App',
+        host: 'vee-app.co.il|www.vee-app.co.il',
+        filter: null,
+        exclude: '/text-to-pdf|/serve-monitor|/pixel-dungeon|/Miryam_Zelig|/miryam_zelig|/Manager_Site|/OnYourWay|/onyourway|/sos|/LibiDiamonds2'
+    },
+    {
+        name: 'PDF Generator',
+        host: 'vee-app.co.il|www.vee-app.co.il',
+        filter: '/text-to-pdf',
+        exclude: null
+    },
+    {
+        name: 'Pixel Dungeon',
+        host: 'vee-app.co.il|www.vee-app.co.il',
+        filter: '/pixel-dungeon/',
+        exclude: null
+    },
+    {
+        name: 'Miryam Zelig',
+        host: 'vee-app.co.il|www.vee-app.co.il',
+        filter: '/Miryam_Zelig|/miryam_zelig',
+        exclude: null
+    },
+    {
+        name: 'SOS Landing',
+        host: 'sosbaderech.co.il|www.sosbaderech.co.il',
+        filter: null,
+        exclude: null
+    }
+];
+
+const updateHostAwareApp = db.prepare(`
+    UPDATE apps
+    SET log_path = ?, log_host = ?, log_filter = ?, log_exclude = ?
+    WHERE name = ?
+`);
+const contaminatedHistoryApps = new Set(['Vee Main App', 'SOS Landing']);
+const applyHostAwareConfig = db.transaction(() => {
+    hostAwareAppConfig.forEach((app) => {
+        const existing = db.prepare(`
+            SELECT id, log_path, log_host, log_filter, log_exclude
+            FROM apps WHERE name = ?
+        `).get(app.name);
+        if (!existing) return;
+
+        const changed = existing.log_path !== hostAwareLogPath ||
+            existing.log_host !== app.host ||
+            existing.log_filter !== app.filter ||
+            existing.log_exclude !== app.exclude;
+        if (changed) {
+            db.prepare('DELETE FROM visitor_ingestion_state WHERE app_id = ?').run(existing.id);
+            if (contaminatedHistoryApps.has(app.name)) {
+                db.prepare('DELETE FROM visitor_events WHERE app_id = ?').run(existing.id);
+                console.log(`Reset contaminated visitor analytics for ${app.name} before enabling host-aware logging.`);
+            } else {
+                console.log(`Reset visitor ingestion cursor for ${app.name} before enabling host-aware logging.`);
+            }
+        }
+        updateHostAwareApp.run(hostAwareLogPath, app.host, app.filter, app.exclude, app.name);
+    });
+});
+applyHostAwareConfig();
 
 module.exports = db;

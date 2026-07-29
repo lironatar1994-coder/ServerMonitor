@@ -21,7 +21,7 @@
 - Keep dashboard UI practical for live operations: empty states should distinguish no configured apps from failed loading.
 - `/visitors` is the default cross-site visitor overview and `/visitors/:id` is the deep per-site view. Visitor pages must not mix in CPU, RAM, disk, PM2, or host-process metrics.
 - `/infrastructure` owns server resources and app runtime health. `/services` owns configuration and operational actions.
-- Keep visible visitor terminology honest: unique visitors are distinct human-classified IPs in the selected range, active visitors are from the last five minutes, and IP-derived locations are approximate.
+- Keep visible visitor terminology honest: unique candidates are distinct IPs not identified as bots in the selected range, active candidates are from the last five minutes, and IP-derived locations are approximate. Never label candidates as confirmed people or human traffic.
 - Preserve RTL Hebrew presentation, `he-IL` formatting, and `Asia/Jerusalem` timestamps.
 
 ## Work Guidance

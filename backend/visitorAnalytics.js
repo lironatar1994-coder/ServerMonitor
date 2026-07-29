@@ -30,9 +30,9 @@ try {
 const insertEvent = db.prepare(`
     INSERT OR IGNORE INTO visitor_events (
         app_id, source_file_id, source_offset, occurred_at, ip, method, path,
-        status, referrer, user_agent, device_type, is_bot, bot_reason,
+        status, referrer, host, user_agent, device_type, is_bot, bot_reason,
         country_code, region, city
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const upsertState = db.prepare(`
@@ -68,9 +68,9 @@ function enrichLocation(ip) {
 }
 
 function ingestLine(app, line, sourceFileId, sourceOffset) {
-    if (!isTargetAppLine(line, app.name, app.log_filter)) return 0;
     const entry = parseNginxAccessLine(line);
     if (!entry?.ip) return 0;
+    if (!isTargetAppLine(line, app.name, app.log_filter, app.log_host, app.log_exclude, entry)) return 0;
     const timestamp = parseAccessLogTimestamp(entry.timestamp);
     if (!timestamp) return 0;
 
@@ -86,6 +86,7 @@ function ingestLine(app, line, sourceFileId, sourceOffset) {
         entry.path,
         entry.status,
         entry.referrer === '-' ? null : entry.referrer,
+        entry.host,
         entry.userAgent,
         getAgentType(entry, line),
         botReason ? 1 : 0,

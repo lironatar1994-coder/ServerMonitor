@@ -167,7 +167,13 @@ async function runMonitorCycle() {
             
             // 3. Parse logs
             if (app.log_path) {
-                metrics = parseNginxLogMetrics(app.log_path, app.name, app.log_filter);
+                metrics = parseNginxLogMetrics(
+                    app.log_path,
+                    app.name,
+                    app.log_filter,
+                    app.log_host,
+                    app.log_exclude
+                );
             } else if (app.name === 'SSH Security') {
                 metrics.attacks = getFail2banBannedCount();
                 status = 'online';

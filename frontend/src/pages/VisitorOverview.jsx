@@ -48,26 +48,26 @@ const VisitorOverview = () => {
         <div>
           <span className="edition-label">תמונת מצב / כל האתרים</span>
           <h1>מי נמצא<br /><em>באתרים שלך?</em></h1>
-          <p>מבט אחד שמפריד בין אנשים אמיתיים, תנועה אוטומטית והסיפור שמאחורי כל כניסה.</p>
+          <p>מבט אחד שמפריד בין בוטים מזוהים, תנועה שלא זוהתה כבוט והסיפור שמאחורי כל כניסה.</p>
         </div>
         <div className="hero-aside">
           <span className="live-now"><CircleDot /> מתעדכן כל 30 שניות</span>
           <RangePicker days={days} onChange={(value) => { setDays(value); setCustomRange(null); }} customActive={Boolean(customRange)} onCustom={setCustomRange} loading={loading} onRefresh={() => fetchAnalytics()} />
-          <small>מבקר ייחודי = כתובת IP אנושית ייחודית בטווח הנבחר</small>
+          <small>מועמד ייחודי = כתובת IP שלא זוהתה כבוט. זו הערכה, לא אימות של אדם.</small>
         </div>
       </header>
 
       <DataState loading={loading && !data} error={error}>
         <section className="metrics-ledger" aria-label="מדדי מבקרים מרכזיים">
-          <MetricBlock label="מבקרים ייחודיים" value={summary.unique_humans} delta={data?.comparison?.unique_humans_percent} tone="forest" note="לעומת הטווח הקודם" />
-          <MetricBlock label="פעילים עכשיו" value={summary.active_humans} tone="vermilion" note="בקשה בחמש הדקות האחרונות" />
-          <MetricBlock label="בקשות אנושיות" value={summary.human_requests} delta={data?.comparison?.human_requests_percent} note="פעילות שנקלטה בשרת" />
+          <MetricBlock label="מועמדים ייחודיים" value={summary.unique_candidates} delta={data?.comparison?.unique_candidates_percent} tone="forest" note="לא זוהו כבוט; לעומת הטווח הקודם" />
+          <MetricBlock label="פעילים עכשיו" value={summary.active_candidates} tone="vermilion" note="מועמד עם בקשה בחמש הדקות האחרונות" />
+          <MetricBlock label="בקשות לא מזוהות כבוט" value={summary.candidate_requests} delta={data?.comparison?.candidate_requests_percent} note="אינן הוכחה לפעילות אנושית" />
           <MetricBlock label="תנועת בוטים" value={`${botShare.toFixed(0)}%`} tone="ochre" note={`${formatNumber(summary.bot_requests)} בקשות שסוננו`} />
         </section>
 
         <section className="overview-composition">
           <article className="story-panel story-panel--chart">
-            <SectionHeader eyebrow="קצב התנועה" title="מתי הם הגיעו" note="אנשים ייחודיים ובקשות אנושיות לאורך הטווח" />
+            <SectionHeader eyebrow="קצב התנועה" title="מתי הם הגיעו" note="מועמדים ייחודיים ובקשות שלא זוהו כבוט לאורך הטווח" />
             <div className="main-chart" aria-label="גרף תנועת מבקרים">
               {chartData.length ? (
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
@@ -82,8 +82,8 @@ const VisitorOverview = () => {
                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#6f695f', fontSize: 12 }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6f695f', fontSize: 12 }} allowDecimals={false} />
                     <Tooltip contentStyle={{ background: '#171713', border: 0, borderRadius: 0, color: '#f2ebdd' }} />
-                    <Area type="monotone" dataKey="human_requests" name="בקשות" stroke="#1f5a47" strokeWidth={3} fill="url(#visitorInk)" />
-                    <Area type="monotone" dataKey="unique_humans" name="ייחודיים" stroke="#d5543f" strokeWidth={2} fill="transparent" />
+                    <Area type="monotone" dataKey="candidate_requests" name="בקשות מועמדות" stroke="#1f5a47" strokeWidth={3} fill="url(#visitorInk)" />
+                    <Area type="monotone" dataKey="unique_candidates" name="מועמדים ייחודיים" stroke="#d5543f" strokeWidth={2} fill="transparent" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : <div className="quiet-empty">הגרף יתמלא ברגע שתיקלט תנועה חדשה</div>}
@@ -96,8 +96,8 @@ const VisitorOverview = () => {
               {(data?.sites || []).map((site, index) => (
                 <Link to={`/visitors/${site.app_id}`} className="site-rank" key={site.app_id}>
                   <span>{String(index + 1).padStart(2, '0')}</span>
-                  <div><b>{site.name}</b><small>{formatNumber(site.human_requests)} בקשות אנושיות</small></div>
-                  <strong>{formatNumber(site.unique_humans)}</strong>
+                  <div><b>{site.name}</b><small>{formatNumber(site.candidate_requests)} בקשות שלא זוהו כבוט</small></div>
+                  <strong>{formatNumber(site.unique_candidates)}</strong>
                   <ArrowLeft aria-hidden="true" />
                 </Link>
               ))}
@@ -113,7 +113,7 @@ const VisitorOverview = () => {
         </section>
 
         <section className="live-feed-section">
-          <SectionHeader eyebrow="זרם חי" title="הכניסות האנושיות האחרונות" note={`עודכן ${formatDateTime(data?.generated_at)}`} />
+          <SectionHeader eyebrow="זרם חי" title="הכניסות האחרונות שלא זוהו כבוט" note={`עודכן ${formatDateTime(data?.generated_at)}`} />
           <div className="live-feed">
             {(data?.recent || []).map((event, index) => (
               <Link to={`/visitors/${event.app_id}`} className="feed-row" key={`${event.ip}-${event.occurred_at}-${index}`}>

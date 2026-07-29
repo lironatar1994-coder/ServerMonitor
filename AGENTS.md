@@ -83,9 +83,10 @@ When the user requests a durable behavior change, record it here or in the relev
 - Production city/region enrichment reads `GEOIP_DB_PATH`, defaulting to `/usr/share/GeoIP/GeoLite2-City.mmdb`; deployment must warn but continue when the local database is unavailable.
 - Send one client-website comparison email daily and one weekly, using completed Israel calendar periods and the production recipient configured in `REPORT_EMAIL_TO`.
 - Install `server_maintenance.sh` as the daily 03:00 host-maintenance job. Keep seven days of compressed PM2 logs and SQLite backups, remove expired deployment/build caches, report disk thresholds, and never force Linux kernel cache drops.
+- Never present traffic that merely escaped bot heuristics as confirmed human. Use candidate/estimated language, keep classification uncertainty visible, and require exact host-aware log attribution for every monitored website.
 
 ## Child DOX Index
 
 - `backend/AGENTS.md` - Express API, persistent visitor analytics, SQLite monitor database, PM2/system monitoring logic, authentication routes, and background checks.
 - `frontend/AGENTS.md` - Vite React visitor, infrastructure, services, settings, authentication, responsive design, static assets, and production build.
-- Root-owned deployment and host files: `deploy.ps1`, `deploy_linux.sh`, `server_maintenance.sh`, `monitor.vee-app.co.il.conf`, `start.bat`, `.gitignore`, and repository-level operational artifacts.
+- Root-owned deployment and host files: `deploy.ps1`, `deploy_linux.sh`, `server_maintenance.sh`, `monitor.vee-app.co.il.conf`, `nginx-monitor-host-log.conf`, `start.bat`, `.gitignore`, and repository-level operational artifacts.

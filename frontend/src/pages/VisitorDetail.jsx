@@ -87,16 +87,16 @@ const VisitorDetail = () => {
 
       <DataState loading={loading && !data} error={error}>
         <section className="metrics-ledger metrics-ledger--detail">
-          <MetricBlock label="מבקרים ייחודיים" value={summary.unique_humans} delta={data?.comparison?.unique_humans_percent} tone="forest" note="כתובות IP אנושיות" />
-          <MetricBlock label="פעילים עכשיו" value={summary.active_humans} tone="vermilion" note="בחמש הדקות האחרונות" />
-          <MetricBlock label="בקשות אנושיות" value={summary.human_requests} delta={data?.comparison?.human_requests_percent} note="בטווח הנבחר" />
+          <MetricBlock label="מועמדים ייחודיים" value={summary.unique_candidates} delta={data?.comparison?.unique_candidates_percent} tone="forest" note="כתובות IP שלא זוהו כבוט" />
+          <MetricBlock label="פעילים עכשיו" value={summary.active_candidates} tone="vermilion" note="מועמדים בחמש הדקות האחרונות" />
+          <MetricBlock label="בקשות לא מזוהות כבוט" value={summary.candidate_requests} delta={data?.comparison?.candidate_requests_percent} note="הערכה בלבד, לא אימות אדם" />
           <MetricBlock label="בוטים שסוננו" value={summary.bot_requests} tone="ochre" note="לא נספרו כמבקרים" />
         </section>
 
         <section className="visitor-mix" aria-label="מבקרים חדשים וחוזרים">
-          <div><span>חדשים בטווח</span><strong>{formatNumber(summary.new_humans)}</strong><small>נצפו לראשונה בתוך הטווח</small></div>
-          <div><span>חוזרים</span><strong>{formatNumber(summary.returning_humans)}</strong><small>נראו גם לפני תחילת הטווח</small></div>
-          <p>ההבחנה מבוססת על כתובת IP ונשענת על היסטוריה של עד 90 יום.</p>
+          <div><span>מועמדים חדשים בטווח</span><strong>{formatNumber(summary.new_candidates)}</strong><small>נצפו לראשונה בתוך הטווח</small></div>
+          <div><span>מועמדים חוזרים</span><strong>{formatNumber(summary.returning_candidates)}</strong><small>נראו גם לפני תחילת הטווח</small></div>
+          <p>מועמד הוא כתובת IP שלא זוהתה כבוט. זו הערכה המבוססת על לוגים, לא אימות של אדם.</p>
         </section>
 
         <section className="detail-analysis-grid">
@@ -108,7 +108,7 @@ const VisitorDetail = () => {
                 <XAxis dataKey="label" axisLine={false} tickLine={false} />
                 <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip />
-                <Area dataKey="human_requests" name="בקשות" stroke="#1f5a47" strokeWidth={3} fill="#1f5a4720" />
+                <Area dataKey="candidate_requests" name="בקשות מועמדות" stroke="#1f5a47" strokeWidth={3} fill="#1f5a4720" />
               </AreaChart></ResponsiveContainer> : <div className="quiet-empty">אין תנועה בטווח הזה</div>}
             </div>
           </article>

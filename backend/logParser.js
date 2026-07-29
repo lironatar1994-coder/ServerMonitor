@@ -32,7 +32,23 @@ const botUserAgentPatterns = [
     /java\//i,
     /libwww-perl/i,
     /httpclient/i,
-    /axios/i
+    /axios/i,
+    /gobuster/i,
+    /libredtail/i,
+    /l9scan/i,
+    /l9explore/i,
+    /leakix/i,
+    /censys/i,
+    /zgrab/i,
+    /masscan/i,
+    /nuclei/i,
+    /nikto/i,
+    /sqlmap/i,
+    /palo alto networks/i,
+    /cortex-xpanse/i,
+    /cms-checker/i,
+    /cve-\d/i,
+    /internet[- ](?:measurement|census|scanner)/i
 ];
 
 const suspiciousPathPatterns = [
@@ -49,7 +65,19 @@ const suspiciousPathPatterns = [
     /\/etc\/passwd/i,
     /\/actuator/i,
     /\/solr/i,
-    /\/server-status/i
+    /\/server-status/i,
+    /\/\.git(?:\/|$)/i,
+    /\/\.svn(?:\/|$)/i,
+    /\/\.hg(?:\/|$)/i,
+    /\/\.aws(?:\/|$)/i,
+    /\/\.docker(?:\/|$)/i,
+    /\/phpinfo(?:\.php)?(?:\/|$)/i,
+    /\/info\.php(?:\/|$)/i,
+    /\/composer\.(?:json|lock)(?:\/|$)/i,
+    /\/docker-compose\.ya?ml(?:\/|$)/i,
+    /\/\.?aws\/credentials(?:\/|$)/i,
+    /\/owa\/auth/i,
+    /\/autodiscover\//i
 ];
 
 function readLogTail(logPath, tailBytes = DEFAULT_TAIL_BYTES) {
@@ -70,24 +98,40 @@ function readLogTail(logPath, tailBytes = DEFAULT_TAIL_BYTES) {
     }
 }
 
-function isTargetAppLine(line, appName, logFilter) {
-    if (logFilter) {
-        return logFilter
-            .split('|')
-            .map((filter) => filter.trim())
-            .filter(Boolean)
-            .some((filter) => line.includes(filter));
+function splitConfig(value) {
+    return (value || '')
+        .split('|')
+        .map((part) => part.trim())
+        .filter(Boolean);
+}
+
+function isTargetAppLine(line, appName, logFilter, logHost, logExclude, parsedEntry) {
+    const entry = parsedEntry || parseNginxAccessLine(line);
+    if (!entry) return false;
+
+    const allowedHosts = splitConfig(logHost).map((host) => host.toLowerCase());
+    if (allowedHosts.length && (!entry.host || !allowedHosts.includes(entry.host.toLowerCase()))) {
+        return false;
     }
-    if (appName === 'PDF Generator') return line.includes('/text-to-pdf');
-    if (appName === 'Vee Main App') return !line.includes('/text-to-pdf') && !line.includes('/serve-monitor');
+
+    const excludedPaths = splitConfig(logExclude);
+    if (excludedPaths.some((filter) => entry.path.includes(filter))) return false;
+
+    if (logFilter) {
+        return splitConfig(logFilter).some((filter) => entry.path.includes(filter));
+    }
+    if (appName === 'PDF Generator') return entry.path.includes('/text-to-pdf');
+    if (appName === 'Vee Main App' && !logExclude) {
+        return !entry.path.includes('/text-to-pdf') && !entry.path.includes('/serve-monitor');
+    }
     return true;
 }
 
 function parseNginxAccessLine(line) {
-    const match = line.match(/^(\S+)\s+\S+\s+\S+\s+\[([^\]]+)\]\s+"(\S+)\s+([^\s"]+)(?:\s+[^"]*)?"\s+(\d{3})\s+\S+\s+"([^"]*)"\s+"([^"]*)"/);
+    const match = line.match(/^(\S+)\s+\S+\s+\S+\s+\[([^\]]+)\]\s+"(\S+)\s+([^\s"]+)(?:\s+[^"]*)?"\s+(\d{3})\s+\S+\s+"([^"]*)"\s+"([^"]*)"(?:\s+"([^"]*)")?/);
     if (!match) return null;
 
-    const [, ip, timestamp, method, rawPath, status, referrer, userAgent] = match;
+    const [, ip, timestamp, method, rawPath, status, referrer, userAgent, host] = match;
     const path = rawPath.split('?')[0] || rawPath;
 
     return {
@@ -97,7 +141,8 @@ function parseNginxAccessLine(line) {
         path,
         status: parseInt(status, 10),
         referrer,
-        userAgent
+        userAgent,
+        host: host || null
     };
 }
 
@@ -162,7 +207,7 @@ function isAttackLine(line, entry) {
     );
 }
 
-function parseNginxLogMetrics(logPath, appName, logFilter) {
+function parseNginxLogMetrics(logPath, appName, logFilter, logHost, logExclude) {
     if (!logPath || !fs.existsSync(logPath)) {
         return { visitors: 0, requests: 0, attacks: 0, total_requests: 0, bot_requests: 0, bot_visitors: 0 };
     }
@@ -177,11 +222,11 @@ function parseNginxLogMetrics(logPath, appName, logFilter) {
         let attacks = 0;
 
         lines.forEach((line) => {
-            if (!isTargetAppLine(line, appName, logFilter)) return;
-
-            totalRequests++;
             const entry = parseNginxAccessLine(line);
             if (!entry) return;
+            if (!isTargetAppLine(line, appName, logFilter, logHost, logExclude, entry)) return;
+
+            totalRequests++;
 
             if (isAttackLine(line, entry)) attacks++;
 
@@ -210,7 +255,7 @@ function parseNginxLogMetrics(logPath, appName, logFilter) {
     }
 }
 
-function getRecentVisitors(logPath, appName, logFilter, limit = 100) {
+function getRecentVisitors(logPath, appName, logFilter, logHost, logExclude, limit = 100) {
     if (!logPath || !fs.existsSync(logPath)) return [];
 
     const lines = readLogTail(logPath, VISITOR_TAIL_BYTES);
@@ -218,10 +263,9 @@ function getRecentVisitors(logPath, appName, logFilter, limit = 100) {
 
     for (let i = lines.length - 1; i >= 0; i--) {
         const line = lines[i];
-        if (!isTargetAppLine(line, appName, logFilter)) continue;
-
         const entry = parseNginxAccessLine(line);
         if (!entry) continue;
+        if (!isTargetAppLine(line, appName, logFilter, logHost, logExclude, entry)) continue;
 
         const botReason = getBotReason(entry, line);
         visitors.push({
@@ -232,7 +276,8 @@ function getRecentVisitors(logPath, appName, logFilter, limit = 100) {
             status: entry.status,
             agent: getAgentType(entry, line),
             is_bot: Boolean(botReason),
-            bot_reason: botReason || null
+            bot_reason: botReason || null,
+            classification: botReason ? 'bot' : 'candidate'
         });
 
         if (visitors.length >= limit) break;
@@ -254,16 +299,16 @@ function getTopCounts(map, limit = 5) {
         .map(([value, count]) => ({ value, count }));
 }
 
-function getUniqueVisitors(logPath, appName, logFilter, limit = 250) {
+function getUniqueVisitors(logPath, appName, logFilter, logHost, logExclude, limit = 250) {
     if (!logPath || !fs.existsSync(logPath)) {
         return {
             summary: {
                 total_unique: 0,
-                human_unique: 0,
+                candidate_unique: 0,
                 bot_unique: 0,
                 mixed_unique: 0,
                 total_requests: 0,
-                human_requests: 0,
+                candidate_requests: 0,
                 bot_requests: 0
             },
             visitors: []
@@ -272,17 +317,16 @@ function getUniqueVisitors(logPath, appName, logFilter, limit = 250) {
 
     const lines = readLogTail(logPath, VISITOR_TAIL_BYTES);
     const grouped = new Map();
-    const humanIps = new Set();
+    const candidateIps = new Set();
     const botIps = new Set();
     let totalRequests = 0;
-    let humanRequests = 0;
+    let candidateRequests = 0;
     let botRequests = 0;
 
     lines.forEach((line) => {
-        if (!isTargetAppLine(line, appName, logFilter)) return;
-
         const entry = parseNginxAccessLine(line);
         if (!entry?.ip) return;
+        if (!isTargetAppLine(line, appName, logFilter, logHost, logExclude, entry)) return;
 
         totalRequests++;
         const timestampValue = parseAccessLogTimestamp(entry.timestamp);
@@ -294,8 +338,8 @@ function getUniqueVisitors(logPath, appName, logFilter, limit = 250) {
             botRequests++;
             botIps.add(entry.ip);
         } else {
-            humanRequests++;
-            humanIps.add(entry.ip);
+            candidateRequests++;
+            candidateIps.add(entry.ip);
         }
 
         if (!grouped.has(entry.ip)) {
@@ -306,7 +350,7 @@ function getUniqueVisitors(logPath, appName, logFilter, limit = 250) {
                 last_seen: entry.timestamp,
                 last_seen_value: timestampValue,
                 requests: 0,
-                human_requests: 0,
+                candidate_requests: 0,
                 bot_requests: 0,
                 agents: new Map(),
                 paths: new Map(),
@@ -322,7 +366,7 @@ function getUniqueVisitors(logPath, appName, logFilter, limit = 250) {
             visitor.bot_requests++;
             incrementCount(visitor.bot_reasons, botReason);
         } else {
-            visitor.human_requests++;
+            visitor.candidate_requests++;
         }
 
         incrementCount(visitor.agents, agent);
@@ -344,17 +388,17 @@ function getUniqueVisitors(logPath, appName, logFilter, limit = 250) {
         .map((visitor) => {
             const topAgents = getTopCounts(visitor.agents, 3);
             const topBotReasons = getTopCounts(visitor.bot_reasons, 2);
-            const isMixed = visitor.human_requests > 0 && visitor.bot_requests > 0;
-            const isBotOnly = visitor.bot_requests > 0 && visitor.human_requests === 0;
+            const isMixed = visitor.candidate_requests > 0 && visitor.bot_requests > 0;
+            const isBotOnly = visitor.bot_requests > 0 && visitor.candidate_requests === 0;
 
             return {
                 ip: visitor.ip,
                 first_seen: visitor.first_seen,
                 last_seen: visitor.last_seen,
                 requests: visitor.requests,
-                human_requests: visitor.human_requests,
+                candidate_requests: visitor.candidate_requests,
                 bot_requests: visitor.bot_requests,
-                classification: isMixed ? 'Mixed' : isBotOnly ? 'Bot' : 'Human',
+                classification: isMixed ? 'Mixed' : isBotOnly ? 'Bot' : 'Candidate',
                 agent: topAgents[0]?.value || 'Unknown',
                 bot_reason: topBotReasons[0]?.value || null,
                 paths: getTopCounts(visitor.paths, 5),
@@ -368,11 +412,11 @@ function getUniqueVisitors(logPath, appName, logFilter, limit = 250) {
     return {
         summary: {
             total_unique: grouped.size,
-            human_unique: humanIps.size,
+            candidate_unique: candidateIps.size,
             bot_unique: botIps.size,
-            mixed_unique: Array.from(grouped.values()).filter((visitor) => visitor.human_requests > 0 && visitor.bot_requests > 0).length,
+            mixed_unique: Array.from(grouped.values()).filter((visitor) => visitor.candidate_requests > 0 && visitor.bot_requests > 0).length,
             total_requests: totalRequests,
-            human_requests: humanRequests,
+            candidate_requests: candidateRequests,
             bot_requests: botRequests
         },
         visitors

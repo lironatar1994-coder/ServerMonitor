@@ -2,7 +2,17 @@ import { useEffect, useState } from 'react';
 import { Activity, FileText, Globe, Plus, ServerCog, Terminal, X } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 
-const initialForm = { name: '', url: '', pm2_name: '', log_path: '', log_filter: '', health_port: '', health_path: '' };
+const initialForm = {
+  name: '',
+  url: '',
+  pm2_name: '',
+  log_path: '',
+  log_host: '',
+  log_filter: '',
+  log_exclude: '',
+  health_port: '',
+  health_path: ''
+};
 
 const AddAppModal = ({ onClose, onAdded }) => {
   const [formData, setFormData] = useState(initialForm);
@@ -40,8 +50,10 @@ const AddAppModal = ({ onClose, onAdded }) => {
           <label><span><Globe /> כתובת האתר</span><input dir="ltr" value={formData.url} onChange={(event) => updateField('url', event.target.value)} placeholder="https://vee-app.co.il" /></label>
           <label><span><Terminal /> שם תהליך PM2</span><input dir="ltr" value={formData.pm2_name} onChange={(event) => updateField('pm2_name', event.target.value)} placeholder="vee-app" /></label>
           <div className="form-pair"><label><span><Activity /> פורט בדיקת תקינות</span><input type="number" value={formData.health_port} onChange={(event) => updateField('health_port', event.target.value)} placeholder="3001" /></label><label><span>נתיב בדיקה</span><input dir="ltr" value={formData.health_path} onChange={(event) => updateField('health_path', event.target.value)} placeholder="/api/health" /></label></div>
-          <label><span><FileText /> קובץ Nginx access log</span><input dir="ltr" value={formData.log_path} onChange={(event) => updateField('log_path', event.target.value)} placeholder="/var/log/nginx/access.log" /></label>
-          <label><span>מסנן שורות לוג</span><input dir="ltr" value={formData.log_filter} onChange={(event) => updateField('log_filter', event.target.value)} placeholder="/my-site/|/My_Site/" /></label>
+          <label><span><FileText /> קובץ Nginx access log</span><input dir="ltr" value={formData.log_path} onChange={(event) => updateField('log_path', event.target.value)} placeholder="/var/log/nginx/monitor_host_access.log" /></label>
+          <label><span>דומיינים מדויקים</span><input dir="ltr" value={formData.log_host} onChange={(event) => updateField('log_host', event.target.value)} placeholder="example.co.il|www.example.co.il" /></label>
+          <label><span>נתיבים לכלול</span><input dir="ltr" value={formData.log_filter} onChange={(event) => updateField('log_filter', event.target.value)} placeholder="/my-site/|/My_Site/" /></label>
+          <label><span>נתיבים להוציא</span><input dir="ltr" value={formData.log_exclude} onChange={(event) => updateField('log_exclude', event.target.value)} placeholder="/admin|/monitor" /></label>
           <footer><button type="button" onClick={onClose}>ביטול</button><button type="submit" disabled={loading}><Plus /> {loading ? 'מחבר…' : 'חיבור השירות'}</button></footer>
         </form>
       </section>

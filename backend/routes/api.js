@@ -4,7 +4,7 @@ const { authenticateToken } = require('./auth');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
-const { getRecentVisitors, getUniqueVisitors } = require('../logParser');
+const { getRecentVisitors, getUniqueVisitors, isTargetAppLine } = require('../logParser');
 
 const router = express.Router();
 const WHATSAPP_STATUS_PATH = process.env.WHATSAPP_STATUS_PATH || '/root/Vee/backend/whatsapp_status.json';
@@ -294,12 +294,29 @@ router.get('/', (req, res) => {
 
 // Add new app
 router.post('/', (req, res) => {
-    const { name, url, pm2_name, log_path, health_port, health_path, log_filter } = req.body;
+    const {
+        name, url, pm2_name, log_path, health_port, health_path,
+        log_filter, log_host, log_exclude
+    } = req.body;
     
     if (!name) return res.status(400).json({ error: 'App name is required' });
     
-    const info = db.prepare('INSERT INTO apps (name, url, pm2_name, log_path, health_port, health_path, log_filter) VALUES (?, ?, ?, ?, ?, ?, ?)')
-                   .run(name, url || null, pm2_name || null, log_path || null, health_port || null, health_path || null, log_filter || null);
+    const info = db.prepare(`
+        INSERT INTO apps (
+            name, url, pm2_name, log_path, health_port, health_path,
+            log_filter, log_host, log_exclude
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+        name,
+        url || null,
+        pm2_name || null,
+        log_path || null,
+        health_port || null,
+        health_path || null,
+        log_filter || null,
+        log_host || null,
+        log_exclude || null
+    );
                    
     res.json({ id: info.lastInsertRowid, message: 'App added successfully' });
 });
@@ -386,15 +403,15 @@ router.get('/:id/logs', (req, res) => {
             const content = fs.readFileSync(app.log_path, 'utf-8');
             const lines = content.split('\n').filter(Boolean);
             
-            if (app.log_filter) {
-                logLines = lines.filter(l => l.includes(app.log_filter)).slice(-50);
-            } else if (app.name === 'PDF Generator') {
-                logLines = lines.filter(l => l.includes('/text-to-pdf')).slice(-50);
-            } else if (app.name === 'Vee Main App') {
-                logLines = lines.filter(l => !l.includes('/text-to-pdf') && !l.includes('/serve-monitor')).slice(-50);
-            } else {
-                logLines = lines.slice(-50);
-            }
+            logLines = lines
+                .filter((line) => isTargetAppLine(
+                    line,
+                    app.name,
+                    app.log_filter,
+                    app.log_host,
+                    app.log_exclude
+                ))
+                .slice(-50);
         } catch (e) {
             logLines = [`Error reading log file: ${e.message}`];
         }
@@ -475,7 +492,14 @@ router.get('/:id/visitors', (req, res) => {
     }
     
     try {
-        const visitors = getRecentVisitors(app.log_path, app.name, app.log_filter, 100);
+        const visitors = getRecentVisitors(
+            app.log_path,
+            app.name,
+            app.log_filter,
+            app.log_host,
+            app.log_exclude,
+            100
+        );
         res.json({ is_whatsapp: false, visitors });
     } catch (e) {
         console.error(e);
@@ -493,11 +517,11 @@ router.get('/:id/unique-visitors', (req, res) => {
             is_whatsapp: true,
             summary: {
                 total_unique: 0,
-                human_unique: 0,
+                candidate_unique: 0,
                 bot_unique: 0,
                 mixed_unique: 0,
                 total_requests: 0,
-                human_requests: 0,
+                candidate_requests: 0,
                 bot_requests: 0
             },
             visitors: []
@@ -509,11 +533,11 @@ router.get('/:id/unique-visitors', (req, res) => {
             is_whatsapp: false,
             summary: {
                 total_unique: 0,
-                human_unique: 0,
+                candidate_unique: 0,
                 bot_unique: 0,
                 mixed_unique: 0,
                 total_requests: 0,
-                human_requests: 0,
+                candidate_requests: 0,
                 bot_requests: 0
             },
             visitors: []
@@ -521,7 +545,14 @@ router.get('/:id/unique-visitors', (req, res) => {
     }
 
     try {
-        const uniqueVisitors = getUniqueVisitors(app.log_path, app.name, app.log_filter, 250);
+        const uniqueVisitors = getUniqueVisitors(
+            app.log_path,
+            app.name,
+            app.log_filter,
+            app.log_host,
+            app.log_exclude,
+            250
+        );
         res.json({ is_whatsapp: false, ...uniqueVisitors });
     } catch (e) {
         console.error(e);

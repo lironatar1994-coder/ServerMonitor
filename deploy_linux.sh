@@ -12,6 +12,8 @@ BACKEND_PORT=4010
 FRONTEND_DIR="frontend"
 BACKEND_DIR="backend"
 GEOIP_DB_PATH="${GEOIP_DB_PATH:-/usr/share/GeoIP/GeoLite2-City.mmdb}"
+BACKUP_DIR="/root/server-monitor-backups"
+NGINX_LOG_CONFIG="/etc/nginx/conf.d/server-monitor-host-log.conf"
 
 echo "[INFO] Starting Deployment..."
 cd "$APP_ROOT"
@@ -21,14 +23,30 @@ echo "[INFO] Pulling latest code..."
 git fetch origin main
 git reset --hard origin/main
 
-# 2. Frontend Setup
+# 2. Runtime backup
+echo "[INFO] Backing up monitor database..."
+mkdir -p "$BACKUP_DIR"
+if [ -f "$BACKEND_DIR/monitor.db" ]; then
+  BACKUP_PATH="$BACKUP_DIR/monitor-$(date +%Y%m%d-%H%M%S).db"
+  sqlite3 "$BACKEND_DIR/monitor.db" ".backup '$BACKUP_PATH'"
+  find "$BACKUP_DIR" -maxdepth 1 -type f -name 'monitor-*.db' -mtime +30 -delete
+  echo "[INFO] Database backup created at $BACKUP_PATH"
+fi
+
+# 3. Host-aware Nginx access log
+echo "[INFO] Installing host-aware access logging..."
+install -m 0644 nginx-monitor-host-log.conf "$NGINX_LOG_CONFIG"
+nginx -t
+systemctl reload nginx
+
+# 4. Frontend Setup
 echo "[INFO] Processing Frontend..."
 cd "$FRONTEND_DIR"
 npm ci -s
 npm run build
 cd ..
 
-# 3. Backend Setup
+# 5. Backend Setup
 echo "[INFO] Processing Backend..."
 cd "$BACKEND_DIR"
 npm ci -s
@@ -47,7 +65,7 @@ else
   echo "[WARN] GeoIP city database not found at $GEOIP_DB_PATH; visitor analytics will show unknown locations"
 fi
 
-# 4. PM2 Start
+# 6. PM2 Start
 echo "[INFO] Starting PM2 process..."
 # We serve the frontend via Nginx or we can use the backend to serve it
 # In our architecture, we can just run the backend.
