@@ -107,7 +107,7 @@ const VisitorOverview = () => {
         </section>
 
         <section className="insight-grid">
-          <article className="story-panel"><SectionHeader eyebrow="התעניינות" title="העמודים שמושכים אנשים" /><RankedList items={data?.pages} /></article>
+          <article className="story-panel"><SectionHeader eyebrow="התעניינות" title="העמודים שקיבלו תנועה מועמדת" /><RankedList items={data?.pages} /></article>
           <article className="story-panel"><SectionHeader eyebrow="ישראל" title="מאיפה מגיעים" note="מיקום משוער לפי כתובת IP" /><RankedList items={data?.locations} color="ochre" empty="מיקום יופיע לאחר חיבור מסד GeoIP" /></article>
           <article className="story-panel"><SectionHeader eyebrow="מכשירים" title="איך הם גולשים" /><RankedList items={data?.devices} color="vermilion" /></article>
         </section>

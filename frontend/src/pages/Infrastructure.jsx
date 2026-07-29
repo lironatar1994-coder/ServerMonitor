@@ -74,7 +74,7 @@ const Infrastructure = () => {
           </article>
         </section>
 
-        <section className="infra-note"><Activity /><div><b>הפרדה מלאה בין העולמות</b><p>המסך הזה מציג בריאות שרת ושירותים בלבד. נתוני אנשים, דפים ומקורות תנועה נמצאים באזור “מבקרים”.</p></div><Server /><Database /></section>
+        <section className="infra-note"><Activity /><div><b>הפרדה מלאה בין העולמות</b><p>המסך הזה מציג בריאות שרת ושירותים בלבד. נתוני תנועה, דפים ומקורות נמצאים באזור “מבקרים”.</p></div><Server /><Database /></section>
       </DataState>
     </div>
   );
