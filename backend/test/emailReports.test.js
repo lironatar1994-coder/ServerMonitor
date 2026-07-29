@@ -56,3 +56,18 @@ test('builds per-client comparisons and safe HTML', () => {
     assert.match(rendered.html, /Client &lt;One&gt;/);
     assert.doesNotMatch(rendered.html, /Client <One>/);
 });
+
+test('includes seeded Libi Diamonds in client comparison reports', () => {
+    const period = {
+        type: 'daily', periodKey: '2026-07-11',
+        from: '2026-07-11T00:00:00.000Z', to: '2026-07-12T00:00:00.000Z',
+        previousFrom: '2026-07-10T00:00:00.000Z'
+    };
+    const row = buildReportData(period).find((item) => item.name === 'Libi Diamonds');
+    assert.ok(row);
+    assert.equal(row.url, 'https://www.libidiamonds.co.il/');
+
+    const rendered = renderEmail('daily', period, [row]);
+    assert.match(rendered.html, /Libi Diamonds/);
+    assert.match(rendered.html, /https:\/\/www\.libidiamonds\.co\.il\//);
+});

@@ -84,7 +84,7 @@ When the user requests a durable behavior change, record it here or in the relev
 - Send one client-website comparison email daily and one weekly, using completed Israel calendar periods and the production recipient configured in `REPORT_EMAIL_TO`.
 - Install `server_maintenance.sh` as the daily 03:00 host-maintenance job. Keep seven days of compressed PM2 logs and SQLite backups, remove expired deployment/build caches, report disk thresholds, and never force Linux kernel cache drops.
 - Never present traffic that merely escaped bot heuristics as confirmed human. Use candidate/estimated language, keep classification uncertainty visible, and require exact host-aware log attribution for every monitored website.
-- Keep Libi Diamonds in visitor and infrastructure monitoring as its own website, attributed only to `libidiamonds.co.il` and `www.libidiamonds.co.il`.
+- Keep Libi Diamonds in visitor monitoring, infrastructure monitoring, and daily/weekly comparison emails as its own website, attributed only to `libidiamonds.co.il` and `www.libidiamonds.co.il`.
 
 ## Child DOX Index
 
