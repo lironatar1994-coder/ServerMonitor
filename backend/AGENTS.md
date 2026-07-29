@@ -24,6 +24,7 @@
 - Avoid logging secrets or authentication tokens.
 - For web apps, `metrics.visitors` and `metrics.requests` are candidate traffic that was not identified as bot traffic. Never describe this heuristic remainder as confirmed human activity; bot-looking traffic remains visible as `agent: "Bot"`.
 - Website attribution must use `log_host` against the hostname appended by `nginx-monitor-host-log.conf`. `log_filter` includes paths and `log_exclude` removes paths; do not infer a domain from referrers or a shared hostless access log.
+- Keep Libi Diamonds registered as a dedicated monitored website at `https://www.libidiamonds.co.il/`, tied to PM2 process `libi-diamonds-live` and exact hosts `libidiamonds.co.il|www.libidiamonds.co.il`.
 - `/apps/:id/unique-visitors` groups the current access-log tail by IP and reports first seen, last seen, request counts, top paths, statuses, and human/bot/mixed classification; it is a bounded log-window view, not a permanent analytics ledger.
 - `/apps/:id/traffic-history?days=7|30` returns fixed daily buckets from sampled `metrics` rows for visitor charts; it is monitored traffic history, not exact per-visit or per-day unique analytics.
 - `visitor_events` is the persistent 90-day request ledger. It stores the requested host and full IPs for private analysis, and deduplicates by app, source-file identity, and byte offset.

@@ -61,6 +61,38 @@ test('requires an exact recorded host when an app has a host boundary', () => {
     ), false);
 });
 
+test('seeds Libi Diamonds with dedicated production hosts and runtime', () => {
+    const app = db.prepare(`
+        SELECT name, url, pm2_name, log_path, log_host, log_filter, log_exclude
+        FROM apps WHERE name = ?
+    `).get('Libi Diamonds');
+    assert.deepEqual(app, {
+        name: 'Libi Diamonds',
+        url: 'https://www.libidiamonds.co.il/',
+        pm2_name: 'libi-diamonds-live',
+        log_path: '/var/log/nginx/monitor_host_access.log',
+        log_host: 'libidiamonds.co.il|www.libidiamonds.co.il',
+        log_filter: null,
+        log_exclude: null
+    });
+
+    const libiLine = '1.2.3.4 - - [12/Jul/2026:12:03:00 +0300] "GET /rings HTTP/1.1" 200 100 "-" "Mozilla/5.0 (Windows NT 10.0)" "www.libidiamonds.co.il"';
+    assert.equal(isTargetAppLine(
+        libiLine,
+        app.name,
+        app.log_filter,
+        app.log_host,
+        app.log_exclude
+    ), true);
+    assert.equal(isTargetAppLine(
+        libiLine,
+        'Vee Main App',
+        null,
+        'vee-app.co.il|www.vee-app.co.il',
+        null
+    ), false);
+});
+
 test('catches production scanner signatures previously counted as candidates', () => {
     const gobuster = parseNginxAccessLine(
         '5.5.5.5 - - [12/Jul/2026:12:04:00 +0300] "GET /.git/config HTTP/1.1" 404 10 "-" "gobuster/3.8.2" "vee-app.co.il"'

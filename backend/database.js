@@ -187,6 +187,25 @@ if (!miryamExists) {
 }
 
 const hostAwareLogPath = '/var/log/nginx/monitor_host_access.log';
+
+const libiExists = db.prepare('SELECT id FROM apps WHERE name = ?').get('Libi Diamonds');
+if (!libiExists) {
+    db.prepare(`
+        INSERT INTO apps (
+            name, url, pm2_name, log_path, log_host, log_filter, log_exclude
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+        'Libi Diamonds',
+        'https://www.libidiamonds.co.il/',
+        'libi-diamonds-live',
+        hostAwareLogPath,
+        'libidiamonds.co.il|www.libidiamonds.co.il',
+        null,
+        null
+    );
+    console.log('Libi Diamonds app entry created in database.');
+}
+
 const hostAwareAppConfig = [
     {
         name: 'Vee Main App',
@@ -215,6 +234,12 @@ const hostAwareAppConfig = [
     {
         name: 'SOS Landing',
         host: 'sosbaderech.co.il|www.sosbaderech.co.il',
+        filter: null,
+        exclude: null
+    },
+    {
+        name: 'Libi Diamonds',
+        host: 'libidiamonds.co.il|www.libidiamonds.co.il',
         filter: null,
         exclude: null
     }
