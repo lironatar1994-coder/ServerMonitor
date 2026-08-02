@@ -86,7 +86,11 @@ echo "[INFO] Starting PM2 process..."
 # In our architecture, we can just run the backend.
 export PORT="$BACKEND_PORT"
 export GEOIP_DB_PATH
-pm2 start "backend/server.js" --name "$APP_NAME" --cwd "$(pwd)" --update-env || pm2 restart "$APP_NAME" --update-env
+if pm2 describe "$APP_NAME" > /dev/null 2>&1; then
+    pm2 restart "$APP_NAME" --update-env
+else
+    pm2 start "backend/server.js" --name "$APP_NAME" --cwd "$(pwd)" --update-env
+fi
 pm2 save > /dev/null
 
 echo "[SUCCESS] DEPLOYMENT COMPLETE"

@@ -36,7 +36,7 @@ git push origin main
 # 3. Trigger Remote Deployment
 Write-Host "Connecting to server and triggering remote deploy..." -ForegroundColor Blue
 # Note: Ensure the ServerMonitor folder exists on the server
-$REMOTE_CMD = "cd /root/ServerMonitor && chmod +x deploy_linux.sh && ./deploy_linux.sh"
+$REMOTE_CMD = "cd /root/ServerMonitor && git fetch origin main && git reset --hard origin/main && chmod +x deploy_linux.sh && ./deploy_linux.sh"
 
 ssh $SSH_HOST $REMOTE_CMD
 

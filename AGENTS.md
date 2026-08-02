@@ -88,6 +88,7 @@ When the user requests a durable behavior change, record it here or in the relev
 - Use successful page-level navigations—not images, scripts, fonts, API calls, or failed requests—for visitor activity, page rankings, and email comparisons; retain raw requests only as diagnostic data.
 - Keep the small production server bounded by clearing disposable Libi build caches, clearing the NPM download cache when disk usage reaches 70%, and capping deployment backups by age and count.
 - Keep production SSH key-only: root administration may use authorized keys, while password and keyboard-interactive login remain disabled and deployment must validate `sshd` before reload.
+- Prefetch and reset the production checkout before invoking `deploy_linux.sh` so deploy-script changes apply in the same run; restart an existing PM2 monitor process without emitting a false launch error.
 
 ## Child DOX Index
 
