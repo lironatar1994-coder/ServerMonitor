@@ -13,6 +13,7 @@
 - `logParser.js` owns host-aware Nginx access-log filtering, visitor parsing, and heuristic bot classification.
 - `visitorAnalytics.js` owns cursor-based access-log ingestion, initial bounded backfill, GeoIP enrichment, and raw-event retention.
 - `jewelryAnalytics.js` owns canonical Libi product/collection path aggregation, catalog labels, category inference, and equal-period comparisons.
+- `resourceUsage.js` owns complete PM2 process-tree attribution and cached, bounded production-storage scans.
 - `emailReports.js` owns daily and weekly client comparison reports, Resend delivery, scheduling, and delivery deduplication.
 - `routes/` owns HTTP route handlers and request/response contracts.
 - `monitor.db` is runtime state and must not be treated as a source schema definition.
@@ -35,7 +36,8 @@
 - Persistent analytics count unique candidates as distinct non-bot-classified IPs in the selected range. Candidate means “not identified as a bot,” not verified human. GeoIP is local and optional via `GEOIP_DB_PATH`; missing data must remain an explicit unknown rather than failing ingestion.
 - A unique candidate must have at least one successful page view. `visitor_events.is_page_view` excludes assets, API calls, robots/sitemaps, failed responses, and non-navigation methods; raw requests remain available for bot and diagnostic totals.
 - Version bot and page-view rules through `monitor_metadata`, and reclassify stored events when the ruleset changes so historical dashboards and emails do not keep stale classifications.
-- `/apps/server-stats` reports Linux `MemAvailable`-based RAM use, swap details, root-filesystem usage, load, and top processes.
+- `/apps/server-stats` reports Linux `MemAvailable`-based RAM use, swap details, root-filesystem usage, load, and top processes. Its `resources` payload attributes all descendant processes to each known PM2 app and ranks memory-heavy processes.
+- Storage visibility must scan only the production paths declared in `resourceUsage.js`, cache the potentially expensive `du` snapshot for five minutes, distinguish dependency, rollback, backup, log, and cache bytes, and return stale cached data when a refresh fails.
 - Sampled `metrics` rows are retained for 90 days; purge maintenance must run at most daily and remain indexed by timestamp.
 - Reject analytics ranges longer than 90 days, cap visitor pages at 100 rows, keep all analytics endpoints authenticated, and use parameterized SQL.
 - Email reports use completed Israel calendar periods: daily compares yesterday with the day before; weekly compares the previous Monday–Sunday with the preceding week. Reports must use candidate language and state that the classification is an estimate.
@@ -57,6 +59,7 @@
 - Run backend syntax checks with `node --check <file>` for touched backend JavaScript files.
 - When API behavior changes, run the server or exercise the relevant endpoint when practical.
 - Run `npm test` for visitor parser, ingestion, deduplication, and retention behavior.
+- Keep process-tree parsing and descendant-attribution tests passing when resource reporting changes.
 - Keep report period, comparison, and HTML escaping tests passing; production delivery uses the existing Resend configuration.
 
 ## Child DOX Index

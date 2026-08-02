@@ -91,6 +91,7 @@ When the user requests a durable behavior change, record it here or in the relev
 - Keep production SSH key-only: root administration may use authorized keys, while password and keyboard-interactive login remain disabled and deployment must validate `sshd` before reload.
 - Prefetch and reset the production checkout before invoking `deploy_linux.sh` so deploy-script changes apply in the same run; restart an existing PM2 monitor process without emitting a false launch error.
 - In the Libi Diamonds deep visitor view, rank exact product and collection paths by candidate page views and distinct candidate IPs, compare them with the preceding equal period, and link directly to the viewed storefront page.
+- Attribute runtime memory and CPU to complete PM2 process trees, not only their wrapper processes. In `שרת ומשאבים`, expose ranked application, process, and bounded storage ownership, including dependency, rollback, backup, log, and cache totals.
 
 ## Child DOX Index
 

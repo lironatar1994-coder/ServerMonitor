@@ -5,6 +5,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const { getRecentVisitors, getUniqueVisitors, isTargetAppLine } = require('../logParser');
+const { getResourceUsage } = require('../resourceUsage');
 
 const router = express.Router();
 const WHATSAPP_STATUS_PATH = process.env.WHATSAPP_STATUS_PATH || '/root/Vee/backend/whatsapp_status.json';
@@ -31,13 +32,11 @@ function normalizeWhatsappMessageStatus(rawStatus) {
     return status || 'pending';
 }
 
-function getLivePm2Metrics(pm2Name) {
-    if (!pm2Name) return { status: 'offline', cpu: 0, memory: 0 };
-
+function getPm2Snapshot() {
     const { execFileSync } = require('child_process');
     try {
         const now = Date.now();
-        if (now - pm2SnapshotCache.fetchedAt > 5000) {
+        if (!pm2SnapshotCache.processes.length || now - pm2SnapshotCache.fetchedAt > 5000) {
             const stdout = execFileSync('/usr/bin/pm2', ['jlist'], {
                 env: { ...process.env, PM2_HOME: '/root/.pm2' }
             }).toString().trim();
@@ -47,19 +46,22 @@ function getLivePm2Metrics(pm2Name) {
                 processes: JSON.parse(stdout || '[]')
             };
         }
-
-        const match = pm2SnapshotCache.processes.find(process => process?.name === pm2Name);
-        if (match) {
-            return {
-                status: match?.pm2_env?.status === 'online' ? 'online' : 'offline',
-                cpu: match?.monit?.cpu || 0,
-                memory: match?.monit?.memory || 0
-            };
-        }
-        return { status: 'offline', cpu: 0, memory: 0 };
+        return pm2SnapshotCache.processes;
     } catch (e) {
-        return { status: 'offline', cpu: 0, memory: 0 };
+        return pm2SnapshotCache.processes;
     }
+}
+
+function getLivePm2Metrics(pm2Name) {
+    if (!pm2Name) return { status: 'offline', cpu: 0, memory: 0 };
+
+    const match = getPm2Snapshot().find(process => process?.name === pm2Name);
+    if (!match) return { status: 'offline', cpu: 0, memory: 0 };
+    return {
+        status: match?.pm2_env?.status === 'online' ? 'online' : 'offline',
+        cpu: match?.monit?.cpu || 0,
+        memory: match?.monit?.memory || 0
+    };
 }
 
 function getCpuSnapshot() {
@@ -265,12 +267,21 @@ router.use(authenticateToken);
 router.get('/server-stats', (req, res) => {
     const cpuLoad = os.loadavg()[0]; // 1 min average
     const cpuSnapshot = getCpuSnapshot();
+    const ram = getMemoryStats();
+    const disk = getDiskStats();
+    const apps = db.prepare('SELECT id, name, pm2_name FROM apps WHERE pm2_name IS NOT NULL').all();
     
     res.json({
-        ram: getMemoryStats(),
+        ram,
         cpu: { load: cpuLoad, cores: os.cpus().length, snapshot: cpuSnapshot },
         uptime: os.uptime(),
-        disk: getDiskStats()
+        disk,
+        resources: getResourceUsage({
+            pm2Processes: getPm2Snapshot(),
+            apps,
+            totalMemory: ram.total,
+            diskTotal: disk?.total || 0
+        })
     });
 });
 
