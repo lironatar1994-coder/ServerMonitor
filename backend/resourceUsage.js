@@ -1,9 +1,9 @@
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFile, execFileSync } = require('child_process');
 
 const STORAGE_CACHE_MS = 5 * 60 * 1000;
-let storageCache = { fetchedAt: 0, snapshot: null };
+let storageCache = { fetchedAt: 0, snapshot: null, pending: null };
 
 const PROJECTS = [
     { id: 'vee', name: 'Vee', path: '/root/Vee', dependencies: ['/root/Vee/backend/node_modules', '/root/Vee/frontend/node_modules'] },
@@ -118,31 +118,30 @@ function readProcessTable() {
 
 function readDuSizes(targets) {
     const existing = targets.filter((target) => fs.existsSync(target.path));
-    if (!existing.length || process.platform !== 'linux') return new Map();
-    const output = execFileSync('/usr/bin/du', ['-s', '-B1', '--', ...existing.map((target) => target.path)], {
-        encoding: 'utf8',
-        timeout: 20000
+    if (!existing.length || process.platform !== 'linux') return Promise.resolve(new Map());
+    return new Promise((resolve, reject) => {
+        execFile('/usr/bin/du', ['-s', '-B1', '--', ...existing.map((target) => target.path)], {
+            encoding: 'utf8',
+            timeout: 20000,
+            maxBuffer: 1024 * 1024
+        }, (error, output) => {
+            if (error) return reject(error);
+            const sizes = new Map();
+            output.split('\n').filter(Boolean).forEach((line) => {
+                const match = line.match(/^(\d+)\s+(.+)$/);
+                if (match) sizes.set(path.normalize(match[2]), Number(match[1]) || 0);
+            });
+            resolve(sizes);
+        });
     });
-    const sizes = new Map();
-    output.split('\n').filter(Boolean).forEach((line) => {
-        const match = line.match(/^(\d+)\s+(.+)$/);
-        if (match) sizes.set(path.normalize(match[2]), Number(match[1]) || 0);
-    });
-    return sizes;
 }
 
-function getStorageSnapshot(diskTotal) {
-    const now = Date.now();
-    if (storageCache.snapshot && now - storageCache.fetchedAt < STORAGE_CACHE_MS) {
-        return { ...storageCache.snapshot, cached: true };
-    }
-
-    try {
-        const projectSizes = readDuSizes(PROJECTS);
+async function buildStorageSnapshot(diskTotal) {
+        const projectSizes = await readDuSizes(PROJECTS);
         const dependencyTargets = PROJECTS.flatMap((project) => project.dependencies.map((dependencyPath) => ({ path: dependencyPath })));
-        const dependencySizes = readDuSizes(dependencyTargets);
-        const otherSizes = readDuSizes(OTHER_STORAGE);
-        const topLevelSizes = readDuSizes(TOP_LEVEL_STORAGE);
+        const dependencySizes = await readDuSizes(dependencyTargets);
+        const otherSizes = await readDuSizes(OTHER_STORAGE);
+        const topLevelSizes = await readDuSizes(TOP_LEVEL_STORAGE);
         const projects = PROJECTS
             .filter((project) => projectSizes.has(path.normalize(project.path)))
             .map((project) => {
@@ -177,7 +176,7 @@ function getStorageSnapshot(diskTotal) {
             }))
             .sort((a, b) => b.bytes - a.bytes);
 
-        const snapshot = {
+        return {
             updated_at: new Date().toISOString(),
             cached: false,
             projects,
@@ -192,15 +191,37 @@ function getStorageSnapshot(diskTotal) {
                 cache_bytes: other.filter((item) => item.type === 'cache').reduce((sum, item) => sum + item.bytes, 0)
             }
         };
-        storageCache = { fetchedAt: now, snapshot };
-        return snapshot;
-    } catch (error) {
-        if (storageCache.snapshot) return { ...storageCache.snapshot, cached: true, error: error.message };
-        return { updated_at: new Date().toISOString(), cached: false, projects: [], other: [], top_level: [], totals: {}, error: error.message };
-    }
 }
 
-function getResourceUsage({ pm2Processes, apps, totalMemory, diskTotal }) {
+function startStorageRefresh(diskTotal) {
+    const refresh = buildStorageSnapshot(diskTotal)
+        .then((snapshot) => {
+            storageCache.fetchedAt = Date.now();
+            storageCache.snapshot = snapshot;
+            return snapshot;
+        })
+        .catch((error) => storageCache.snapshot
+            ? { ...storageCache.snapshot, cached: true, error: error.message }
+            : { updated_at: new Date().toISOString(), cached: false, projects: [], other: [], top_level: [], totals: {}, error: error.message })
+        .finally(() => {
+            if (storageCache.pending === refresh) storageCache.pending = null;
+        });
+    storageCache.pending = refresh;
+    return refresh;
+}
+
+async function getStorageSnapshot(diskTotal) {
+    const now = Date.now();
+    if (storageCache.snapshot && now - storageCache.fetchedAt < STORAGE_CACHE_MS) {
+        return { ...storageCache.snapshot, cached: true };
+    }
+
+    const refresh = storageCache.pending || startStorageRefresh(diskTotal);
+    if (storageCache.snapshot) return { ...storageCache.snapshot, cached: true, refreshing: true };
+    return refresh;
+}
+
+async function getResourceUsage({ pm2Processes, apps, totalMemory, diskTotal }) {
     try {
         const processes = readProcessTable();
         const applications = buildApplicationUsage(pm2Processes, apps, processes, totalMemory);
@@ -219,10 +240,10 @@ function getResourceUsage({ pm2Processes, apps, totalMemory, diskTotal }) {
                 .sort((a, b) => b.cpu - a.cpu)
                 .slice(0, 12)
                 .map((process) => ({ ...process, owner: ownerByPid.get(process.pid) || null })),
-            storage: getStorageSnapshot(diskTotal)
+            storage: await getStorageSnapshot(diskTotal)
         };
     } catch (error) {
-        return { updated_at: new Date().toISOString(), applications: [], top_memory_processes: [], top_cpu_processes: [], storage: getStorageSnapshot(diskTotal), error: error.message };
+        return { updated_at: new Date().toISOString(), applications: [], top_memory_processes: [], top_cpu_processes: [], storage: await getStorageSnapshot(diskTotal), error: error.message };
     }
 }
 

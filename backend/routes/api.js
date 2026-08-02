@@ -264,7 +264,7 @@ function getTrafficHistory(appId, days) {
 router.use(authenticateToken);
 
 // Get Server General Stats
-router.get('/server-stats', (req, res) => {
+router.get('/server-stats', async (req, res) => {
     const cpuLoad = os.loadavg()[0]; // 1 min average
     const cpuSnapshot = getCpuSnapshot();
     const ram = getMemoryStats();
@@ -276,7 +276,7 @@ router.get('/server-stats', (req, res) => {
         cpu: { load: cpuLoad, cores: os.cpus().length, snapshot: cpuSnapshot },
         uptime: os.uptime(),
         disk,
-        resources: getResourceUsage({
+        resources: await getResourceUsage({
             pm2Processes: getPm2Snapshot(),
             apps,
             totalMemory: ram.total,
