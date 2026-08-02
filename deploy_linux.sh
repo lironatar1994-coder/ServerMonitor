@@ -14,7 +14,9 @@ BACKEND_DIR="backend"
 GEOIP_DB_PATH="${GEOIP_DB_PATH:-/usr/share/GeoIP/GeoLite2-City.mmdb}"
 BACKUP_DIR="/root/server-monitor-backups"
 BACKUP_RETENTION_DAYS=7
+BACKUP_MAX_COUNT=10
 NGINX_LOG_CONFIG="/etc/nginx/conf.d/server-monitor-host-log.conf"
+SSH_HARDENING_CONFIG="/etc/ssh/sshd_config.d/00-server-monitor-hardening.conf"
 
 echo "[INFO] Starting Deployment..."
 cd "$APP_ROOT"
@@ -31,6 +33,12 @@ if [ -f "$BACKEND_DIR/monitor.db" ]; then
   BACKUP_PATH="$BACKUP_DIR/monitor-$(date +%Y%m%d-%H%M%S).db"
   sqlite3 "$BACKEND_DIR/monitor.db" ".backup '$BACKUP_PATH'"
   find "$BACKUP_DIR" -maxdepth 1 -type f -name 'monitor-*.db' -mtime +"$BACKUP_RETENTION_DAYS" -delete
+  mapfile -t BACKUP_FILES < <(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'monitor-*.db' -printf '%T@ %p\n' | sort -nr | cut -d' ' -f2-)
+  if [ "${#BACKUP_FILES[@]}" -gt "$BACKUP_MAX_COUNT" ]; then
+    for ((INDEX = BACKUP_MAX_COUNT; INDEX < ${#BACKUP_FILES[@]}; INDEX++)); do
+      rm -f -- "${BACKUP_FILES[$INDEX]}"
+    done
+  fi
   echo "[INFO] Database backup created at $BACKUP_PATH"
 fi
 
@@ -40,14 +48,20 @@ install -m 0644 nginx-monitor-host-log.conf "$NGINX_LOG_CONFIG"
 nginx -t
 systemctl reload nginx
 
-# 4. Frontend Setup
+# 4. SSH hardening: preserve key-based root administration and reject passwords.
+echo "[INFO] Installing key-only SSH policy..."
+install -m 0644 ssh-hardening.conf "$SSH_HARDENING_CONFIG"
+sshd -t
+systemctl reload ssh
+
+# 5. Frontend Setup
 echo "[INFO] Processing Frontend..."
 cd "$FRONTEND_DIR"
 npm ci -s
 npm run build
 cd ..
 
-# 5. Backend Setup
+# 6. Backend Setup
 echo "[INFO] Processing Backend..."
 cd "$BACKEND_DIR"
 npm ci -s
@@ -66,7 +80,7 @@ else
   echo "[WARN] GeoIP city database not found at $GEOIP_DB_PATH; visitor analytics will show unknown locations"
 fi
 
-# 6. PM2 Start
+# 7. PM2 Start
 echo "[INFO] Starting PM2 process..."
 # We serve the frontend via Nginx or we can use the backend to serve it
 # In our architecture, we can just run the backend.

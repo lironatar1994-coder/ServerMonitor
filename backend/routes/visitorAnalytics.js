@@ -32,8 +32,9 @@ function getSummary(appId, range) {
         SELECT
             COUNT(*) AS total_requests,
             SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) AS candidate_requests,
+            SUM(CASE WHEN is_bot = 0 AND is_page_view = 1 THEN 1 ELSE 0 END) AS page_views,
             SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) AS bot_requests,
-            COUNT(DISTINCT CASE WHEN is_bot = 0 THEN ip END) AS unique_candidates,
+            COUNT(DISTINCT CASE WHEN is_bot = 0 AND is_page_view = 1 THEN ip END) AS unique_candidates,
             COUNT(DISTINCT CASE WHEN is_bot = 1 THEN ip END) AS unique_bots
         FROM visitor_events
         WHERE occurred_at >= ? AND occurred_at < ? ${appClause}
@@ -43,7 +44,7 @@ function getSummary(appId, range) {
     const active = db.prepare(`
         SELECT COUNT(DISTINCT ip) AS active_candidates
         FROM visitor_events
-        WHERE is_bot = 0 AND occurred_at >= ?
+        WHERE is_bot = 0 AND is_page_view = 1 AND occurred_at >= ?
         ${appId ? 'AND app_id = ?' : ''}
     `).get(...activeParams);
     const mix = db.prepare(`
@@ -53,11 +54,11 @@ function getSummary(appId, range) {
         FROM (
             SELECT e.ip, (
                 SELECT MIN(previous.occurred_at) FROM visitor_events previous
-                WHERE previous.ip = e.ip AND previous.is_bot = 0
+                WHERE previous.ip = e.ip AND previous.is_bot = 0 AND previous.is_page_view = 1
                 ${appId ? 'AND previous.app_id = @appId' : ''}
             ) AS first_seen
             FROM visitor_events e
-            WHERE e.is_bot = 0 AND e.occurred_at >= @from AND e.occurred_at < @to
+            WHERE e.is_bot = 0 AND e.is_page_view = 1 AND e.occurred_at >= @from AND e.occurred_at < @to
             ${appId ? 'AND e.app_id = @appId' : ''}
             GROUP BY e.ip
         )
@@ -65,6 +66,7 @@ function getSummary(appId, range) {
     return {
         total_requests: Number(summary.total_requests) || 0,
         candidate_requests: Number(summary.candidate_requests) || 0,
+        page_views: Number(summary.page_views) || 0,
         bot_requests: Number(summary.bot_requests) || 0,
         unique_candidates: Number(summary.unique_candidates) || 0,
         unique_bots: Number(summary.unique_bots) || 0,
@@ -84,6 +86,7 @@ function getComparison(appId, range, summary) {
     const delta = (current, before) => before > 0 ? ((current - before) / before) * 100 : current > 0 ? 100 : 0;
     return {
         unique_candidates_percent: delta(summary.unique_candidates, previousSummary.unique_candidates),
+        page_views_percent: delta(summary.page_views, previousSummary.page_views),
         candidate_requests_percent: delta(summary.candidate_requests, previousSummary.candidate_requests),
         previous: previousSummary
     };
@@ -97,7 +100,8 @@ function getSeries(appId, range) {
     const params = appId ? [range.from, range.to, appId] : [range.from, range.to];
     return db.prepare(`
         SELECT ${bucket} AS bucket,
-            COUNT(DISTINCT CASE WHEN is_bot = 0 THEN ip END) AS unique_candidates,
+            COUNT(DISTINCT CASE WHEN is_bot = 0 AND is_page_view = 1 THEN ip END) AS unique_candidates,
+            SUM(CASE WHEN is_bot = 0 AND is_page_view = 1 THEN 1 ELSE 0 END) AS page_views,
             SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) AS candidate_requests,
             SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) AS bot_requests
         FROM visitor_events
@@ -117,7 +121,7 @@ function getRankedDimension(appId, range, column, limit = 8) {
             COUNT(*) AS requests,
             COUNT(DISTINCT ip) AS unique_visitors
         FROM visitor_events
-        WHERE occurred_at >= ? AND occurred_at < ? AND is_bot = 0
+        WHERE occurred_at >= ? AND occurred_at < ? AND is_bot = 0 AND is_page_view = 1
           ${appId ? 'AND app_id = ?' : ''}
         GROUP BY label ORDER BY requests DESC, label ASC LIMIT ?
     `).all(...params);
@@ -132,7 +136,7 @@ function getRecent(appId, range, limit = 12) {
                e.city, e.region, a.id AS app_id, a.name AS app_name
         FROM visitor_events e
         JOIN apps a ON a.id = e.app_id
-        WHERE e.occurred_at >= ? AND e.occurred_at < ? AND e.is_bot = 0
+        WHERE e.occurred_at >= ? AND e.occurred_at < ? AND e.is_bot = 0 AND e.is_page_view = 1
           ${appId ? 'AND e.app_id = ?' : ''}
         ORDER BY e.occurred_at DESC LIMIT ?
     `).all(...params);
@@ -141,7 +145,8 @@ function getRecent(appId, range, limit = 12) {
 function getSiteRanking(range) {
     return db.prepare(`
         SELECT a.id AS app_id, a.name, a.url,
-            COUNT(DISTINCT CASE WHEN e.is_bot = 0 THEN e.ip END) AS unique_candidates,
+            COUNT(DISTINCT CASE WHEN e.is_bot = 0 AND e.is_page_view = 1 THEN e.ip END) AS unique_candidates,
+            SUM(CASE WHEN e.is_bot = 0 AND e.is_page_view = 1 THEN 1 ELSE 0 END) AS page_views,
             SUM(CASE WHEN e.is_bot = 0 THEN 1 ELSE 0 END) AS candidate_requests,
             SUM(CASE WHEN e.is_bot = 1 THEN 1 ELSE 0 END) AS bot_requests
         FROM apps a
@@ -155,9 +160,9 @@ function getSiteRanking(range) {
 function getHourly(appId, range) {
     return db.prepare(`
         SELECT CAST(strftime('%H', occurred_at, '+3 hours') AS INTEGER) AS hour,
-            COUNT(*) AS requests, COUNT(DISTINCT ip) AS unique_visitors
+            COUNT(*) AS page_views, COUNT(DISTINCT ip) AS unique_visitors
         FROM visitor_events
-        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND is_bot = 0
+        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND is_bot = 0 AND is_page_view = 1
         GROUP BY hour ORDER BY hour ASC
     `).all(appId, range.from, range.to);
 }
@@ -246,6 +251,7 @@ router.get('/apps/:id/visitors', (req, res) => {
         if (classification !== 'all') {
             clauses.push('is_bot = ?');
             params.push(classification === 'bot' ? 1 : 0);
+            if (classification === 'candidate') clauses.push('is_page_view = 1');
         }
         if (search) {
             clauses.push('(ip LIKE ? OR path LIKE ? OR city LIKE ? OR region LIKE ?)');
@@ -262,10 +268,12 @@ router.get('/apps/:id/visitors', (req, res) => {
                 MAX(device_type) AS device_type, MAX(city) AS city, MAX(region) AS region,
                 (SELECT path FROM visitor_events p
                  WHERE p.app_id = visitor_events.app_id AND p.ip = visitor_events.ip
+                 AND p.occurred_at >= ? AND p.occurred_at < ?
+                 ${classification === 'candidate' ? 'AND p.is_page_view = 1 AND p.is_bot = 0' : ''}
                  ORDER BY p.occurred_at DESC LIMIT 1) AS latest_path
             FROM visitor_events WHERE ${where}
             GROUP BY ip ORDER BY ${sort} ${direction} LIMIT ? OFFSET ?
-        `).all(...params, limit, (page - 1) * limit);
+        `).all(range.from, range.to, ...params, limit, (page - 1) * limit);
         res.json({ app, range: { from: range.from, to: range.to }, page, limit, total: Number(total), visitors: rows });
     } catch (error) {
         respondError(res, error);

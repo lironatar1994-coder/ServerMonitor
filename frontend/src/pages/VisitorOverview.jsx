@@ -61,13 +61,13 @@ const VisitorOverview = () => {
         <section className="metrics-ledger" aria-label="מדדי מבקרים מרכזיים">
           <MetricBlock label="מועמדים ייחודיים" value={summary.unique_candidates} delta={data?.comparison?.unique_candidates_percent} tone="forest" note="לא זוהו כבוט; לעומת הטווח הקודם" />
           <MetricBlock label="פעילים עכשיו" value={summary.active_candidates} tone="vermilion" note="מועמד עם בקשה בחמש הדקות האחרונות" />
-          <MetricBlock label="בקשות לא מזוהות כבוט" value={summary.candidate_requests} delta={data?.comparison?.candidate_requests_percent} note="אינן הוכחה לפעילות אנושית" />
+          <MetricBlock label="צפיות בעמודים" value={summary.page_views} delta={data?.comparison?.page_views_percent} note="ללא תמונות, קוד, גופנים או API" />
           <MetricBlock label="תנועת בוטים" value={`${botShare.toFixed(0)}%`} tone="ochre" note={`${formatNumber(summary.bot_requests)} בקשות שסוננו`} />
         </section>
 
         <section className="overview-composition">
           <article className="story-panel story-panel--chart">
-            <SectionHeader eyebrow="קצב התנועה" title="מתי הם הגיעו" note="מועמדים ייחודיים ובקשות שלא זוהו כבוט לאורך הטווח" />
+            <SectionHeader eyebrow="קצב התנועה" title="מתי הם הגיעו" note="מועמדים ייחודיים וצפיות בעמודים לאורך הטווח" />
             <div className="main-chart" aria-label="גרף תנועת מבקרים">
               {chartData.length ? (
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
@@ -82,7 +82,7 @@ const VisitorOverview = () => {
                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#6f695f', fontSize: 12 }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6f695f', fontSize: 12 }} allowDecimals={false} />
                     <Tooltip contentStyle={{ background: '#171713', border: 0, borderRadius: 0, color: '#f2ebdd' }} />
-                    <Area type="monotone" dataKey="candidate_requests" name="בקשות מועמדות" stroke="#1f5a47" strokeWidth={3} fill="url(#visitorInk)" />
+                    <Area type="monotone" dataKey="page_views" name="צפיות בעמודים" stroke="#1f5a47" strokeWidth={3} fill="url(#visitorInk)" />
                     <Area type="monotone" dataKey="unique_candidates" name="מועמדים ייחודיים" stroke="#d5543f" strokeWidth={2} fill="transparent" />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -96,7 +96,7 @@ const VisitorOverview = () => {
               {(data?.sites || []).map((site, index) => (
                 <Link to={`/visitors/${site.app_id}`} className="site-rank" key={site.app_id}>
                   <span>{String(index + 1).padStart(2, '0')}</span>
-                  <div><b>{site.name}</b><small>{formatNumber(site.candidate_requests)} בקשות שלא זוהו כבוט</small></div>
+                  <div><b>{site.name}</b><small>{formatNumber(site.page_views)} צפיות בעמודים</small></div>
                   <strong>{formatNumber(site.unique_candidates)}</strong>
                   <ArrowLeft aria-hidden="true" />
                 </Link>
@@ -107,13 +107,13 @@ const VisitorOverview = () => {
         </section>
 
         <section className="insight-grid">
-          <article className="story-panel"><SectionHeader eyebrow="התעניינות" title="העמודים שקיבלו תנועה מועמדת" /><RankedList items={data?.pages} /></article>
+          <article className="story-panel"><SectionHeader eyebrow="התעניינות" title="העמודים שנצפו" /><RankedList items={data?.pages} /></article>
           <article className="story-panel"><SectionHeader eyebrow="ישראל" title="מאיפה מגיעים" note="מיקום משוער לפי כתובת IP" /><RankedList items={data?.locations} color="ochre" empty="מיקום יופיע לאחר חיבור מסד GeoIP" /></article>
           <article className="story-panel"><SectionHeader eyebrow="מכשירים" title="איך הם גולשים" /><RankedList items={data?.devices} color="vermilion" /></article>
         </section>
 
         <section className="live-feed-section">
-          <SectionHeader eyebrow="זרם חי" title="הכניסות האחרונות שלא זוהו כבוט" note={`עודכן ${formatDateTime(data?.generated_at)}`} />
+          <SectionHeader eyebrow="זרם חי" title="צפיות העמוד האחרונות שלא זוהו כבוט" note={`עודכן ${formatDateTime(data?.generated_at)}`} />
           <div className="live-feed">
             {(data?.recent || []).map((event, index) => (
               <Link to={`/visitors/${event.app_id}`} className="feed-row" key={`${event.ip}-${event.occurred_at}-${index}`}>

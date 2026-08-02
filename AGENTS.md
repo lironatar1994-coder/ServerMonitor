@@ -85,9 +85,12 @@ When the user requests a durable behavior change, record it here or in the relev
 - Install `server_maintenance.sh` as the daily 03:00 host-maintenance job. Keep seven days of compressed PM2 logs and SQLite backups, remove expired deployment/build caches, report disk thresholds, and never force Linux kernel cache drops.
 - Never present traffic that merely escaped bot heuristics as confirmed human. Use candidate/estimated language, keep classification uncertainty visible, and require exact host-aware log attribution for every monitored website.
 - Keep Libi Diamonds in visitor monitoring, infrastructure monitoring, and daily/weekly comparison emails as its own website, attributed only to `libidiamonds.co.il` and `www.libidiamonds.co.il`.
+- Use successful page-level navigations—not images, scripts, fonts, API calls, or failed requests—for visitor activity, page rankings, and email comparisons; retain raw requests only as diagnostic data.
+- Keep the small production server bounded by clearing disposable Libi build caches, clearing the NPM download cache when disk usage reaches 70%, and capping deployment backups by age and count.
+- Keep production SSH key-only: root administration may use authorized keys, while password and keyboard-interactive login remain disabled and deployment must validate `sshd` before reload.
 
 ## Child DOX Index
 
 - `backend/AGENTS.md` - Express API, persistent visitor analytics, SQLite monitor database, PM2/system monitoring logic, authentication routes, and background checks.
 - `frontend/AGENTS.md` - Vite React visitor, infrastructure, services, settings, authentication, responsive design, static assets, and production build.
-- Root-owned deployment and host files: `deploy.ps1`, `deploy_linux.sh`, `server_maintenance.sh`, `monitor.vee-app.co.il.conf`, `nginx-monitor-host-log.conf`, `start.bat`, `.gitignore`, and repository-level operational artifacts.
+- Root-owned deployment and host files: `deploy.ps1`, `deploy_linux.sh`, `server_maintenance.sh`, `monitor.vee-app.co.il.conf`, `nginx-monitor-host-log.conf`, `ssh-hardening.conf`, `start.bat`, `.gitignore`, and repository-level operational artifacts.

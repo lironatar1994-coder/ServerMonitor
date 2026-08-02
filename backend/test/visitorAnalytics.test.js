@@ -12,11 +12,12 @@ process.env.GEOIP_DB_PATH = path.join(tempDir, 'missing.mmdb');
 const db = require('../database');
 const {
     getBotReason,
+    isPageView,
     isTargetAppLine,
     parseAccessLogTimestamp,
     parseNginxAccessLine
 } = require('../logParser');
-const { ingestApp, purgeExpiredEvents } = require('../visitorAnalytics');
+const { ingestApp, purgeExpiredEvents, refreshStoredEventClassifications } = require('../visitorAnalytics');
 
 const humanLine = '1.2.3.4 - - [12/Jul/2026:12:00:00 +0300] "GET /site/ HTTP/1.1" 200 120 "https://google.com" "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"';
 const botLine = '5.6.7.8 - - [12/Jul/2026:12:01:00 +0300] "GET /site/wp-login.php HTTP/1.1" 404 12 "-" "curl/8.1"';
@@ -102,6 +103,20 @@ test('catches production scanner signatures previously counted as candidates', (
     );
     assert.equal(getBotReason(gobuster), 'bot user agent');
     assert.equal(getBotReason(censys), 'bot user agent');
+    assert.equal(getBotReason({ userAgent: 'WordPress/6.4.3; https://wordpress.org/', path: '/', method: 'GET' }), 'bot user agent');
+    assert.equal(getBotReason({ userAgent: 'Mozilla/5.0 (Windows NT) WindowsPowerShell/5.1', path: '/', method: 'GET' }), 'bot user agent');
+    assert.equal(getBotReason({ userAgent: 'Python/3.11 aiohttp/3.8.4', path: '/', method: 'GET' }), 'bot user agent');
+});
+
+test('separates page views from assets, API calls, errors, and non-navigation methods', () => {
+    assert.equal(isPageView({ method: 'GET', path: '/jewelry/rings', status: 200 }), true);
+    assert.equal(isPageView({ method: 'GET', path: '/_next/image', status: 200 }), false);
+    assert.equal(isPageView({ method: 'GET', path: '/images/ring.webp', status: 200 }), false);
+    assert.equal(isPageView({ method: 'GET', path: '/api/products', status: 200 }), false);
+    assert.equal(isPageView({ method: 'GET', path: '/missing', status: 404 }), false);
+    assert.equal(isPageView({ method: 'GET', path: '/', status: 301 }), false);
+    assert.equal(isPageView({ method: 'HEAD', path: '/', status: 200 }), false);
+    assert.equal(isPageView({ method: 'POST', path: '/checkout', status: 200 }), false);
 });
 
 test('backfills, classifies, deduplicates, and incrementally ingests', () => {
@@ -127,4 +142,19 @@ test('purges raw visitor events older than 90 days', () => {
     db.prepare(`INSERT INTO visitor_events (app_id, source_file_id, source_offset, occurred_at, ip)
         VALUES (?, 'old-file', 999, '2020-01-01T00:00:00.000Z', '9.9.9.9')`).run(app.id);
     assert.equal(purgeExpiredEvents(), 1);
+});
+
+test('reclassifies stored automation and page views when rules change', () => {
+    db.prepare("DELETE FROM monitor_metadata WHERE key = 'visitor_classification_ruleset'").run();
+    const app = db.prepare('SELECT id FROM apps WHERE name = ?').get('Test Site');
+    db.prepare(`INSERT INTO visitor_events (
+        app_id, source_file_id, source_offset, occurred_at, ip, method, path,
+        status, user_agent, is_bot, is_page_view
+    ) VALUES (?, 'reclassify', 1001, '2026-07-12T10:00:00.000Z', '8.8.8.8', 'GET', '/', 200, 'WordPress/6.4.3; https://wordpress.org/', 0, 0)`).run(app.id);
+    const result = refreshStoredEventClassifications();
+    const event = db.prepare("SELECT is_bot, bot_reason, is_page_view FROM visitor_events WHERE source_file_id = 'reclassify'").get();
+    assert.ok(result.scanned > 0);
+    assert.equal(event.is_bot, 1);
+    assert.equal(event.bot_reason, 'bot user agent');
+    assert.equal(event.is_page_view, 1);
 });

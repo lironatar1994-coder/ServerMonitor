@@ -67,8 +67,8 @@ const VisitorDetail = () => {
     label: new Intl.DateTimeFormat('he-IL', days === 1 ? { hour: '2-digit' } : { day: '2-digit', month: '2-digit' }).format(new Date(item.bucket))
   }));
   const pages = Math.max(1, Math.ceil((visitors.total || 0) / visitors.limit));
-  const hourly = Array.from({ length: 24 }, (_, hour) => data?.hourly?.find((item) => Number(item.hour) === hour) || { hour, requests: 0 });
-  const peakHour = Math.max(...hourly.map((item) => Number(item.requests) || 0), 1);
+  const hourly = Array.from({ length: 24 }, (_, hour) => data?.hourly?.find((item) => Number(item.hour) === hour) || { hour, page_views: 0 });
+  const peakHour = Math.max(...hourly.map((item) => Number(item.page_views) || 0), 1);
 
   return (
     <div className="page page--visitor-detail">
@@ -89,7 +89,7 @@ const VisitorDetail = () => {
         <section className="metrics-ledger metrics-ledger--detail">
           <MetricBlock label="מועמדים ייחודיים" value={summary.unique_candidates} delta={data?.comparison?.unique_candidates_percent} tone="forest" note="כתובות IP שלא זוהו כבוט" />
           <MetricBlock label="פעילים עכשיו" value={summary.active_candidates} tone="vermilion" note="מועמדים בחמש הדקות האחרונות" />
-          <MetricBlock label="בקשות לא מזוהות כבוט" value={summary.candidate_requests} delta={data?.comparison?.candidate_requests_percent} note="הערכה בלבד, לא אימות אדם" />
+          <MetricBlock label="צפיות בעמודים" value={summary.page_views} delta={data?.comparison?.page_views_percent} note="ללא תמונות, קוד, גופנים או API" />
           <MetricBlock label="בוטים שסוננו" value={summary.bot_requests} tone="ochre" note="לא נספרו כמבקרים" />
         </section>
 
@@ -108,7 +108,7 @@ const VisitorDetail = () => {
                 <XAxis dataKey="label" axisLine={false} tickLine={false} />
                 <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip />
-                <Area dataKey="candidate_requests" name="בקשות מועמדות" stroke="#1f5a47" strokeWidth={3} fill="#1f5a4720" />
+                <Area dataKey="page_views" name="צפיות בעמודים" stroke="#1f5a47" strokeWidth={3} fill="#1f5a4720" />
               </AreaChart></ResponsiveContainer> : <div className="quiet-empty">אין תנועה בטווח הזה</div>}
             </div>
           </article>
@@ -122,8 +122,8 @@ const VisitorDetail = () => {
 
         <section className="hourly-section">
           <SectionHeader eyebrow="שעות פעילות" title="הקצב לאורך היממה" note="לפי שעון ישראל" />
-          <div className="hourly-strip" aria-label="התפלגות בקשות לפי שעה">
-            {hourly.map((item) => <div key={item.hour} title={`${item.hour}:00 · ${item.requests} בקשות`}><i style={{ height: `${Math.max(4, (Number(item.requests) / peakHour) * 100)}%` }} /><span>{item.hour % 3 === 0 ? String(item.hour).padStart(2, '0') : ''}</span></div>)}
+          <div className="hourly-strip" aria-label="התפלגות צפיות בעמודים לפי שעה">
+            {hourly.map((item) => <div key={item.hour} title={`${item.hour}:00 · ${item.page_views} צפיות`}><i style={{ height: `${Math.max(4, (Number(item.page_views) / peakHour) * 100)}%` }} /><span>{item.hour % 3 === 0 ? String(item.hour).padStart(2, '0') : ''}</span></div>)}
           </div>
         </section>
 
@@ -138,7 +138,7 @@ const VisitorDetail = () => {
                 <tr key={visitor.ip} onClick={() => handleOpenVisitor(visitor.ip)} tabIndex="0" onKeyDown={(event) => (event.key === 'Enter' || event.key === ' ') && handleOpenVisitor(visitor.ip)}>
                   <td><b dir="ltr">{visitor.ip}</b><small>ראשון: {formatDateTime(visitor.first_seen)}</small></td>
                   <td><span><MapPin /> {visitor.city || visitor.region || 'לא ידוע'}</span><small><MonitorSmartphone /> {visitor.device_type || 'לא ידוע'}</small></td>
-                  <td><strong>{formatNumber(visitor.requests)}</strong><small>בקשות</small></td>
+                  <td><strong>{formatNumber(visitor.requests)}</strong><small>צפיות בעמודים</small></td>
                   <td>{formatDateTime(visitor.last_seen)}</td>
                   <td dir="ltr">{visitor.latest_path || '—'}</td>
                 </tr>
@@ -147,7 +147,7 @@ const VisitorDetail = () => {
             <div className="visitor-mobile-list">
               {visitors.visitors.map((visitor) => (
                 <button type="button" className="visitor-card" key={visitor.ip} onClick={() => handleOpenVisitor(visitor.ip)}>
-                  <span><b dir="ltr">{visitor.ip}</b><strong>{formatNumber(visitor.requests)} בקשות</strong></span>
+                  <span><b dir="ltr">{visitor.ip}</b><strong>{formatNumber(visitor.requests)} צפיות</strong></span>
                   <small><MapPin /> {visitor.city || visitor.region || 'לא ידוע'} · {visitor.device_type || 'לא ידוע'}</small>
                   <small>אחרון: {formatDateTime(visitor.last_seen)}</small>
                   <em dir="ltr">{visitor.latest_path || '—'}</em>

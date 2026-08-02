@@ -2,8 +2,10 @@ const fs = require('fs');
 const path = require('path');
 const db = require('./database');
 const {
+    CLASSIFICATION_RULESET_VERSION,
     getAgentType,
     getBotReason,
+    isPageView,
     isTargetAppLine,
     parseAccessLogTimestamp,
     parseNginxAccessLine
@@ -31,8 +33,8 @@ const insertEvent = db.prepare(`
     INSERT OR IGNORE INTO visitor_events (
         app_id, source_file_id, source_offset, occurred_at, ip, method, path,
         status, referrer, host, user_agent, device_type, is_bot, bot_reason,
-        country_code, region, city
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        is_page_view, country_code, region, city
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const upsertState = db.prepare(`
@@ -91,6 +93,7 @@ function ingestLine(app, line, sourceFileId, sourceOffset) {
         getAgentType(entry, line),
         botReason ? 1 : 0,
         botReason || null,
+        isPageView(entry) ? 1 : 0,
         location.countryCode,
         location.region,
         location.city
@@ -223,6 +226,48 @@ function purgeExpiredEvents() {
     return db.prepare('DELETE FROM visitor_events WHERE occurred_at < ?').run(cutoff).changes;
 }
 
+function refreshStoredEventClassifications() {
+    const metadataKey = 'visitor_classification_ruleset';
+    const current = db.prepare('SELECT value FROM monitor_metadata WHERE key = ?').get(metadataKey);
+    if (current?.value === CLASSIFICATION_RULESET_VERSION) return { scanned: 0, updated: 0 };
+
+    const rows = db.prepare(`
+        SELECT id, method, path, status, user_agent, is_bot, bot_reason, is_page_view
+        FROM visitor_events
+    `).all();
+    const update = db.prepare(`
+        UPDATE visitor_events
+        SET is_bot = ?, bot_reason = ?, is_page_view = ?
+        WHERE id = ?
+    `);
+    let updated = 0;
+    const transaction = db.transaction(() => {
+        rows.forEach((row) => {
+            const entry = {
+                method: row.method,
+                path: row.path,
+                status: row.status,
+                userAgent: row.user_agent
+            };
+            const addedReason = getBotReason(entry);
+            const isBot = Boolean(row.is_bot || addedReason);
+            const botReason = row.bot_reason || addedReason || null;
+            const pageView = isPageView(entry) ? 1 : 0;
+            if (Number(row.is_bot) !== Number(isBot) || row.bot_reason !== botReason || Number(row.is_page_view) !== pageView) {
+                update.run(isBot ? 1 : 0, botReason, pageView, row.id);
+                updated++;
+            }
+        });
+        db.prepare(`
+            INSERT INTO monitor_metadata (key, value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+        `).run(metadataKey, CLASSIFICATION_RULESET_VERSION);
+    });
+    transaction();
+    return { scanned: rows.length, updated };
+}
+
 function runVisitorIngestion() {
     const apps = db.prepare("SELECT * FROM apps WHERE log_path IS NOT NULL AND log_path != ''").all();
     let inserted = 0;
@@ -239,6 +284,10 @@ function runVisitorIngestion() {
 
 function startVisitorIngestion() {
     if (ingestTimer) return;
+    const refreshed = refreshStoredEventClassifications();
+    if (refreshed.scanned) {
+        console.log(`Visitor classification refreshed: ${refreshed.updated}/${refreshed.scanned} events updated.`);
+    }
     setTimeout(runVisitorIngestion, 1500);
     ingestTimer = setInterval(runVisitorIngestion, INGEST_INTERVAL_MS);
 }
@@ -251,6 +300,7 @@ module.exports = {
     ingestBuffer,
     ingestFileRange,
     purgeExpiredEvents,
+    refreshStoredEventClassifications,
     runVisitorIngestion,
     startVisitorIngestion
 };

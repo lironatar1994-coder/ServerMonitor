@@ -22,6 +22,7 @@
 - `/visitors` is the default cross-site visitor overview and `/visitors/:id` is the deep per-site view. Visitor pages must not mix in CPU, RAM, disk, PM2, or host-process metrics.
 - `/infrastructure` owns server resources and app runtime health. `/services` owns configuration and operational actions.
 - Keep visible visitor terminology honest: unique candidates are distinct IPs not identified as bots in the selected range, active candidates are from the last five minutes, and IP-derived locations are approximate. Never label candidates as confirmed people or human traffic.
+- Present successful page views as the primary activity metric. Do not label asset, script, font, API, or failed requests as visitor engagement.
 - Preserve RTL Hebrew presentation, `he-IL` formatting, and `Asia/Jerusalem` timestamps.
 
 ## Work Guidance

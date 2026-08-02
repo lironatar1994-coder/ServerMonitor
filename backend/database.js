@@ -61,6 +61,7 @@ db.exec(`
         device_type TEXT DEFAULT 'Unknown',
         is_bot INTEGER DEFAULT 0,
         bot_reason TEXT,
+        is_page_view INTEGER DEFAULT 0,
         country_code TEXT,
         region TEXT,
         city TEXT,
@@ -90,6 +91,12 @@ db.exec(`
         error TEXT,
         sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (report_type, period_key, recipient)
+    );
+
+    CREATE TABLE IF NOT EXISTS monitor_metadata (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE INDEX IF NOT EXISTS idx_visitor_events_app_time
@@ -159,6 +166,18 @@ try {
 } catch (e) {
     // Column already exists
 }
+
+try {
+    db.exec(`ALTER TABLE visitor_events ADD COLUMN is_page_view INTEGER DEFAULT 0`);
+    console.log('Added column is_page_view to visitor_events table');
+} catch (e) {
+    // Column already exists
+}
+
+db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_visitor_events_app_page_time
+        ON visitor_events (app_id, is_bot, is_page_view, occurred_at DESC);
+`);
 
 // Insert Pixel Dungeon app if not exists
 const pdExists = db.prepare('SELECT id FROM apps WHERE name = ?').get('Pixel Dungeon');

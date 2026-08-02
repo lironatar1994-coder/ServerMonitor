@@ -46,12 +46,28 @@ for cache_dir in \
     "/root/OnYourWay/frontend/.next/cache" \
     "/root/sos-landing-standalone/.next/cache" \
     "/root/LibiDiamonds-live/.next/cache" \
+    "/root/LibiDiamonds-live.rollback/.next/cache" \
     "/root/ServerMonitor/frontend/node_modules/.vite"; do
     if [ -d "$cache_dir" ]; then
         find "$cache_dir" -mindepth 1 -mtime +7 -delete 2>/dev/null || true
     fi
 done
 summary "Build-cache entries older than seven days removed."
+
+for libi_cache_dir in \
+    "/root/LibiDiamonds-live/.next/cache" \
+    "/root/LibiDiamonds-live.rollback/.next/cache"; do
+    if [ -d "$libi_cache_dir" ]; then
+        find "$libi_cache_dir" -mindepth 1 -delete 2>/dev/null || true
+    fi
+done
+summary "Disposable Libi build caches cleared from the active and rollback releases."
+
+pre_backup_disk_percent="$(df --output=pcent / | tail -1 | tr -dc '0-9')"
+if [ "${pre_backup_disk_percent:-0}" -ge 70 ] && command -v npm >/dev/null 2>&1; then
+    npm cache clean --force >/dev/null 2>&1 || true
+    summary "NPM download cache cleared because root disk usage was at least 70%."
+fi
 
 mkdir -p "$BACKUP_DIR"
 
@@ -109,7 +125,7 @@ echo "Run completed: $(date)" >> "$SUMMARY_LOG"
 echo "--- Server Maintenance Completed at $(date) ---"
 
 env_file="/root/Vee/backend/.env"
-if [ -r "$env_file" ] && command -v jq >/dev/null 2>&1; then
+if [ "${SKIP_MAINTENANCE_EMAIL:-0}" != "1" ] && [ -r "$env_file" ] && command -v jq >/dev/null 2>&1; then
     resend_key="$(sed -n 's/^RESEND_API_KEY=//p' "$env_file" | tail -1 | tr -d '\r' | sed -e 's/^["'\'']//; s/["'\'']$//')"
     email_to="$(sed -n 's/^MAINTENANCE_EMAIL_TO=//p' "$env_file" | tail -1 | tr -d '\r' | sed -e 's/^["'\'']//; s/["'\'']$//')"
     if [ -z "$email_to" ]; then

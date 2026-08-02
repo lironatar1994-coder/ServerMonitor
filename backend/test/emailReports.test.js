@@ -32,11 +32,12 @@ test('builds completed Israel calendar periods', () => {
 test('builds per-client comparisons and safe HTML', () => {
     const appId = db.prepare('INSERT INTO apps (name, url, log_path, status) VALUES (?, ?, ?, ?)')
         .run('Client <One>', 'https://example.com', '/tmp/access.log', 'online').lastInsertRowid;
-    const insert = db.prepare(`INSERT INTO visitor_events (app_id, source_file_id, source_offset, occurred_at, ip, path, is_bot) VALUES (?, 'email-test', ?, ?, ?, ?, ?)`);
-    insert.run(appId, 1, '2026-07-11T10:00:00.000Z', '1.1.1.1', '/pricing', 0);
-    insert.run(appId, 2, '2026-07-11T11:00:00.000Z', '2.2.2.2', '/pricing', 0);
-    insert.run(appId, 3, '2026-07-11T12:00:00.000Z', '9.9.9.9', '/scan', 1);
-    insert.run(appId, 4, '2026-07-10T10:00:00.000Z', '1.1.1.1', '/', 0);
+    const insert = db.prepare(`INSERT INTO visitor_events (app_id, source_file_id, source_offset, occurred_at, ip, path, is_bot, is_page_view) VALUES (?, 'email-test', ?, ?, ?, ?, ?, ?)`);
+    insert.run(appId, 1, '2026-07-11T10:00:00.000Z', '1.1.1.1', '/pricing', 0, 1);
+    insert.run(appId, 2, '2026-07-11T11:00:00.000Z', '2.2.2.2', '/pricing', 0, 1);
+    insert.run(appId, 3, '2026-07-11T12:00:00.000Z', '9.9.9.9', '/scan', 1, 1);
+    insert.run(appId, 4, '2026-07-10T10:00:00.000Z', '1.1.1.1', '/', 0, 1);
+    insert.run(appId, 5, '2026-07-11T13:00:00.000Z', '1.1.1.1', '/images/hero.webp', 0, 0);
 
     const period = {
         type: 'daily', periodKey: '2026-07-11',
@@ -46,13 +47,16 @@ test('builds per-client comparisons and safe HTML', () => {
     const row = buildReportData(period).find((item) => item.id === appId);
     assert.equal(row.uniqueCandidates, 2);
     assert.equal(row.uniqueChange, 100);
-    assert.equal(row.candidateRequests, 2);
+    assert.equal(row.candidateRequests, 3);
+    assert.equal(row.pageViews, 2);
     assert.equal(row.botRequests, 1);
     assert.equal(row.topPage, '/pricing');
 
     const rendered = renderEmail('daily', period, [row]);
-    assert.match(rendered.subject, /סיכום לקוחות יומי/);
-    assert.match(rendered.html, /זו הערכה ולא אימות של אדם/);
+    assert.match(rendered.subject, /דוח תנועה יומי/);
+    assert.match(rendered.html, /זו הערכה, לא אימות של אדם/);
+    assert.match(rendered.html, /צפיות בעמודים/);
+    assert.match(rendered.html, /monitor\.vee-app\.co\.il\/serve-monitor\/visitors/);
     assert.match(rendered.html, /Client &lt;One&gt;/);
     assert.doesNotMatch(rendered.html, /Client <One>/);
 });
@@ -70,4 +74,15 @@ test('includes seeded Libi Diamonds in client comparison reports', () => {
     const rendered = renderEmail('daily', period, [row]);
     assert.match(rendered.html, /Libi Diamonds/);
     assert.match(rendered.html, /https:\/\/www\.libidiamonds\.co\.il\//);
+});
+
+test('excludes operational log records without a website URL', () => {
+    db.prepare('INSERT INTO apps (name, url, log_path, status) VALUES (?, ?, ?, ?)')
+        .run('Cleanup Summary', '', '/var/log/server_cleanup_summary.log', 'online');
+    const period = {
+        type: 'daily', periodKey: '2026-07-11',
+        from: '2026-07-11T00:00:00.000Z', to: '2026-07-12T00:00:00.000Z',
+        previousFrom: '2026-07-10T00:00:00.000Z'
+    };
+    assert.equal(buildReportData(period).some((item) => item.name === 'Cleanup Summary'), false);
 });

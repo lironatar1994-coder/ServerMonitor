@@ -77,7 +77,8 @@ function buildPeriod(type, now = new Date()) {
 function getRangeStats(appId, from, to) {
     return db.prepare(`
         SELECT
-            COUNT(DISTINCT CASE WHEN is_bot = 0 THEN ip END) AS unique_candidates,
+            COUNT(DISTINCT CASE WHEN is_bot = 0 AND is_page_view = 1 THEN ip END) AS unique_candidates,
+            SUM(CASE WHEN is_bot = 0 AND is_page_view = 1 THEN 1 ELSE 0 END) AS page_views,
             SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) AS candidate_requests,
             SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) AS bot_requests
         FROM visitor_events
@@ -89,7 +90,8 @@ function getTopPage(appId, from, to) {
     return db.prepare(`
         SELECT path, COUNT(*) AS requests
         FROM visitor_events
-        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND is_bot = 0
+        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ?
+          AND is_bot = 0 AND is_page_view = 1
         GROUP BY path ORDER BY requests DESC, path ASC LIMIT 1
     `).get(appId, from, to) || { path: '—', requests: 0 };
 }
@@ -105,7 +107,7 @@ function buildReportData(period) {
     const apps = db.prepare(`
         SELECT id, name, url, status
         FROM apps
-        WHERE url IS NOT NULL AND log_path IS NOT NULL
+        WHERE NULLIF(TRIM(url), '') IS NOT NULL AND log_path IS NOT NULL
         ORDER BY name ASC
     `).all();
 
@@ -116,7 +118,11 @@ function buildReportData(period) {
         return {
             ...app,
             uniqueCandidates: Number(current.unique_candidates) || 0,
+            previousUniqueCandidates: Number(previous.unique_candidates) || 0,
             uniqueChange: percentChange(current.unique_candidates, previous.unique_candidates),
+            pageViews: Number(current.page_views) || 0,
+            previousPageViews: Number(previous.page_views) || 0,
+            pageViewChange: percentChange(current.page_views, previous.page_views),
             candidateRequests: Number(current.candidate_requests) || 0,
             requestChange: percentChange(current.candidate_requests, previous.candidate_requests),
             botRequests: Number(current.bot_requests) || 0,
@@ -135,26 +141,43 @@ function formatChange(value) {
     return `${arrow} ${Math.abs(number).toFixed(0)}%`;
 }
 
+function formatMetricChange(current, previous) {
+    const currentValue = Number(current) || 0;
+    const previousValue = Number(previous) || 0;
+    if (!previousValue && currentValue) return 'חדש בתקופה';
+    if (!previousValue) return 'ללא שינוי';
+    return formatChange(percentChange(currentValue, previousValue));
+}
+
 function formatPeriod(period) {
     const formatter = new Intl.DateTimeFormat('he-IL', { timeZone: TIMEZONE, day: '2-digit', month: '2-digit', year: 'numeric' });
     return `${formatter.format(new Date(period.from))}–${formatter.format(new Date(new Date(period.to).getTime() - 1))}`;
 }
 
 function renderEmail(type, period, rows) {
-    const title = type === 'daily' ? 'סיכום לקוחות יומי' : 'סיכום לקוחות שבועי';
-    const tableRows = rows.map((row) => `
-        <tr>
-          <td style="padding:12px;border-bottom:1px solid #ddd7ca"><strong>${escapeHtml(row.name)}</strong><br><span style="color:#777;font-size:12px">${escapeHtml(row.url || '')}</span></td>
-          <td style="padding:12px;border-bottom:1px solid #ddd7ca;color:${row.status === 'online' ? '#1f5a47' : '#d5543f'}"><strong>${row.status === 'online' ? 'פעיל' : 'בדיקה'}</strong></td>
-          <td style="padding:12px;border-bottom:1px solid #ddd7ca;text-align:center"><strong>${formatNumber(row.uniqueCandidates)}</strong><br><span>${formatChange(row.uniqueChange)}</span></td>
-          <td style="padding:12px;border-bottom:1px solid #ddd7ca;text-align:center"><strong>${formatNumber(row.candidateRequests)}</strong><br><span>${formatChange(row.requestChange)}</span></td>
-          <td style="padding:12px;border-bottom:1px solid #ddd7ca;text-align:center">${formatNumber(row.botRequests)}</td>
-          <td style="padding:12px;border-bottom:1px solid #ddd7ca;direction:ltr;text-align:left">${escapeHtml(row.topPage)}</td>
-        </tr>`).join('');
-    const totals = rows.reduce((sum, row) => ({ visitors: sum.visitors + row.uniqueCandidates, requests: sum.requests + row.candidateRequests, bots: sum.bots + row.botRequests }), { visitors: 0, requests: 0, bots: 0 });
-    const html = `<!doctype html><html dir="rtl" lang="he"><body style="margin:0;background:#f2ebdd;color:#171713;font-family:Arial,sans-serif"><div style="max-width:920px;margin:0 auto;padding:28px"><div style="background:#171713;color:#f2ebdd;padding:28px"><div style="color:#d5543f;font-size:12px;font-weight:bold">VEE MONITOR / REPORT</div><h1 style="margin:12px 0 6px;font-size:34px">${title}</h1><div style="color:#bbb5aa">${formatPeriod(period)}</div></div><div style="display:flex;background:#fff;border-bottom:1px solid #171713"><div style="padding:18px;flex:1"><strong style="font-size:28px">${formatNumber(totals.visitors)}</strong><br>מועמדים ייחודיים</div><div style="padding:18px;flex:1"><strong style="font-size:28px">${formatNumber(totals.requests)}</strong><br>בקשות שלא זוהו כבוט</div><div style="padding:18px;flex:1"><strong style="font-size:28px">${formatNumber(totals.bots)}</strong><br>בקשות בוטים</div></div><table role="presentation" style="width:100%;border-collapse:collapse;background:#fff;font-size:14px"><thead><tr style="background:#e5ddce"><th style="padding:12px;text-align:right">לקוח</th><th style="padding:12px;text-align:right">סטטוס</th><th style="padding:12px">מועמדים / שינוי</th><th style="padding:12px">בקשות / שינוי</th><th style="padding:12px">בוטים</th><th style="padding:12px;text-align:right">עמוד מוביל</th></tr></thead><tbody>${tableRows || '<tr><td colspan="6" style="padding:28px;text-align:center">אין לקוחות להצגה</td></tr>'}</tbody></table><p style="color:#6f695f;font-size:12px;line-height:1.6">מועמד הוא כתובת IP שלא זוהתה כבוט; זו הערכה ולא אימות של אדם. השינוי מושווה לתקופה הקודמת באותו אורך. הנתונים לפי שעון ישראל.</p><a href="https://vee-app.co.il/serve-monitor/visitors" style="display:inline-block;background:#d5543f;color:white;text-decoration:none;padding:12px 18px;font-weight:bold">פתיחת תמונת המבקרים</a></div></body></html>`;
-    const text = [title, formatPeriod(period), 'מועמד = כתובת IP שלא זוהתה כבוט; זו אינה הוכחה לאדם.', '', ...rows.map((row) => `${row.name}: ${row.uniqueCandidates} מועמדים (${formatChange(row.uniqueChange)}), ${row.candidateRequests} בקשות שלא זוהו כבוט (${formatChange(row.requestChange)}), ${row.botRequests} בוטים, עמוד מוביל ${row.topPage}, סטטוס ${row.status}`)].join('\n');
-    return { subject: `Vee Monitor — ${title} | ${formatPeriod(period)}`, html, text };
+    const title = type === 'daily' ? 'דוח תנועה יומי' : 'דוח תנועה שבועי';
+    const periodLabel = formatPeriod(period);
+    const siteCards = rows.map((row) => `
+      <table role="presentation" class="site-card" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #d8d0c2;margin:0 0 12px">
+        <tr><td style="padding:18px 20px;border-bottom:1px solid #e4ded3">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td style="text-align:right"><strong style="font-size:18px">${escapeHtml(row.name)}</strong><br><span dir="ltr" style="display:inline-block;color:#797267;font-size:12px">${escapeHtml(row.url || '')}</span></td>
+            <td width="92" style="text-align:left;color:${row.status === 'online' ? '#1f5a47' : '#b94332'};font-size:13px;font-weight:bold">${row.status === 'online' ? '● פעיל' : '● דורש בדיקה'}</td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:0 20px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td class="site-metric" width="33%" style="padding:16px 0;text-align:right"><span style="color:#797267;font-size:11px">מועמדים ייחודיים</span><br><strong style="font-size:24px">${formatNumber(row.uniqueCandidates)}</strong><br><small style="color:${row.uniqueCandidates < row.previousUniqueCandidates ? '#b94332' : '#1f5a47'}">${formatMetricChange(row.uniqueCandidates, row.previousUniqueCandidates)}</small></td>
+            <td class="site-metric" width="33%" style="padding:16px;text-align:right;border-right:1px solid #eee8dd"><span style="color:#797267;font-size:11px">צפיות בעמודים</span><br><strong style="font-size:24px">${formatNumber(row.pageViews)}</strong><br><small style="color:${row.pageViews < row.previousPageViews ? '#b94332' : '#1f5a47'}">${formatMetricChange(row.pageViews, row.previousPageViews)}</small></td>
+            <td class="site-metric" width="33%" style="padding:16px;text-align:right;border-right:1px solid #eee8dd"><span style="color:#797267;font-size:11px">בקשות בוטים</span><br><strong style="font-size:24px">${formatNumber(row.botRequests)}</strong></td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:12px 20px;background:#faf7f1;color:#5f594f;font-size:12px">העמוד המוביל: <strong dir="ltr" style="color:#171713">${escapeHtml(row.topPage)}</strong></td></tr>
+      </table>`).join('');
+    const totals = rows.reduce((sum, row) => ({ visitors: sum.visitors + row.uniqueCandidates, pageViews: sum.pageViews + row.pageViews, bots: sum.bots + row.botRequests }), { visitors: 0, pageViews: 0, bots: 0 });
+    const html = `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>@media(max-width:600px){.email-wrap{padding:12px!important}.hero{padding:24px 20px!important}.summary-cell{display:block!important;width:auto!important;border-right:0!important;border-bottom:1px solid #e4ded3}.site-metric{display:block!important;width:auto!important;border-right:0!important;border-bottom:1px solid #eee8dd;padding:13px 0!important}}</style></head><body style="margin:0;background:#eee8dc;color:#171713;font-family:Arial,sans-serif"><div style="display:none;max-height:0;overflow:hidden">${title}: מועמדים, צפיות בעמודים, בוטים והשוואה לתקופה הקודמת.</div><div class="email-wrap" style="max-width:720px;margin:0 auto;padding:24px"><div class="hero" style="background:#171713;color:#f5efe3;padding:32px"><div style="color:#dc604b;font-size:11px;font-weight:bold;letter-spacing:1.4px">VEE MONITOR / TRAFFIC EDITION</div><h1 style="margin:12px 0 8px;font-size:34px;line-height:1.1">${title}</h1><div style="color:#c5beb2">תקופה שהושלמה · ${periodLabel}</div></div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border-collapse:collapse;margin-bottom:18px"><tr><td class="summary-cell" width="33%" style="padding:20px;border-left:1px solid #e4ded3"><strong style="font-size:28px">${formatNumber(totals.visitors)}</strong><br><span style="font-size:12px;color:#6f695f">מועמדים ייחודיים לפי אתר</span></td><td class="summary-cell" width="33%" style="padding:20px;border-left:1px solid #e4ded3"><strong style="font-size:28px">${formatNumber(totals.pageViews)}</strong><br><span style="font-size:12px;color:#6f695f">צפיות בעמודים</span></td><td class="summary-cell" width="33%" style="padding:20px"><strong style="font-size:28px">${formatNumber(totals.bots)}</strong><br><span style="font-size:12px;color:#6f695f">בקשות בוטים שסוננו</span></td></tr></table>${siteCards || '<div style="background:#fff;padding:28px;text-align:center">אין אתרים להצגה</div>'}<div style="background:#ded6c8;padding:18px 20px;margin-top:18px;color:#554f46;font-size:12px;line-height:1.7"><strong style="color:#171713">איך לקרוא את הנתונים</strong><br>מועמד הוא כתובת IP עם לפחות צפייה אחת בעמוד שלא זוהתה כבוט — זו הערכה, לא אימות של אדם. צפיות בעמודים אינן כוללות תמונות, קובצי JavaScript, גופנים או בקשות API. השינוי מושווה לתקופה הקודמת באותו אורך ולפי שעון ישראל.</div><a href="https://monitor.vee-app.co.il/serve-monitor/visitors" style="display:block;background:#d5543f;color:#fff;text-decoration:none;text-align:center;padding:15px 18px;margin-top:14px;font-weight:bold">פתיחת תמונת המבקרים המלאה ←</a><p style="margin:18px 4px;color:#81796d;font-size:11px;text-align:center">Vee Monitor · דוח אוטומטי לתקופה שהושלמה</p></div></body></html>`;
+    const text = [title, periodLabel, 'מועמד = כתובת IP עם צפייה בעמוד שלא זוהתה כבוט; זו אינה הוכחה לאדם.', 'צפיות בעמודים אינן כוללות קובצי תמונה, JavaScript, גופנים או API.', '', ...rows.map((row) => `${row.name}: ${row.uniqueCandidates} מועמדים (${formatMetricChange(row.uniqueCandidates, row.previousUniqueCandidates)}), ${row.pageViews} צפיות בעמודים (${formatMetricChange(row.pageViews, row.previousPageViews)}), ${row.botRequests} בקשות בוטים, עמוד מוביל ${row.topPage}, סטטוס ${row.status}`)].join('\n');
+    return { subject: `Vee Monitor — ${title} | ${periodLabel}`, html, text };
 }
 
 function escapeHtml(value) {
