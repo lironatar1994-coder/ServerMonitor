@@ -1,4 +1,5 @@
 const db = require('./database');
+const { getLibiJewelryInterest } = require('./jewelryAnalytics');
 
 const TIMEZONE = 'Asia/Jerusalem';
 const DAILY_HOUR = Number(process.env.REPORT_DAILY_HOUR || 8);
@@ -115,6 +116,9 @@ function buildReportData(period) {
         const current = getRangeStats(app.id, period.from, period.to);
         const previous = getRangeStats(app.id, period.previousFrom, period.from);
         const topPage = getTopPage(app.id, period.from, period.to);
+        const jewelryInterest = app.name === 'Libi Diamonds'
+            ? getLibiJewelryInterest(db, app.id, { from: period.from, to: period.to })
+            : null;
         return {
             ...app,
             uniqueCandidates: Number(current.unique_candidates) || 0,
@@ -126,7 +130,8 @@ function buildReportData(period) {
             candidateRequests: Number(current.candidate_requests) || 0,
             requestChange: percentChange(current.candidate_requests, previous.candidate_requests),
             botRequests: Number(current.bot_requests) || 0,
-            topPage: topPage.path || '—'
+            topPage: topPage.path || '—',
+            jewelryInterest
         };
     });
 }
@@ -173,10 +178,16 @@ function renderEmail(type, period, rows) {
           </tr></table>
         </td></tr>
         <tr><td style="padding:12px 20px;background:#faf7f1;color:#5f594f;font-size:12px">העמוד המוביל: <strong dir="ltr" style="color:#171713">${escapeHtml(row.topPage)}</strong></td></tr>
+        ${row.jewelryInterest?.summary?.top_product ? `<tr><td style="padding:15px 20px;background:#efe4c9;border-top:1px solid #d8d0c2;color:#554713;font-size:12px;line-height:1.6"><strong style="color:#171713">התכשיט הנצפה ביותר: ${escapeHtml(row.jewelryInterest.summary.top_product.name)}</strong><br>${formatNumber(row.jewelryInterest.summary.top_product.page_views)} צפיות · ${formatNumber(row.jewelryInterest.summary.top_product.unique_candidates)} מועמדים · קטגוריה מובילה: ${escapeHtml(row.jewelryInterest.summary.top_collection?.label || '—')}</td></tr>` : ''}
       </table>`).join('');
     const totals = rows.reduce((sum, row) => ({ visitors: sum.visitors + row.uniqueCandidates, pageViews: sum.pageViews + row.pageViews, bots: sum.bots + row.botRequests }), { visitors: 0, pageViews: 0, bots: 0 });
     const html = `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>@media(max-width:600px){.email-wrap{padding:12px!important}.hero{padding:24px 20px!important}.summary-cell{display:block!important;width:auto!important;border-right:0!important;border-bottom:1px solid #e4ded3}.site-metric{display:block!important;width:auto!important;border-right:0!important;border-bottom:1px solid #eee8dd;padding:13px 0!important}}</style></head><body style="margin:0;background:#eee8dc;color:#171713;font-family:Arial,sans-serif"><div style="display:none;max-height:0;overflow:hidden">${title}: מועמדים, צפיות בעמודים, בוטים והשוואה לתקופה הקודמת.</div><div class="email-wrap" style="max-width:720px;margin:0 auto;padding:24px"><div class="hero" style="background:#171713;color:#f5efe3;padding:32px"><div style="color:#dc604b;font-size:11px;font-weight:bold;letter-spacing:1.4px">VEE MONITOR / TRAFFIC EDITION</div><h1 style="margin:12px 0 8px;font-size:34px;line-height:1.1">${title}</h1><div style="color:#c5beb2">תקופה שהושלמה · ${periodLabel}</div></div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border-collapse:collapse;margin-bottom:18px"><tr><td class="summary-cell" width="33%" style="padding:20px;border-left:1px solid #e4ded3"><strong style="font-size:28px">${formatNumber(totals.visitors)}</strong><br><span style="font-size:12px;color:#6f695f">מועמדים ייחודיים לפי אתר</span></td><td class="summary-cell" width="33%" style="padding:20px;border-left:1px solid #e4ded3"><strong style="font-size:28px">${formatNumber(totals.pageViews)}</strong><br><span style="font-size:12px;color:#6f695f">צפיות בעמודים</span></td><td class="summary-cell" width="33%" style="padding:20px"><strong style="font-size:28px">${formatNumber(totals.bots)}</strong><br><span style="font-size:12px;color:#6f695f">בקשות בוטים שסוננו</span></td></tr></table>${siteCards || '<div style="background:#fff;padding:28px;text-align:center">אין אתרים להצגה</div>'}<div style="background:#ded6c8;padding:18px 20px;margin-top:18px;color:#554f46;font-size:12px;line-height:1.7"><strong style="color:#171713">איך לקרוא את הנתונים</strong><br>מועמד הוא כתובת IP עם לפחות צפייה אחת בעמוד שלא זוהתה כבוט — זו הערכה, לא אימות של אדם. צפיות בעמודים אינן כוללות תמונות, קובצי JavaScript, גופנים או בקשות API. השינוי מושווה לתקופה הקודמת באותו אורך ולפי שעון ישראל.</div><a href="https://monitor.vee-app.co.il/serve-monitor/visitors" style="display:block;background:#d5543f;color:#fff;text-decoration:none;text-align:center;padding:15px 18px;margin-top:14px;font-weight:bold">פתיחת תמונת המבקרים המלאה ←</a><p style="margin:18px 4px;color:#81796d;font-size:11px;text-align:center">Vee Monitor · דוח אוטומטי לתקופה שהושלמה</p></div></body></html>`;
-    const text = [title, periodLabel, 'מועמד = כתובת IP עם צפייה בעמוד שלא זוהתה כבוט; זו אינה הוכחה לאדם.', 'צפיות בעמודים אינן כוללות קובצי תמונה, JavaScript, גופנים או API.', '', ...rows.map((row) => `${row.name}: ${row.uniqueCandidates} מועמדים (${formatMetricChange(row.uniqueCandidates, row.previousUniqueCandidates)}), ${row.pageViews} צפיות בעמודים (${formatMetricChange(row.pageViews, row.previousPageViews)}), ${row.botRequests} בקשות בוטים, עמוד מוביל ${row.topPage}, סטטוס ${row.status}`)].join('\n');
+    const text = [title, periodLabel, 'מועמד = כתובת IP עם צפייה בעמוד שלא זוהתה כבוט; זו אינה הוכחה לאדם.', 'צפיות בעמודים אינן כוללות קובצי תמונה, JavaScript, גופנים או API.', '', ...rows.map((row) => {
+        const jewelry = row.jewelryInterest?.summary?.top_product
+            ? `, תכשיט מוביל ${row.jewelryInterest.summary.top_product.name} (${row.jewelryInterest.summary.top_product.page_views} צפיות)`
+            : '';
+        return `${row.name}: ${row.uniqueCandidates} מועמדים (${formatMetricChange(row.uniqueCandidates, row.previousUniqueCandidates)}), ${row.pageViews} צפיות בעמודים (${formatMetricChange(row.pageViews, row.previousPageViews)}), ${row.botRequests} בקשות בוטים, עמוד מוביל ${row.topPage}${jewelry}, סטטוס ${row.status}`;
+    })].join('\n');
     return { subject: `Vee Monitor — ${title} | ${periodLabel}`, html, text };
 }
 

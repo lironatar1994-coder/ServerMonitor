@@ -67,13 +67,21 @@ test('includes seeded Libi Diamonds in client comparison reports', () => {
         from: '2026-07-11T00:00:00.000Z', to: '2026-07-12T00:00:00.000Z',
         previousFrom: '2026-07-10T00:00:00.000Z'
     };
+    const libiApp = db.prepare('SELECT id FROM apps WHERE name = ?').get('Libi Diamonds');
+    db.prepare(`INSERT INTO visitor_events (
+        app_id, source_file_id, source_offset, occurred_at, ip, path, is_bot, is_page_view
+    ) VALUES (?, 'email-libi-product', 1, ?, '7.7.7.7', '/product/aura-solitaire-ring', 0, 1)`)
+        .run(libiApp.id, '2026-07-11T10:00:00.000Z');
     const row = buildReportData(period).find((item) => item.name === 'Libi Diamonds');
     assert.ok(row);
     assert.equal(row.url, 'https://www.libidiamonds.co.il/');
+    assert.equal(row.jewelryInterest.summary.top_product.name, 'טבעת סוליטר ״אורה״');
 
     const rendered = renderEmail('daily', period, [row]);
     assert.match(rendered.html, /Libi Diamonds/);
     assert.match(rendered.html, /https:\/\/www\.libidiamonds\.co\.il\//);
+    assert.match(rendered.html, /התכשיט הנצפה ביותר/);
+    assert.match(rendered.html, /טבעת סוליטר/);
 });
 
 test('excludes operational log records without a website URL', () => {
