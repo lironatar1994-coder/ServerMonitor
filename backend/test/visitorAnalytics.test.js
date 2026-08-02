@@ -18,6 +18,7 @@ const {
     parseNginxAccessLine
 } = require('../logParser');
 const { ingestApp, purgeExpiredEvents, refreshStoredEventClassifications } = require('../visitorAnalytics');
+const { getLibiJewelryInterest, humanizeSlug, inferCategory } = require('../jewelryAnalytics');
 
 const humanLine = '1.2.3.4 - - [12/Jul/2026:12:00:00 +0300] "GET /site/ HTTP/1.1" 200 120 "https://google.com" "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"';
 const botLine = '5.6.7.8 - - [12/Jul/2026:12:01:00 +0300] "GET /site/wp-login.php HTTP/1.1" 404 12 "-" "curl/8.1"';
@@ -157,4 +158,38 @@ test('reclassifies stored automation and page views when rules change', () => {
     assert.equal(event.is_bot, 1);
     assert.equal(event.bot_reason, 'bot user agent');
     assert.equal(event.is_page_view, 1);
+});
+
+test('ranks Libi products and collections from canonical candidate page views', () => {
+    const app = db.prepare('SELECT id FROM apps WHERE name = ?').get('Libi Diamonds');
+    const insert = db.prepare(`INSERT INTO visitor_events (
+        app_id, source_file_id, source_offset, occurred_at, ip, method, path,
+        status, user_agent, is_bot, is_page_view
+    ) VALUES (?, 'jewelry-test', ?, ?, ?, 'GET', ?, 200, 'Mozilla/5.0', ?, ?)`);
+    const rows = [
+        [1, '2026-08-02T09:00:00.000Z', '1.1.1.1', '/product/aura-solitaire-ring', 0, 1],
+        [2, '2026-08-02T09:05:00.000Z', '1.1.1.1', '/product/aura-solitaire-ring?metal=white', 0, 1],
+        [3, '2026-08-03T10:00:00.000Z', '2.2.2.2', '/product/aria-oval-studs/', 0, 1],
+        [4, '2026-08-03T10:01:00.000Z', '3.3.3.3', '/jewelry/rings', 0, 1],
+        [5, '2026-07-28T10:00:00.000Z', '4.4.4.4', '/product/aura-solitaire-ring', 0, 1],
+        [6, '2026-08-03T10:02:00.000Z', '5.5.5.5', '/product/aura-solitaire-ring', 1, 1],
+        [7, '2026-08-03T10:03:00.000Z', '6.6.6.6', '/product/aura-solitaire-ring', 0, 0]
+    ];
+    rows.forEach((row) => insert.run(app.id, ...row));
+
+    const interest = getLibiJewelryInterest(db, app.id, {
+        from: '2026-08-01T00:00:00.000Z',
+        to: '2026-08-08T00:00:00.000Z'
+    });
+    assert.equal(interest.summary.product_page_views, 3);
+    assert.equal(interest.summary.unique_product_candidates, 2);
+    assert.equal(interest.summary.products_viewed, 2);
+    assert.equal(interest.products[0].slug, 'aura-solitaire-ring');
+    assert.equal(interest.products[0].page_views, 2);
+    assert.equal(interest.products[0].unique_candidates, 1);
+    assert.equal(interest.products[0].previous_page_views, 1);
+    assert.equal(interest.collections[0].category, 'rings');
+    assert.equal(interest.collections[0].page_views, 1);
+    assert.equal(inferCategory('aria-oval-studs'), 'earrings');
+    assert.equal(humanizeSlug('new-diamond-pendant'), 'New Diamond Pendant');
 });

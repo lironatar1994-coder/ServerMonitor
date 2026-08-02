@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('./auth');
+const { getLibiJewelryInterest } = require('../jewelryAnalytics');
 
 const router = express.Router();
 const MAX_RANGE_MS = 90 * 24 * 60 * 60 * 1000;
@@ -224,7 +225,10 @@ router.get('/apps/:id', (req, res) => {
             referrers: getRankedDimension(app.id, range, 'referrer'),
             devices: getRankedDimension(app.id, range, 'device_type', 4),
             statuses: getRankedDimension(app.id, range, 'status', 6),
-            recent: getRecent(app.id, range)
+            recent: getRecent(app.id, range),
+            jewelry_interest: app.name === 'Libi Diamonds'
+                ? getLibiJewelryInterest(db, app.id, range)
+                : null
         });
     } catch (error) {
         respondError(res, error);

@@ -163,6 +163,41 @@ svg { width: 1.15rem; height: 1.15rem; stroke-width: 1.8; }
 .visitor-mix > div { padding: 1.1rem 1.3rem; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: .2rem 1rem; border-left: 1px solid var(--ink); }
 .visitor-mix span { font-size: .72rem; font-weight: 800; }.visitor-mix strong { grid-row: 1 / 3; grid-column: 2; font: 700 2.5rem 'Frank Ruhl Libre', serif; color: var(--forest); }.visitor-mix small { color: var(--ink-muted); font-size: .62rem; }
 .visitor-mix p { margin: 0; padding: 1.2rem; display: flex; align-items: center; color: var(--ink-muted); font-size: .7rem; }
+.jewelry-interest { margin-top: 3rem; border: 1px solid var(--ink); background: var(--paper-light); box-shadow: .65rem .65rem 0 #17171312; }
+.jewelry-interest__masthead { min-height: 13rem; display: grid; grid-template-columns: minmax(0,1.3fr) minmax(26rem,.7fr); border-bottom: 1px solid var(--ink); }
+.jewelry-interest__masthead > div:first-child { padding: clamp(1.5rem,3vw,2.7rem); }
+.jewelry-interest__masthead .edition-label { color: #8a650f; }
+.jewelry-interest__masthead h2 { max-width: 44rem; margin: 0; font: 700 clamp(2.2rem,4.2vw,4.6rem)/.9 'Frank Ruhl Libre',serif; letter-spacing: -.04em; }
+.jewelry-interest__masthead p { max-width: 43rem; margin: 1.2rem 0 0; color: var(--ink-muted); font-size: .76rem; line-height: 1.7; }
+.jewelry-interest__summary { display: grid; grid-template-columns: repeat(3,1fr); border-right: 1px solid var(--ink); background: #efe4c9; }
+.jewelry-interest__summary > div { min-width: 0; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; border-left: 1px solid var(--ink); }
+.jewelry-interest__summary > div:last-child { border-left: 0; }
+.jewelry-interest__summary span { font-size: .68rem; font-weight: 800; line-height: 1.35; }
+.jewelry-interest__summary strong { font: 700 clamp(2.6rem,4vw,4.5rem)/.8 'Frank Ruhl Libre',serif; color: #8a650f; }
+.jewelry-interest__layout { display: grid; grid-template-columns: minmax(20rem,.72fr) minmax(0,1.28fr); }
+.collection-pulse, .product-ledger { min-width: 0; padding: clamp(1.25rem,2.5vw,2.25rem); }
+.collection-pulse { border-left: 1px solid var(--ink); }
+.jewelry-subhead { margin-bottom: 1.25rem; }
+.jewelry-subhead > span { color: #8a650f; font-size: .64rem; font-weight: 800; letter-spacing: .12em; }
+.jewelry-subhead h3 { margin: .45rem 0 0; font: 700 clamp(1.55rem,2.3vw,2.25rem)/1 'Frank Ruhl Libre',serif; }
+.collection-pulse__list { border-top: 2px solid var(--ink); }
+.collection-pulse__list a { min-height: 5.1rem; display: grid; grid-template-columns: minmax(5.5rem,.8fr) minmax(5rem,1fr) 2.6rem 4.2rem; gap: .75rem; align-items: center; border-bottom: 1px solid var(--line); text-decoration: none; }
+.collection-pulse__name { min-width: 0; display: flex; flex-direction: column; }
+.collection-pulse__name b { font-size: .82rem; }.collection-pulse__name small { color: var(--ink-muted); font-size: .62rem; }
+.collection-pulse__track, .product-gauge { position: relative; height: 2px; background: var(--line); }
+.collection-pulse__track i, .product-gauge i { position: absolute; inset: 0 auto 0 0; width: var(--interest); background: #9a6d0d; }
+.collection-pulse__track i::after, .product-gauge i::after { content: ''; position: absolute; top: 50%; right: 0; width: .52rem; height: .52rem; background: #9a6d0d; transform: translate(50%,-50%) rotate(45deg); }
+.collection-pulse__list strong { font: 700 1.35rem 'Frank Ruhl Libre',serif; }
+.collection-pulse__list em { font-style: normal; font-size: .64rem; font-weight: 800; direction: ltr; }.collection-pulse__list em.is-up { color: var(--forest); }.collection-pulse__list em.is-down { color: var(--vermilion); }
+.product-ledger__list { border-top: 2px solid var(--ink); }
+.product-ledger__list > a { min-height: 5.5rem; display: grid; grid-template-columns: 2.2rem minmax(11rem,1.4fr) minmax(5rem,.8fr) 4.4rem 4.4rem 1.2rem; gap: .75rem; align-items: center; border-bottom: 1px solid var(--line); text-decoration: none; transition: padding .15s,background .15s; }
+.product-ledger__list > a:hover { padding-inline: .6rem; background: #f5eddd; }
+.product-rank { font: 600 .68rem 'Fira Code',monospace; color: #8a650f; }
+.product-name { min-width: 0; display: flex; flex-direction: column; gap: .22rem; }.product-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8rem; }.product-name small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-muted); font-size: .61rem; }
+.product-stat { display: grid; grid-template-columns: .9rem auto; align-items: center; column-gap: .25rem; }.product-stat svg { width: .78rem; color: #8a650f; }.product-stat b { font: 700 1.18rem 'Frank Ruhl Libre',serif; }.product-stat small { grid-column: 1/-1; color: var(--ink-muted); font-size: .57rem; }
+.product-open { width: .9rem; color: var(--ink-muted); }
+.jewelry-empty { min-height: 12rem; display: flex; align-items: center; justify-content: center; gap: .7rem; color: var(--ink-muted); font-size: .8rem; }
+.jewelry-interest__note { min-height: 3.4rem; padding: .8rem 1.2rem; display: flex; align-items: center; gap: .55rem; border-top: 1px solid var(--ink); color: var(--ink-muted); font-size: .65rem; }.jewelry-interest__note svg { width: .9rem; color: #8a650f; }
 .hourly-section { padding: 2.5rem 0; border-bottom: 1px solid var(--ink); }
 .hourly-strip { height: 10rem; display: grid; grid-template-columns: repeat(24,1fr); align-items: end; gap: .25rem; direction: ltr; border-bottom: 1px solid var(--ink); }
 .hourly-strip div { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: .35rem; }
@@ -411,6 +446,10 @@ svg { width: 1.15rem; height: 1.15rem; stroke-width: 1.8; }
   .visitor-mix { grid-template-columns: 1fr 1fr; }
   .visitor-mix > div:nth-child(2) { border-left: 0; }
   .visitor-mix p { grid-column: 1 / -1; border-top: 1px solid var(--line); }
+  .jewelry-interest__masthead { grid-template-columns: 1fr; }
+  .jewelry-interest__summary { min-height: 9rem; border-top: 1px solid var(--ink); border-right: 0; }
+  .jewelry-interest__layout { grid-template-columns: 1fr; }
+  .collection-pulse { border-left: 0; border-bottom: 1px solid var(--ink); }
   .insight-grid { grid-template-columns: 1fr; }
   .insight-grid article { border-left: 0; border-bottom: 1px solid var(--ink); }
   .insight-grid article:last-child { grid-column: auto; border-top: 0; border-bottom: 0; }
@@ -460,6 +499,19 @@ svg { width: 1.15rem; height: 1.15rem; stroke-width: 1.8; }
   .visitor-card b { font: 600 .7rem 'Fira Code', monospace; }
   .visitor-card small { display: flex; align-items: center; gap: .3rem; color: var(--ink-muted); font-size: .68rem; }
   .visitor-card em { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 .68rem 'Fira Code', monospace; }
+  .jewelry-interest { margin-top: 2rem; box-shadow: .35rem .35rem 0 #17171312; }
+  .jewelry-interest__masthead h2 { font-size: clamp(2.35rem,12vw,3.6rem); }
+  .jewelry-interest__summary { grid-template-columns: 1fr 1fr; }
+  .jewelry-interest__summary > div { min-height: 7.5rem; }
+  .jewelry-interest__summary > div:nth-child(2) { border-left: 0; }
+  .jewelry-interest__summary > div:last-child { grid-column: 1/-1; min-height: 5.4rem; border-top: 1px solid var(--ink); }
+  .collection-pulse, .product-ledger { padding: 1.15rem; }
+  .collection-pulse__list a { grid-template-columns: minmax(5rem,1fr) 2.5rem 3.6rem; }
+  .collection-pulse__track { display: none; }
+  .product-ledger__list > a { min-height: 7rem; grid-template-columns: 1.8rem minmax(0,1fr) 1rem; gap: .5rem; padding-block: .75rem; }
+  .product-gauge { grid-column: 2/3; width: 100%; }
+  .product-stat { grid-row: 3; grid-column: 2; }.product-stat:nth-of-type(4) { justify-self: start; }.product-stat:nth-of-type(5) { justify-self: end; }
+  .product-open { grid-column: 3; grid-row: 1/4; }
   .visitor-drawer { padding: 1.2rem; }
   .visitor-drawer h2 { font-size: 1.4rem; }
   .instrument-grid { grid-template-columns: 1fr 1fr; }

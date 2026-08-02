@@ -12,6 +12,7 @@
 - `monitor.js` owns background health, PM2, log, metric, and alert collection.
 - `logParser.js` owns host-aware Nginx access-log filtering, visitor parsing, and heuristic bot classification.
 - `visitorAnalytics.js` owns cursor-based access-log ingestion, initial bounded backfill, GeoIP enrichment, and raw-event retention.
+- `jewelryAnalytics.js` owns canonical Libi product/collection path aggregation, catalog labels, category inference, and equal-period comparisons.
 - `emailReports.js` owns daily and weekly client comparison reports, Resend delivery, scheduling, and delivery deduplication.
 - `routes/` owns HTTP route handlers and request/response contracts.
 - `monitor.db` is runtime state and must not be treated as a source schema definition.
@@ -30,6 +31,7 @@
 - `visitor_events` is the persistent 90-day request ledger. It stores the requested host and full IPs for private analysis, and deduplicates by app, source-file identity, and byte offset.
 - Initial persistent ingestion backfills at most 30 days or 64 MB, then follows each log by cursor every 30 seconds and finishes an identifiable rotated file before switching.
 - `/visitor-analytics/overview` serves cross-site analytics; `/visitor-analytics/apps/:id`, `/visitors`, and `/timeline` serve per-site summary, paginated unique-IP rows, and IP request history.
+- The Libi response from `/visitor-analytics/apps/:id` includes `jewelry_interest`: canonical `/product/:slug` and `/jewelry/:category` rankings based only on candidate page views, with distinct candidate counts and previous-period comparisons. Query strings and trailing slashes must not split one product into multiple rows.
 - Persistent analytics count unique candidates as distinct non-bot-classified IPs in the selected range. Candidate means “not identified as a bot,” not verified human. GeoIP is local and optional via `GEOIP_DB_PATH`; missing data must remain an explicit unknown rather than failing ingestion.
 - A unique candidate must have at least one successful page view. `visitor_events.is_page_view` excludes assets, API calls, robots/sitemaps, failed responses, and non-navigation methods; raw requests remain available for bot and diagnostic totals.
 - Version bot and page-view rules through `monitor_metadata`, and reclassify stored events when the ruleset changes so historical dashboards and emails do not keep stale classifications.

@@ -4,6 +4,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch, getRangePreset, rangeQuery } from '../lib/api';
 import { DataState, MetricBlock, RangePicker, RankedList, SectionHeader } from '../components/AnalyticsParts';
+import JewelryInterest from '../components/JewelryInterest';
 import { formatDateTime, formatNumber } from '../lib/format';
 
 const VisitorDetail = () => {
@@ -98,6 +99,8 @@ const VisitorDetail = () => {
           <div><span>מועמדים חוזרים</span><strong>{formatNumber(summary.returning_candidates)}</strong><small>נראו גם לפני תחילת הטווח</small></div>
           <p>מועמד הוא כתובת IP שלא זוהתה כבוט. זו הערכה המבוססת על לוגים, לא אימות של אדם.</p>
         </section>
+
+        <JewelryInterest interest={data?.jewelry_interest} siteUrl={data?.app?.url} />
 
         <section className="detail-analysis-grid">
           <article className="story-panel detail-chart-panel">
