@@ -86,6 +86,7 @@ function buildApplicationUsage(pm2Processes, apps, processes, totalMemory) {
             const tree = collectProcessTree(process.pid, processes);
             const root = tree.find((item) => item.pid === Number(process.pid));
             const memoryBytes = tree.reduce((sum, item) => sum + item.rss_bytes, 0);
+            const swapBytes = tree.reduce((sum, item) => sum + (item.swap_bytes || 0), 0);
             const cpuPercent = tree.reduce((sum, item) => sum + item.cpu, 0);
             const dominant = tree.reduce((largest, item) => !largest || item.rss_bytes > largest.rss_bytes ? item : largest, null);
             const wrapperBytes = root?.rss_bytes || Number(process.monit?.memory) || 0;
@@ -98,13 +99,24 @@ function buildApplicationUsage(pm2Processes, apps, processes, totalMemory) {
                 process_count: tree.length,
                 cpu_percent: cpuPercent,
                 memory_bytes: memoryBytes,
+                swap_bytes: swapBytes,
+                footprint_bytes: memoryBytes + swapBytes,
                 memory_percent: totalMemory ? (memoryBytes / totalMemory) * 100 : 0,
                 wrapper_memory_bytes: wrapperBytes,
                 child_memory_bytes: Math.max(0, memoryBytes - wrapperBytes),
                 dominant_process: dominant?.command || process.name
             };
         })
-        .sort((a, b) => b.memory_bytes - a.memory_bytes);
+        .sort((a, b) => b.footprint_bytes - a.footprint_bytes);
+}
+
+function readProcessSwapBytes(pid) {
+    try {
+        const match = fs.readFileSync(`/proc/${pid}/status`, 'utf8').match(/^VmSwap:\s+(\d+)\s+kB$/m);
+        return match ? Number(match[1]) * 1024 : 0;
+    } catch (error) {
+        return 0;
+    }
 }
 
 function readProcessTable() {
@@ -113,7 +125,10 @@ function readProcessTable() {
         encoding: 'utf8',
         timeout: 3000
     });
-    return parseProcessTable(output);
+    return parseProcessTable(output).map((process) => ({
+        ...process,
+        swap_bytes: readProcessSwapBytes(process.pid)
+    }));
 }
 
 function readDuSizes(targets) {

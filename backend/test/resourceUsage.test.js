@@ -24,6 +24,7 @@ test('parses Linux process rows and preserves commands with spaces', () => {
 
 test('collects descendants and attributes complete process-tree resources to PM2 apps', () => {
     const processes = parseProcessTable(processTable);
+    processes.find((process) => process.pid === 101).swap_bytes = 160000 * 1024;
     assert.deepEqual(collectProcessTree(100, processes).map((process) => process.pid).sort(), [100, 101, 102]);
     const usage = buildApplicationUsage([
         { name: 'libi-diamonds-live', pid: 100, monit: { memory: 20 * 1024 * 1024 }, pm2_env: { status: 'online' } },
@@ -38,6 +39,8 @@ test('collects descendants and attributes complete process-tree resources to PM2
     assert.equal(usage[0].process_count, 3);
     assert.equal(usage[0].memory_bytes, (20000 + 480000 + 8000) * 1024);
     assert.equal(usage[0].child_memory_bytes, (480000 + 8000) * 1024);
+    assert.equal(usage[0].swap_bytes, 160000 * 1024);
+    assert.equal(usage[0].footprint_bytes, (20000 + 480000 + 8000 + 160000) * 1024);
     assert.equal(usage[0].dominant_process, 'next-server (v15.5.20)');
     assert.equal(usage[1].name, 'unmapped-worker');
     assert.equal(usage[1].app_id, null);

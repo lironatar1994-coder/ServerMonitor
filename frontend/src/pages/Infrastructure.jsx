@@ -6,7 +6,7 @@ import { DataState, Empty, Panel, PageHead, Stat, StatRow, Tabs } from '../compo
 import { formatNumber, formatTime } from '../lib/format';
 
 const RESOURCE_TABS = [
-  { id: 'applications', label: 'RAM לפי שירות' },
+  { id: 'applications', label: 'זיכרון לפי שירות' },
   { id: 'storage', label: 'אחסון לפי פרויקט' },
   { id: 'processes', label: 'תהליכים' }
 ];
@@ -26,12 +26,13 @@ const toneFor = (percentage) => {
 
 const ResourceRows = ({ items, kind }) => {
   if (!items.length) return <Empty text="הפירוט זמין בשרת Linux" />;
-  const peak = Math.max(...items.map((item) => Number(kind === 'storage' ? item.bytes : item.memory_bytes || item.rss_bytes) || 0), 1);
+  const peak = Math.max(...items.map((item) => Number(kind === 'storage' ? item.bytes : item.footprint_bytes || item.rss_bytes) || 0), 1);
 
   return (
     <ol className="resource-list">
       {items.map((item, index) => {
-        const bytes = Number(kind === 'storage' ? item.bytes : item.memory_bytes || item.rss_bytes) || 0;
+        const bytes = Number(kind === 'storage' ? item.bytes : item.footprint_bytes || item.rss_bytes) || 0;
+        const displayedBytes = kind === 'applications' ? Number(item.memory_bytes) || 0 : bytes;
         const isProcess = kind === 'processes';
         const subtitle = kind === 'applications'
           ? `${formatNumber(item.process_count)} תהליכים · ${formatBytes(item.child_memory_bytes)} בתהליכי־משנה`
@@ -47,8 +48,8 @@ const ResourceRows = ({ items, kind }) => {
               <small>{subtitle}</small>
             </span>
             <span className="resource-list__value">
-              <strong>{formatBytes(bytes)}</strong>
-              {kind === 'applications' && <small>{Number(item.memory_percent || 0).toFixed(1)}% RAM</small>}
+              <strong>{formatBytes(displayedBytes)}</strong>
+              {kind === 'applications' && <small>{formatBytes(item.swap_bytes)} Swap · {Number(item.memory_percent || 0).toFixed(1)}% RAM</small>}
               {kind === 'storage' && <small>{Number(item.disk_percent || 0).toFixed(1)}% מהדיסק</small>}
             </span>
           </li>
@@ -138,7 +139,7 @@ const Infrastructure = () => {
           bleed
         >
           <div className="resource-summary" aria-label="עיקרי צריכת המשאבים">
-            <span><small>הצרכן הגדול ב-RAM</small><strong>{largestApp?.name || 'לא זמין'}</strong><b>{formatBytes(largestApp?.memory_bytes)}</b></span>
+            <span><small>טביעת הזיכרון הגדולה</small><strong>{largestApp?.name || 'לא זמין'}</strong><b>{formatBytes(largestApp?.memory_bytes)} + {formatBytes(largestApp?.swap_bytes)}</b></span>
             <span><small>תלויות בפרויקטים</small><strong>{formatBytes(storage?.totals?.dependency_bytes)}</strong><b>{storage?.projects?.length || 0} פרויקטים</b></span>
             <span><small>גיבויים ו-Rollback</small><strong>{formatBytes((Number(storage?.totals?.backup_bytes) || 0) + (Number(storage?.totals?.rollback_bytes) || 0))}</strong><b>קיבולת התאוששות</b></span>
           </div>
