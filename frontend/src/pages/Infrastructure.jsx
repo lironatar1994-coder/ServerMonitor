@@ -134,7 +134,7 @@ const Infrastructure = () => {
 
         <Panel
           title="מי משתמש במשאבים"
-          hint="RAM נספר לכל עץ התהליכים, כולל תהליכי־משנה ש-PM2 אינו מציג בשורת השירות. האחסון נסרק בנתיבים מוגדרים ונשמר במטמון לחמש דקות."
+          hint="RAM ו-Swap נספרים לכל עץ התהליכים, כולל תהליכי־משנה ש-PM2 אינו מציג בשורת השירות. האחסון נסרק בעדיפות נמוכה ונשמר במטמון לחצי שעה."
           action={<Tabs tabs={RESOURCE_TABS} value={resourceView} onChange={setResourceView} label="סוג פירוט משאבים" />}
           bleed
         >

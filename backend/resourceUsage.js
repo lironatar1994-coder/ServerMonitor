@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFile, execFileSync } = require('child_process');
 
-const STORAGE_CACHE_MS = 5 * 60 * 1000;
+const STORAGE_CACHE_MS = 30 * 60 * 1000;
 let storageCache = { fetchedAt: 0, snapshot: null, pending: null };
 
 const PROJECTS = [
@@ -26,15 +26,6 @@ const OTHER_STORAGE = [
     { id: 'npm-cache', name: 'NPM cache', path: '/root/.npm', type: 'cache' },
     { id: 'apt-lists', name: 'APT package lists', path: '/var/lib/apt/lists', type: 'cache' },
     { id: 'node-runtimes', name: 'Node runtimes', path: '/root/.nvm', type: 'runtime' }
-];
-
-const TOP_LEVEL_STORAGE = [
-    { id: 'root', name: '/root', path: '/root' },
-    { id: 'usr', name: '/usr', path: '/usr' },
-    { id: 'var', name: '/var', path: '/var' },
-    { id: 'boot', name: '/boot', path: '/boot' },
-    { id: 'opt', name: '/opt', path: '/opt' },
-    { id: 'home', name: '/home', path: '/home' }
 ];
 
 function parseProcessTable(output) {
@@ -135,7 +126,12 @@ function readDuSizes(targets) {
     const existing = targets.filter((target) => fs.existsSync(target.path));
     if (!existing.length || process.platform !== 'linux') return Promise.resolve(new Map());
     return new Promise((resolve, reject) => {
-        execFile('/usr/bin/du', ['-s', '-B1', '--', ...existing.map((target) => target.path)], {
+        const useIonice = fs.existsSync('/usr/bin/ionice');
+        const command = useIonice ? '/usr/bin/ionice' : '/usr/bin/du';
+        const args = useIonice
+            ? ['-c', '3', '/usr/bin/du', '-s', '-x', '-B1', '--', ...existing.map((target) => target.path)]
+            : ['-s', '-x', '-B1', '--', ...existing.map((target) => target.path)];
+        execFile(command, args, {
             encoding: 'utf8',
             timeout: 20000,
             maxBuffer: 1024 * 1024
@@ -156,7 +152,6 @@ async function buildStorageSnapshot(diskTotal) {
         const dependencyTargets = PROJECTS.flatMap((project) => project.dependencies.map((dependencyPath) => ({ path: dependencyPath })));
         const dependencySizes = await readDuSizes(dependencyTargets);
         const otherSizes = await readDuSizes(OTHER_STORAGE);
-        const topLevelSizes = await readDuSizes(TOP_LEVEL_STORAGE);
         const projects = PROJECTS
             .filter((project) => projectSizes.has(path.normalize(project.path)))
             .map((project) => {
@@ -182,21 +177,12 @@ async function buildStorageSnapshot(diskTotal) {
                 disk_percent: diskTotal ? ((otherSizes.get(path.normalize(item.path)) || 0) / diskTotal) * 100 : 0
             }))
             .sort((a, b) => b.bytes - a.bytes);
-        const top_level = TOP_LEVEL_STORAGE
-            .filter((item) => topLevelSizes.has(path.normalize(item.path)))
-            .map((item) => ({
-                ...item,
-                bytes: topLevelSizes.get(path.normalize(item.path)) || 0,
-                disk_percent: diskTotal ? ((topLevelSizes.get(path.normalize(item.path)) || 0) / diskTotal) * 100 : 0
-            }))
-            .sort((a, b) => b.bytes - a.bytes);
-
         return {
             updated_at: new Date().toISOString(),
             cached: false,
             projects,
             other,
-            top_level,
+            top_level: [],
             totals: {
                 project_bytes: projects.reduce((sum, item) => sum + item.bytes, 0),
                 dependency_bytes: projects.reduce((sum, item) => sum + item.dependency_bytes, 0),
