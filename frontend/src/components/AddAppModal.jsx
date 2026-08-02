@@ -42,9 +42,9 @@ const AddAppModal = ({ onClose, onAdded }) => {
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="add-service-dialog" role="dialog" aria-modal="true" aria-labelledby="add-service-title">
-        <header><div><span className="eyebrow">שירות חדש</span><h2 id="add-service-title">חיבור לניטור</h2></div><button type="button" onClick={onClose} aria-label="סגירה"><X /></button></header>
-        <p>אפשר לחבר אתר סטטי, תהליך PM2 או שירות עם בדיקת תקינות. רק שם השירות הוא שדה חובה.</p>
-        {error && <div className="form-error" role="alert">{error}</div>}
+        <header><h2 id="add-service-title">שירות חדש</h2><button type="button" onClick={onClose} aria-label="סגירה"><X /></button></header>
+        <p>רק שם השירות הוא שדה חובה.</p>
+        {error && <div className="banner banner--error" role="alert">{error}</div>}
         <form onSubmit={handleSubmit}>
           <label><span><ServerCog /> שם השירות *</span><input value={formData.name} onChange={(event) => updateField('name', event.target.value)} placeholder="לדוגמה: Vee Frontend" required autoFocus /></label>
           <label><span><Globe /> כתובת האתר</span><input dir="ltr" value={formData.url} onChange={(event) => updateField('url', event.target.value)} placeholder="https://vee-app.co.il" /></label>

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowRight, ExternalLink, Play, Power, RefreshCw, ServerCog, TerminalSquare } from 'lucide-react';
+import { ChevronRight, ExternalLink, Play, Power, RefreshCw } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import LiveTerminal from '../components/LiveTerminal';
 import SshSecurityTemplate from '../components/app_templates/SshSecurityTemplate';
 import WhatsAppTemplate from '../components/app_templates/WhatsAppTemplate';
-import { DataState } from '../components/AnalyticsParts';
+import { DataState, Panel, PageHead } from '../components/AnalyticsParts';
 import { formatDateTime } from '../lib/format';
 import { apiFetch } from '../lib/api';
+
+const ACTION_LABEL = { start: 'הפעלה', stop: 'עצירה', restart: 'הפעלה מחדש' };
 
 const AppDetails = () => {
   const { id } = useParams();
@@ -28,6 +30,13 @@ const AppDetails = () => {
     return () => { window.clearTimeout(initial); window.clearInterval(interval); };
   }, [fetchApp]);
 
+  useEffect(() => {
+    if (!pendingAction) return undefined;
+    const handleEscape = (event) => event.key === 'Escape' && setPendingAction(null);
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [pendingAction]);
+
   const handleAction = async () => {
     const action = pendingAction;
     setPendingAction(null); setActionState(action);
@@ -36,20 +45,69 @@ const AppDetails = () => {
     finally { setActionState(''); }
   };
 
-  const actionLabel = { start: 'הפעלה', stop: 'עצירה', restart: 'הפעלה מחדש' };
-
   return (
     <div className="page page--service-detail">
-      <Link className="back-link" to="/services"><ArrowRight /> כל השירותים</Link>
-      <DataState loading={loading} error={error}>
+      <DataState loading={loading && !app} error={error} onRetry={fetchApp}>
         {app && <>
-          <header className="service-detail-hero"><div className="service-detail-mark"><ServerCog /></div><div><span className="edition-label">שירות / תפעול</span><h1>{app.name}</h1><div className="site-meta"><span className={`status-tag ${app.status === 'online' ? 'is-online' : 'is-offline'}`}>{app.status === 'online' ? 'פעיל' : 'לא פעיל'}</span><span>בדיקה אחרונה: {formatDateTime(app.last_checked)}</span>{app.url && <a href={app.url} target="_blank" rel="noreferrer">פתיחה <ExternalLink /></a>}</div></div>{app.pm2_name && <div className="service-actions">{app.status === 'online' ? <button type="button" className="danger-action" onClick={() => setPendingAction('stop')}><Power /> עצירה</button> : <button type="button" onClick={() => setPendingAction('start')}><Play /> הפעלה</button>}<button type="button" onClick={() => setPendingAction('restart')}><RefreshCw className={actionState ? 'is-spinning' : ''} /> הפעלה מחדש</button></div>}</header>
+          <PageHead
+            title={app.name}
+            meta={
+              <>
+                <Link className="crumb" to="/services"><ChevronRight aria-hidden="true" /> כל השירותים</Link>
+                <span className={`chip ${app.status === 'online' ? 'is-online' : 'is-offline'}`}>{app.status === 'online' ? 'פעיל' : 'לא פעיל'}</span>
+                <span className="muted">בדיקה: {formatDateTime(app.last_checked)}</span>
+                {app.url && <a className="crumb" href={app.url} target="_blank" rel="noreferrer">פתיחה <ExternalLink aria-hidden="true" /></a>}
+              </>
+            }
+          >
+            {app.pm2_name && (
+              <div className="btn-group">
+                {app.status === 'online'
+                  ? <button type="button" className="btn btn--danger" onClick={() => setPendingAction('stop')}><Power aria-hidden="true" /> עצירה</button>
+                  : <button type="button" className="btn btn--primary" onClick={() => setPendingAction('start')}><Play aria-hidden="true" /> הפעלה</button>}
+                <button type="button" className="btn" onClick={() => setPendingAction('restart')}>
+                  <RefreshCw className={actionState ? 'is-spinning' : ''} aria-hidden="true" /> הפעלה מחדש
+                </button>
+              </div>
+            )}
+          </PageHead>
 
-          {app.pm2_name === 'vee-whatsapp-worker' ? <div className="special-service"><WhatsAppTemplate app={app} /></div> : app.name === 'SSH Security' ? <div className="special-service"><SshSecurityTemplate app={app} /></div> : <section className="operations-grid"><article className="operation-sheet"><span className="eyebrow">Runtime</span><h2>מצב השירות</h2><dl><div><dt>סוג</dt><dd>{app.pm2_name ? 'תהליך PM2' : 'אתר סטטי'}</dd></div><div><dt>CPU יישום</dt><dd>{(app.cpu || 0).toFixed(1)}%</dd></div><div><dt>זיכרון יישום</dt><dd>{((app.memory || 0) / 1024 / 1024).toFixed(1)} MB</dd></div><div><dt>דומיין לוג</dt><dd dir="ltr">{app.log_host || 'ללא'}</dd></div><div><dt>נתיבים לכלול</dt><dd dir="ltr">{app.log_filter || 'הכול'}</dd></div><div><dt>נתיבים להוציא</dt><dd dir="ltr">{app.log_exclude || 'ללא'}</dd></div></dl>{app.log_path && <Link className="visitor-jump" to={`/visitors/${app.id}`}>מעבר לתמונת המבקרים</Link>}</article><article className="operation-terminal"><span className="terminal-title"><TerminalSquare /> לוג חי</span><LiveTerminal appId={app.id} /></article></section>}
+          {app.pm2_name === 'vee-whatsapp-worker' ? <WhatsAppTemplate app={app} />
+            : app.name === 'SSH Security' ? <SshSecurityTemplate app={app} />
+              : (
+                <div className="grid grid--1-2">
+                  <Panel title="מצב השירות">
+                    <dl className="spec-list">
+                      <div><dt>סוג</dt><dd>{app.pm2_name ? 'תהליך PM2' : 'אתר סטטי'}</dd></div>
+                      <div><dt>CPU</dt><dd>{(app.cpu || 0).toFixed(1)}%</dd></div>
+                      <div><dt>זיכרון</dt><dd>{((app.memory || 0) / 1024 / 1024).toFixed(1)} MB</dd></div>
+                      <div><dt>דומיין לוג</dt><dd dir="ltr">{app.log_host || '—'}</dd></div>
+                      <div><dt>נתיבים לכלול</dt><dd dir="ltr">{app.log_filter || 'הכול'}</dd></div>
+                      <div><dt>נתיבים להוציא</dt><dd dir="ltr">{app.log_exclude || '—'}</dd></div>
+                    </dl>
+                    {app.log_path && <Link className="btn btn--wide" to={`/visitors/${app.id}`}>תמונת המבקרים</Link>}
+                  </Panel>
+
+                  <Panel title="לוג חי" className="panel--terminal" bleed>
+                    <LiveTerminal appId={app.id} />
+                  </Panel>
+                </div>
+              )}
         </>}
       </DataState>
 
-      {pendingAction && <div className="dialog-backdrop" role="presentation"><div className="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title"><span className="eyebrow">אישור פעולה</span><h2 id="confirm-title">{actionLabel[pendingAction]} של {app?.name}?</h2><p>הפעולה תשפיע מיד על השירות בשרת.</p><div><button type="button" onClick={() => setPendingAction(null)}>ביטול</button><button type="button" className="danger-action" onClick={handleAction}>כן, {actionLabel[pendingAction]}</button></div></div></div>}
+      {pendingAction && (
+        <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setPendingAction(null)}>
+          <div className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
+            <h2 id="confirm-title">{ACTION_LABEL[pendingAction]} של {app?.name}?</h2>
+            <p>הפעולה תשפיע מיד על השירות בשרת.</p>
+            <div className="dialog__actions">
+              <button type="button" className="btn" onClick={() => setPendingAction(null)}>ביטול</button>
+              <button type="button" className="btn btn--danger" onClick={handleAction}>{ACTION_LABEL[pendingAction]}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

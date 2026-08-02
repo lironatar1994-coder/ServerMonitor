@@ -14,7 +14,11 @@ const Login = () => {
     event.preventDefault();
     setLoading(true); setError('');
     try {
-      const response = await fetch('/serve-monitor/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+      const response = await fetch('/serve-monitor/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'שם המשתמש או הסיסמה אינם נכונים');
       localStorage.setItem('token', data.token);
@@ -25,9 +29,32 @@ const Login = () => {
   };
 
   return (
-    <main className="login-page">
-      <section className="login-manifesto"><span className="login-brand"><Activity /> Vee Monitor</span><div><span className="edition-label">מבקרים. שרת. שני עולמות.</span><h1>לראות תנועה.<br /><em>להפריד אוטומציה.</em><br />לשמור על השרת.</h1><p>מרכז ניטור פרטי שמציג קודם את מה שחשוב באמת—מה הגיע לאתרים שלך ואיך הוא סווג.</p></div><small>Private operations desk · Israel</small></section>
-      <section className="login-form-side"><form onSubmit={handleSubmit}><span className="eyebrow">כניסה מאובטחת</span><h2>ברוך שובך</h2><p>התחבר כדי לפתוח את תמונת המבקרים החיה.</p>{error && <div className="form-error" role="alert">{error}</div>}<label>שם משתמש<input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" required autoFocus /></label><label>סיסמה<span className="password-field"><input type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /><button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'הסתרת סיסמה' : 'הצגת סיסמה'}>{showPassword ? <EyeOff /> : <Eye />}</button></span></label><button className="login-submit" type="submit" disabled={loading}>{loading ? 'מתחבר…' : <>כניסה למערכת <ArrowLeft /></>}</button></form></section>
+    <main className="login">
+      <form className="login__card" onSubmit={handleSubmit}>
+        <span className="login__brand"><i aria-hidden="true"><Activity /></i><b>Vee</b> Monitor</span>
+        <h1>כניסה</h1>
+        {error && <div className="banner banner--error" role="alert">{error}</div>}
+        <label>שם משתמש
+          <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" required autoFocus />
+        </label>
+        <label>סיסמה
+          <span className="password-field">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+              required
+            />
+            <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'הסתרת סיסמה' : 'הצגת סיסמה'}>
+              {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+            </button>
+          </span>
+        </label>
+        <button className="btn btn--primary btn--wide" type="submit" disabled={loading}>
+          {loading ? 'מתחבר…' : <>כניסה <ArrowLeft aria-hidden="true" /></>}
+        </button>
+      </form>
     </main>
   );
 };

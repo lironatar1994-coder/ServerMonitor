@@ -80,6 +80,7 @@ When the user requests a durable behavior change, record it here or in the relev
 
 - Keep website visitor monitoring and server/resource monitoring as separate product workspaces. The default dashboard must prioritize a clear cross-site visitor picture with both quick and deep views; infrastructure data belongs under `שרת ומשאבים`.
 - Use a distinctive Hebrew/RTL editorial interface for visitor analytics and a separate industrial operational treatment for infrastructure. Do not fall back to generic SaaS cards, glass effects, or decorative dashboards.
+- Optimise every screen for scanning and doing, not for reading. Keep copy minimal, put numbers and controls above the fold on desktop and mobile alike, and move explanations into on-demand hints. Do not reintroduce oversized display headlines or marketing paragraphs.
 - Production city/region enrichment reads `GEOIP_DB_PATH`, defaulting to `/usr/share/GeoIP/GeoLite2-City.mmdb`; deployment must warn but continue when the local database is unavailable.
 - Send one client-website comparison email daily and one weekly, using completed Israel calendar periods and the production recipient configured in `REPORT_EMAIL_TO`.
 - Install `server_maintenance.sh` as the daily 03:00 host-maintenance job. Keep seven days of compressed PM2 logs and SQLite backups, remove expired deployment/build caches, report disk thresholds, and never force Linux kernel cache drops.
@@ -95,4 +96,4 @@ When the user requests a durable behavior change, record it here or in the relev
 
 - `backend/AGENTS.md` - Express API, persistent visitor analytics, SQLite monitor database, PM2/system monitoring logic, authentication routes, and background checks.
 - `frontend/AGENTS.md` - Vite React visitor, infrastructure, services, settings, authentication, responsive design, static assets, and production build.
-- Root-owned deployment and host files: `deploy.ps1`, `deploy_linux.sh`, `server_maintenance.sh`, `monitor.vee-app.co.il.conf`, `nginx-monitor-host-log.conf`, `ssh-hardening.conf`, `start.bat`, `.gitignore`, and repository-level operational artifacts.
+- Root-owned deployment and host files: `deploy.ps1`, `deploy_linux.sh`, `server_maintenance.sh`, `monitor.vee-app.co.il.conf`, `nginx-monitor-host-log.conf`, `ssh-hardening.conf`, `start.bat`, `.claude/launch.json`, `.gitignore`, and repository-level operational artifacts.
