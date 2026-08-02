@@ -80,7 +80,7 @@ function collectProcessTree(rootPid, processes) {
 function buildApplicationUsage(pm2Processes, apps, processes, totalMemory) {
     const appByPm2 = new Map(apps.filter((app) => app.pm2_name).map((app) => [app.pm2_name, app]));
     return pm2Processes
-        .filter((process) => appByPm2.has(process.name) && Number(process.pid) > 0)
+        .filter((process) => Number(process.pid) > 0)
         .map((process) => {
             const app = appByPm2.get(process.name);
             const tree = collectProcessTree(process.pid, processes);
@@ -90,8 +90,8 @@ function buildApplicationUsage(pm2Processes, apps, processes, totalMemory) {
             const dominant = tree.reduce((largest, item) => !largest || item.rss_bytes > largest.rss_bytes ? item : largest, null);
             const wrapperBytes = root?.rss_bytes || Number(process.monit?.memory) || 0;
             return {
-                app_id: app.id,
-                name: app.name,
+                app_id: app?.id || null,
+                name: app?.name || process.name,
                 pm2_name: process.name,
                 status: process.pm2_env?.status || 'unknown',
                 pid: Number(process.pid),
