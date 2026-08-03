@@ -1,12 +1,31 @@
 const express = require('express');
+const crypto = require('crypto');
 const db = require('../database');
 const { authenticateToken } = require('./auth');
 const { getLibiJewelryInterest } = require('../jewelryAnalytics');
+const { findAppForSiteUrl } = require('../siteIdentity');
 
 const router = express.Router();
+const managerSiteRouter = express.Router();
 const MAX_RANGE_MS = 90 * 24 * 60 * 60 * 1000;
 
+managerSiteRouter.use(authenticateManagerSite);
+managerSiteRouter.get('/site', handleManagerSiteAnalytics);
+managerSiteRouter.get('/site/visitors', handleManagerSiteVisitors);
+managerSiteRouter.get('/site/timeline', handleManagerSiteTimeline);
+router.use('/manager-site', managerSiteRouter);
 router.use(authenticateToken);
+
+function authenticateManagerSite(req, res, next) {
+    const expected = process.env.MANAGER_SITE_ANALYTICS_KEY || '';
+    const provided = req.get('x-manager-site-analytics-key') || '';
+    const expectedBuffer = Buffer.from(expected);
+    const providedBuffer = Buffer.from(provided);
+    if (!expected || expectedBuffer.length !== providedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, providedBuffer)) {
+        return res.status(401).json({ error: 'Unauthorized analytics integration' });
+    }
+    next();
+}
 
 function parseRange(query) {
     const now = new Date();
@@ -178,8 +197,160 @@ function assertApp(appId) {
     return app;
 }
 
+function getManagerSiteApp(siteUrl) {
+    if (!siteUrl) {
+        const error = new Error('Website URL is required');
+        error.status = 400;
+        error.code = 'website_url_required';
+        throw error;
+    }
+    const apps = db.prepare(`
+        SELECT id, name, url, status
+        FROM apps
+        WHERE url IS NOT NULL AND TRIM(url) <> ''
+          AND log_path IS NOT NULL AND TRIM(log_path) <> ''
+    `).all();
+    const app = findAppForSiteUrl(apps, siteUrl);
+    if (!app) {
+        const error = new Error('No monitored app matches this website');
+        error.status = 404;
+        error.code = 'analytics_not_configured';
+        throw error;
+    }
+    return app;
+}
+
+function buildAppAnalytics(app, range) {
+    const summary = getSummary(app.id, range);
+    return {
+        timezone: 'Asia/Jerusalem',
+        generated_at: new Date().toISOString(),
+        range: { from: range.from, to: range.to },
+        app,
+        summary,
+        comparison: getComparison(app.id, range, summary),
+        series: getSeries(app.id, range),
+        hourly: getHourly(app.id, range),
+        locations: getRankedDimension(app.id, range, 'city'),
+        regions: getRankedDimension(app.id, range, 'region'),
+        pages: getRankedDimension(app.id, range, 'path'),
+        referrers: getRankedDimension(app.id, range, 'referrer'),
+        devices: getRankedDimension(app.id, range, 'device_type', 4),
+        statuses: getRankedDimension(app.id, range, 'status', 6),
+        recent: getRecent(app.id, range),
+        jewelry_interest: app.name === 'Libi Diamonds'
+            ? getLibiJewelryInterest(db, app.id, range)
+            : null
+    };
+}
+
+function getVisitorPage(app, range, query) {
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.min(100, Math.max(10, Number(query.limit) || 25));
+    const search = String(query.search || '').trim().slice(0, 160);
+    const classification = ['candidate', 'bot', 'all'].includes(query.classification)
+        ? query.classification
+        : 'candidate';
+    const sortMap = {
+        last_seen: 'last_seen', first_seen: 'first_seen', requests: 'requests', ip: 'ip'
+    };
+    const sort = sortMap[query.sort] || 'last_seen';
+    const direction = query.direction === 'asc' ? 'ASC' : 'DESC';
+    const clauses = ['app_id = ?', 'occurred_at >= ?', 'occurred_at < ?'];
+    const params = [app.id, range.from, range.to];
+    if (classification !== 'all') {
+        clauses.push('is_bot = ?');
+        params.push(classification === 'bot' ? 1 : 0);
+        if (classification === 'candidate') clauses.push('is_page_view = 1');
+    }
+    if (search) {
+        clauses.push('(ip LIKE ? OR path LIKE ? OR city LIKE ? OR region LIKE ?)');
+        const term = `%${search}%`;
+        params.push(term, term, term, term);
+    }
+    const where = clauses.join(' AND ');
+    const latestPathFilter = classification === 'candidate'
+        ? 'AND p.is_page_view = 1 AND p.is_bot = 0'
+        : classification === 'bot'
+            ? 'AND p.is_bot = 1'
+            : '';
+    const total = db.prepare(`SELECT COUNT(DISTINCT ip) AS count FROM visitor_events WHERE ${where}`).get(...params).count;
+    const rows = db.prepare(`
+        SELECT ip, MIN(occurred_at) AS first_seen, MAX(occurred_at) AS last_seen,
+            COUNT(*) AS requests,
+            SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) AS candidate_requests,
+            SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) AS bot_requests,
+            MAX(CASE WHEN is_bot = 1 THEN bot_reason END) AS bot_reason,
+            MAX(device_type) AS device_type, MAX(city) AS city, MAX(region) AS region,
+            (SELECT path FROM visitor_events p
+             WHERE p.app_id = visitor_events.app_id AND p.ip = visitor_events.ip
+             AND p.occurred_at >= ? AND p.occurred_at < ?
+             ${latestPathFilter}
+             ORDER BY p.occurred_at DESC LIMIT 1) AS latest_path
+        FROM visitor_events WHERE ${where}
+        GROUP BY ip ORDER BY ${sort} ${direction} LIMIT ? OFFSET ?
+    `).all(range.from, range.to, ...params, limit, (page - 1) * limit);
+    return {
+        app,
+        range: { from: range.from, to: range.to },
+        classification,
+        page,
+        limit,
+        total: Number(total) || 0,
+        visitors: rows
+    };
+}
+
+function getVisitorTimeline(app, range, query) {
+    const ip = String(query.ip || '').trim().slice(0, 160);
+    if (!ip) {
+        const error = new Error('IP is required');
+        error.status = 400;
+        throw error;
+    }
+    const events = db.prepare(`
+        SELECT occurred_at, method, path, status, referrer, device_type,
+               is_bot, bot_reason, city, region
+        FROM visitor_events
+        WHERE app_id = ? AND ip = ? AND occurred_at >= ? AND occurred_at < ?
+        ORDER BY occurred_at DESC LIMIT 250
+    `).all(app.id, ip, range.from, range.to);
+    return { app, ip, range: { from: range.from, to: range.to }, events };
+}
+
+function handleManagerSiteAnalytics(req, res) {
+    try {
+        const app = getManagerSiteApp(req.query.site_url);
+        res.json(buildAppAnalytics(app, parseRange(req.query)));
+    } catch (error) {
+        respondError(res, error);
+    }
+}
+
+function handleManagerSiteVisitors(req, res) {
+    try {
+        const app = getManagerSiteApp(req.query.site_url);
+        const range = parseRange(req.query);
+        res.json(getVisitorPage(app, range, req.query));
+    } catch (error) {
+        respondError(res, error);
+    }
+}
+
+function handleManagerSiteTimeline(req, res) {
+    try {
+        const app = getManagerSiteApp(req.query.site_url);
+        const range = parseRange(req.query);
+        res.json(getVisitorTimeline(app, range, req.query));
+    } catch (error) {
+        respondError(res, error);
+    }
+}
+
 function respondError(res, error) {
-    res.status(error.status || 500).json({ error: error.message });
+    const payload = { error: error.message };
+    if (error.code) payload.code = error.code;
+    res.status(error.status || 500).json(payload);
 }
 
 router.get('/overview', (req, res) => {
@@ -209,27 +380,7 @@ router.get('/apps/:id', (req, res) => {
     try {
         const app = assertApp(req.params.id);
         const range = parseRange(req.query);
-        const summary = getSummary(app.id, range);
-        res.json({
-            timezone: 'Asia/Jerusalem',
-            generated_at: new Date().toISOString(),
-            range: { from: range.from, to: range.to },
-            app,
-            summary,
-            comparison: getComparison(app.id, range, summary),
-            series: getSeries(app.id, range),
-            hourly: getHourly(app.id, range),
-            locations: getRankedDimension(app.id, range, 'city'),
-            regions: getRankedDimension(app.id, range, 'region'),
-            pages: getRankedDimension(app.id, range, 'path'),
-            referrers: getRankedDimension(app.id, range, 'referrer'),
-            devices: getRankedDimension(app.id, range, 'device_type', 4),
-            statuses: getRankedDimension(app.id, range, 'status', 6),
-            recent: getRecent(app.id, range),
-            jewelry_interest: app.name === 'Libi Diamonds'
-                ? getLibiJewelryInterest(db, app.id, range)
-                : null
-        });
+        res.json(buildAppAnalytics(app, range));
     } catch (error) {
         respondError(res, error);
     }
@@ -239,46 +390,7 @@ router.get('/apps/:id/visitors', (req, res) => {
     try {
         const app = assertApp(req.params.id);
         const range = parseRange(req.query);
-        const page = Math.max(1, Number(req.query.page) || 1);
-        const limit = Math.min(100, Math.max(10, Number(req.query.limit) || 25));
-        const search = (req.query.search || '').trim();
-        const classification = ['candidate', 'bot', 'all'].includes(req.query.classification)
-            ? req.query.classification
-            : 'candidate';
-        const sortMap = {
-            last_seen: 'last_seen', first_seen: 'first_seen', requests: 'requests', ip: 'ip'
-        };
-        const sort = sortMap[req.query.sort] || 'last_seen';
-        const direction = req.query.direction === 'asc' ? 'ASC' : 'DESC';
-        const clauses = ['app_id = ?', 'occurred_at >= ?', 'occurred_at < ?'];
-        const params = [app.id, range.from, range.to];
-        if (classification !== 'all') {
-            clauses.push('is_bot = ?');
-            params.push(classification === 'bot' ? 1 : 0);
-            if (classification === 'candidate') clauses.push('is_page_view = 1');
-        }
-        if (search) {
-            clauses.push('(ip LIKE ? OR path LIKE ? OR city LIKE ? OR region LIKE ?)');
-            const term = `%${search}%`;
-            params.push(term, term, term, term);
-        }
-        const where = clauses.join(' AND ');
-        const total = db.prepare(`SELECT COUNT(DISTINCT ip) AS count FROM visitor_events WHERE ${where}`).get(...params).count;
-        const rows = db.prepare(`
-            SELECT ip, MIN(occurred_at) AS first_seen, MAX(occurred_at) AS last_seen,
-                COUNT(*) AS requests,
-                SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) AS candidate_requests,
-                SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) AS bot_requests,
-                MAX(device_type) AS device_type, MAX(city) AS city, MAX(region) AS region,
-                (SELECT path FROM visitor_events p
-                 WHERE p.app_id = visitor_events.app_id AND p.ip = visitor_events.ip
-                 AND p.occurred_at >= ? AND p.occurred_at < ?
-                 ${classification === 'candidate' ? 'AND p.is_page_view = 1 AND p.is_bot = 0' : ''}
-                 ORDER BY p.occurred_at DESC LIMIT 1) AS latest_path
-            FROM visitor_events WHERE ${where}
-            GROUP BY ip ORDER BY ${sort} ${direction} LIMIT ? OFFSET ?
-        `).all(range.from, range.to, ...params, limit, (page - 1) * limit);
-        res.json({ app, range: { from: range.from, to: range.to }, page, limit, total: Number(total), visitors: rows });
+        res.json(getVisitorPage(app, range, req.query));
     } catch (error) {
         respondError(res, error);
     }
@@ -288,15 +400,7 @@ router.get('/apps/:id/timeline', (req, res) => {
     try {
         const app = assertApp(req.params.id);
         const range = parseRange(req.query);
-        if (!req.query.ip) return res.status(400).json({ error: 'IP is required' });
-        const events = db.prepare(`
-            SELECT occurred_at, method, path, status, referrer, device_type,
-                   is_bot, bot_reason, city, region
-            FROM visitor_events
-            WHERE app_id = ? AND ip = ? AND occurred_at >= ? AND occurred_at < ?
-            ORDER BY occurred_at DESC LIMIT 250
-        `).all(app.id, req.query.ip, range.from, range.to);
-        res.json({ app, ip: req.query.ip, range: { from: range.from, to: range.to }, events });
+        res.json(getVisitorTimeline(app, range, req.query));
     } catch (error) {
         respondError(res, error);
     }

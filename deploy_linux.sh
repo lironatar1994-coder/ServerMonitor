@@ -17,6 +17,7 @@ BACKUP_RETENTION_DAYS=7
 BACKUP_MAX_COUNT=10
 NGINX_LOG_CONFIG="/etc/nginx/conf.d/server-monitor-host-log.conf"
 SSH_HARDENING_CONFIG="/etc/ssh/sshd_config.d/00-server-monitor-hardening.conf"
+MANAGER_SITE_ANALYTICS_KEY_FILE="${MANAGER_SITE_ANALYTICS_KEY_FILE:-/root/.manager-site-analytics-key}"
 
 echo "[INFO] Starting Deployment..."
 cd "$APP_ROOT"
@@ -80,12 +81,20 @@ else
   echo "[WARN] GeoIP city database not found at $GEOIP_DB_PATH; visitor analytics will show unknown locations"
 fi
 
+if [ ! -s "$MANAGER_SITE_ANALYTICS_KEY_FILE" ]; then
+  echo "[INFO] Creating the Manager Site analytics service key..."
+  umask 077
+  openssl rand -hex 32 > "$MANAGER_SITE_ANALYTICS_KEY_FILE"
+fi
+chmod 600 "$MANAGER_SITE_ANALYTICS_KEY_FILE"
+
 # 7. PM2 Start
 echo "[INFO] Starting PM2 process..."
 # We serve the frontend via Nginx or we can use the backend to serve it
 # In our architecture, we can just run the backend.
 export PORT="$BACKEND_PORT"
 export GEOIP_DB_PATH
+export MANAGER_SITE_ANALYTICS_KEY="$(tr -d '\r\n' < "$MANAGER_SITE_ANALYTICS_KEY_FILE")"
 if pm2 describe "$APP_NAME" > /dev/null 2>&1; then
     pm2 restart "$APP_NAME" --update-env
 else

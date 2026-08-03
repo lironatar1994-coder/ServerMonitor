@@ -32,6 +32,7 @@
 - `visitor_events` is the persistent 90-day request ledger. It stores the requested host and full IPs for private analysis, and deduplicates by app, source-file identity, and byte offset.
 - Initial persistent ingestion backfills at most 30 days or 64 MB, then follows each log by cursor every 30 seconds and finishes an identifiable rotated file before switching.
 - `/visitor-analytics/overview` serves cross-site analytics; `/visitor-analytics/apps/:id`, `/visitors`, and `/timeline` serve per-site summary, paginated unique-IP rows, and IP request history.
+- `/visitor-analytics/manager-site/site`, `/visitors`, and `/timeline` are server-to-server variants for Manager Site. They require `MANAGER_SITE_ANALYTICS_KEY`, resolve one monitored app from the stored client website URL, and must fail closed on missing, path-only, or ambiguous matches; never accept a client-selected app ID.
 - The Libi response from `/visitor-analytics/apps/:id` includes `jewelry_interest`: canonical `/product/:slug` and `/jewelry/:category` rankings based only on candidate page views, with distinct candidate counts and previous-period comparisons. Query strings and trailing slashes must not split one product into multiple rows.
 - Persistent analytics count unique candidates as distinct non-bot-classified IPs in the selected range. Candidate means “not identified as a bot,” not verified human. GeoIP is local and optional via `GEOIP_DB_PATH`; missing data must remain an explicit unknown rather than failing ingestion.
 - A unique candidate must have at least one successful page view. `visitor_events.is_page_view` excludes assets, API calls, robots/sitemaps, failed responses, and non-navigation methods; raw requests remain available for bot and diagnostic totals.
@@ -46,6 +47,7 @@
 - Daily and weekly client comparison emails must include Libi Diamonds as its own row whenever its seeded monitored-app record is present.
 - Daily delivery defaults to 08:00 and weekly delivery to Monday at 08:05 Israel time. `email_report_deliveries` prevents duplicate sends after restarts.
 - Keep mail credentials and `REPORT_EMAIL_TO` in `backend/.env`; never commit recipient configuration or provider secrets.
+- Keep the Manager Site analytics service key out of Git. Production reads the shared value from `/root/.manager-site-analytics-key`; do not log it or return it to browsers.
 
 ## Work Guidance
 
