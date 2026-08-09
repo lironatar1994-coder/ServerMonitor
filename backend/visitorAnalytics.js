@@ -269,7 +269,7 @@ function refreshStoredEventClassifications() {
 }
 
 function runVisitorIngestion() {
-    const apps = db.prepare("SELECT * FROM apps WHERE log_path IS NOT NULL AND log_path != ''").all();
+    const apps = db.prepare("SELECT * FROM apps WHERE analytics_enabled = 1 AND log_path IS NOT NULL AND log_path != ''").all();
     let inserted = 0;
     apps.forEach((app) => {
         try {

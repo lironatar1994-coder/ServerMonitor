@@ -72,6 +72,7 @@ cd ..
 
 if [ -f "$APP_ROOT/server_maintenance.sh" ]; then
   install -m 700 "$APP_ROOT/server_maintenance.sh" "/root/server_maintenance.sh"
+  (crontab -l 2>/dev/null | grep -v '/root/server_maintenance.sh'; echo '0 3 * * * /bin/bash /root/server_maintenance.sh') | crontab -
   echo "[INFO] Installed versioned daily maintenance script"
 fi
 

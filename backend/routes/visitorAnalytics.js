@@ -172,7 +172,7 @@ function getSiteRanking(range) {
         FROM apps a
         LEFT JOIN visitor_events e ON e.app_id = a.id
             AND e.occurred_at >= ? AND e.occurred_at < ?
-        WHERE a.log_path IS NOT NULL
+        WHERE a.analytics_enabled = 1 AND a.log_path IS NOT NULL
         GROUP BY a.id ORDER BY unique_candidates DESC, candidate_requests DESC, a.name ASC
     `).all(range.from, range.to);
 }
@@ -188,10 +188,15 @@ function getHourly(appId, range) {
 }
 
 function assertApp(appId) {
-    const app = db.prepare('SELECT id, name, url, status FROM apps WHERE id = ?').get(appId);
+    const app = db.prepare('SELECT id, name, url, status, analytics_enabled FROM apps WHERE id = ?').get(appId);
     if (!app) {
         const error = new Error('App not found');
         error.status = 404;
+        throw error;
+    }
+    if (!app.analytics_enabled) {
+        const error = new Error('Visitor analytics is not enabled for this app');
+        error.status = 400;
         throw error;
     }
     return app;

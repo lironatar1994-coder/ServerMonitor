@@ -94,3 +94,17 @@ test('excludes operational log records without a website URL', () => {
     };
     assert.equal(buildReportData(period).some((item) => item.name === 'Cleanup Summary'), false);
 });
+
+test('excludes analytics-only preview apps from client comparison email', () => {
+    const previewId = db.prepare(`INSERT INTO apps
+        (name, url, log_path, analytics_enabled, reporting_enabled)
+        VALUES (?, ?, ?, 1, 0)`)
+        .run('Preview Site', 'https://example.com/preview', '/tmp/access.log').lastInsertRowid;
+    const period = {
+        type: 'daily', periodKey: '2026-07-11',
+        from: '2026-07-11T00:00:00.000Z', to: '2026-07-12T00:00:00.000Z',
+        previousFrom: '2026-07-10T00:00:00.000Z'
+    };
+
+    assert.equal(buildReportData(period).some((item) => item.id === previewId), false);
+});

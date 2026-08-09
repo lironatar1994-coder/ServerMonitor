@@ -40,11 +40,24 @@ find /tmp -maxdepth 1 -type d -name 'npm-*' -mtime +3 -exec rm -rf -- {} +
 find /tmp -maxdepth 1 -type d -name 'v8-compile-cache-*' -mtime +3 -exec rm -rf -- {} +
 summary "Expired deployment archives and Node temporary directories removed."
 
+if [ -d "/root/deployment-backups" ]; then
+    find /root/deployment-backups -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
+        | sort -nr | tail -n +4 | cut -d' ' -f2- \
+        | while IFS= read -r backup_dir; do
+            [ -n "$backup_dir" ] && [ -d "$backup_dir" ] && rm -rf -- "$backup_dir"
+        done
+fi
+find /root/server-monitor-backups -maxdepth 1 -type f -mtime +"$RETENTION_DAYS" -delete 2>/dev/null || true
+find /root -maxdepth 1 -type d -name 'LibiDiamonds-live.rollback*' -mtime +"$RETENTION_DAYS" -exec rm -rf -- {} +
+summary "Deployment backups limited to the newest three; expired monitor copies and Libi rollback directories removed."
+
 for cache_dir in \
     "/root/TextToPDF/.next/cache" \
     "/root/Vee/frontend/.next/cache" \
     "/root/OnYourWay/frontend/.next/cache" \
     "/root/sos-landing-standalone/.next/cache" \
+    "/root/DfusReuven/.next/cache" \
+    "/root/DfusReuven-live/.next/cache" \
     "/root/LibiDiamonds-live/.next/cache" \
     "/root/LibiDiamonds-live.rollback/.next/cache" \
     "/root/ServerMonitor/frontend/node_modules/.vite"; do
@@ -97,8 +110,25 @@ backup_sqlite_db "vee_database" "/root/Vee/backend/database.sqlite" "$timestamp"
 backup_sqlite_db "on_your_way_prod" "/root/OnYourWay/backend/prisma/prod.db" "$timestamp"
 backup_sqlite_db "sos_landing_analytics" "/root/sos-landing-standalone/data/analytics.db" "$timestamp"
 backup_sqlite_db "server_monitor" "/root/ServerMonitor/backend/monitor.db" "$timestamp"
+
+manager_backup="$BACKUP_DIR/manager_site_${timestamp}.tar.gz"
+manager_items=()
+[ -s "/root/Manager_Site/data/store.json" ] && manager_items+=("data/store.json")
+[ -d "/root/Manager_Site/data/uploads" ] && manager_items+=("data/uploads")
+if [ "${#manager_items[@]}" -gt 0 ]; then
+    if tar -C /root/Manager_Site -czf "$manager_backup" "${manager_items[@]}"; then
+        summary "Created Manager Site data and uploads backup: $manager_backup"
+    else
+        rm -f -- "$manager_backup"
+        summary "ERROR: Manager Site backup failed."
+    fi
+else
+    summary "Skipped Manager Site backup; store and uploads are missing."
+fi
+
 find "$BACKUP_DIR" -maxdepth 1 -type f -name '*.sqlite.gz' -mtime +7 -delete
-summary "SQLite backups pruned to seven days."
+find "$BACKUP_DIR" -maxdepth 1 -type f -name 'manager_site_*.tar.gz' -mtime +7 -delete
+summary "Database and Manager Site backups pruned to seven days."
 
 disk_percent="$(df --output=pcent / | tail -1 | tr -dc '0-9')"
 disk_available="$(df -h --output=avail / | tail -1 | xargs)"

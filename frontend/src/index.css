@@ -359,6 +359,10 @@ svg { width: 1rem; height: 1rem; flex: none; stroke-width: 1.9; }
 .add-service-dialog label > span { display: flex; align-items: center; gap: .3rem; }
 .add-service-dialog input { width: 100%; min-height: 2.5rem; padding: .45rem .6rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
 .add-service-dialog input:focus { border-color: var(--ink); outline: none; }
+.add-service-dialog .analytics-toggle { grid-template-columns: auto minmax(0, 1fr); align-items: center; min-height: 2.5rem; padding: .45rem .6rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); cursor: pointer; }
+.add-service-dialog .analytics-toggle input { width: 1rem; min-height: 1rem; margin: 0; accent-color: var(--forest); }
+.add-service-dialog .analytics-toggle > span { color: var(--ink); }
+.add-service-dialog .analytics-toggle:has(input:disabled) { opacity: .5; cursor: not-allowed; }
 .form-pair { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
 .add-service-dialog footer { display: flex; justify-content: flex-end; gap: .5rem; padding-top: .75rem; border-top: 1px solid var(--line); }
 .add-service-dialog footer button { min-height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; gap: .35rem; padding: .5rem .9rem; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; font-size: .8rem; font-weight: 700; }
@@ -389,7 +393,6 @@ svg { width: 1rem; height: 1rem; flex: none; stroke-width: 1.9; }
 .terminal-chrome i:last-child { background: #77b98e; }
 .terminal-empty { min-height: 8rem; display: grid; place-items: center; color: #707971; direction: rtl; }
 .term-success { color: #9bc7a6; } .term-error { color: #ee826e; } .term-warning { color: #d0a54a; } .term-info { color: #a9bcb0; }
-
 /* --------------------------------------------------------- app templates */
 .whatsapp-workspace, .ssh-workspace { display: grid; gap: 1rem; }
 .whatsapp-status-sheet { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; padding: 1.1rem; border-radius: var(--radius); background: #171c19; color: #e6eae4; }

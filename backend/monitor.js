@@ -1,8 +1,7 @@
-const os = require('os');
 const fs = require('fs');
 const db = require('./database');
-const pm2 = require('pm2');
 const http = require('http');
+const https = require('https');
 const { parseNginxLogMetrics } = require('./logParser');
 
 console.log('Background Monitor Started...');
@@ -25,41 +24,36 @@ function checkPm2Status(pm2Name) {
         const { execFile } = require('child_process');
         execFile('/usr/bin/pm2', ['jlist'], {
             env: { ...process.env, PM2_HOME: '/root/.pm2' }
-        }, (err, stdout) => {
-            if (err) {
-                resolve({ status: 'offline', cpu: 0, memory: 0 });
-                return;
-            }
-
+        }, (error, stdout) => {
+            if (error) return resolve({ status: 'offline', cpu: 0, memory: 0 });
             try {
-                const processes = JSON.parse((stdout || '').trim() || '[]');
-                const match = processes.find(process => process?.name === pm2Name);
-                if (match) {
-                    resolve({
-                        status: match?.pm2_env?.status === 'online' ? 'online' : 'offline',
-                        cpu: match?.monit?.cpu || 0,
-                        memory: match?.monit?.memory || 0
-                    });
-                } else {
-                    resolve({ status: 'offline', cpu: 0, memory: 0 });
-                }
-            } catch (parseErr) {
+                const match = JSON.parse((stdout || '').trim() || '[]')
+                    .find((process) => process?.name === pm2Name);
+                resolve(match ? {
+                    status: match?.pm2_env?.status === 'online' ? 'online' : 'offline',
+                    cpu: match?.monit?.cpu || 0,
+                    memory: match?.monit?.memory || 0
+                } : { status: 'offline', cpu: 0, memory: 0 });
+            } catch (parseError) {
                 resolve({ status: 'offline', cpu: 0, memory: 0 });
             }
         });
     });
 }
 
-function checkHttpHealth(port, path = '/') {
+function checkHttpHealthUrl(healthUrl) {
     return new Promise((resolve) => {
-        const options = {
-            host: '127.0.0.1',
-            port: port,
-            path: path,
-            timeout: 2000
-        };
-        
-        const req = http.get(options, (res) => {
+        let url;
+        try {
+            url = new URL(healthUrl);
+        } catch (error) {
+            resolve('error');
+            return;
+        }
+
+        const client = url.protocol === 'https:' ? https : http;
+        const req = client.get(url, { timeout: 5000 }, (res) => {
+            res.resume();
             if (res.statusCode >= 200 && res.statusCode < 400) {
                 resolve('online');
             } else {
@@ -143,25 +137,16 @@ async function runMonitorCycle() {
                 status = pm2Info.status;
                 appCpu = pm2Info.cpu;
                 appMemory = pm2Info.memory;
+            }
 
-                // Health checks are advisory for PM2-backed apps; do not mark them offline if PM2 is up.
-                if (status === 'online') {
-                    if (app.health_port) {
-                        const healthStatus = await checkHttpHealth(app.health_port, app.health_path || '/');
-                        if (healthStatus !== 'online') {
-                            console.warn(`[Monitor] Health check failed for ${app.name} on port ${app.health_port}: ${healthStatus}`);
-                        }
-                    } else if (app.pm2_name === 'vee-app') {
-                        const healthStatus = await checkHttpHealth(3001, '/api/health');
-                        if (healthStatus !== 'online') {
-                            console.warn(`[Monitor] Health check failed for ${app.name} on port 3001: ${healthStatus}`);
-                        }
-                    } else if (app.pm2_name === 'text-to-pdf') {
-                        const healthStatus = await checkHttpHealth(3002, '/text-to-pdf');
-                        if (healthStatus !== 'online') {
-                            console.warn(`[Monitor] Health check failed for ${app.name} on port 3002: ${healthStatus}`);
-                        }
-                    }
+            const healthUrl = app.health_url || (app.health_port
+                ? `http://127.0.0.1:${app.health_port}${app.health_path || '/'}`
+                : null);
+            if (healthUrl && (!app.pm2_name || status === 'online')) {
+                const healthStatus = await checkHttpHealthUrl(healthUrl);
+                if (healthStatus !== 'online') {
+                    status = healthStatus;
+                    console.warn(`[Monitor] Health check failed for ${app.name} at ${healthUrl}: ${healthStatus}`);
                 }
             }
             
@@ -177,10 +162,6 @@ async function runMonitorCycle() {
             } else if (app.name === 'SSH Security') {
                 metrics.attacks = getFail2banBannedCount();
                 status = 'online';
-            } else {
-                metrics.requests = Math.floor(Math.random() * 5);
-                metrics.visitors = Math.floor(Math.random() * 2);
-                metrics.attacks = 0;
             }
             
             // 4. Status Transition Check & Alerts (Skip alerting on first load if old status is unknown)
@@ -191,7 +172,7 @@ async function runMonitorCycle() {
             const isNewOnline = status === 'online';
             const isOldOnline = oldStatus === 'online';
             
-            if (oldStatus !== 'unknown') {
+            if (oldStatus !== 'unknown' && app.alerts_enabled !== 0) {
                 if (!isNewOnline) {
                     // Send/repeat warning alert every 1 hour (60 minutes cooldown)
                     const now = Date.now();

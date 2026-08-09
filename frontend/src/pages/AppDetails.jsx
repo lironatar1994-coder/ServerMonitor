@@ -45,6 +45,8 @@ const AppDetails = () => {
     finally { setActionState(''); }
   };
 
+  const healthTarget = app?.health_url || (app?.health_port ? `127.0.0.1:${app.health_port}${app.health_path || '/'}` : '');
+
   return (
     <div className="page page--service-detail">
       <DataState loading={loading && !app} error={error} onRetry={fetchApp}>
@@ -81,11 +83,12 @@ const AppDetails = () => {
                       <div><dt>סוג</dt><dd>{app.pm2_name ? 'תהליך PM2' : 'אתר סטטי'}</dd></div>
                       <div><dt>CPU</dt><dd>{(app.cpu || 0).toFixed(1)}%</dd></div>
                       <div><dt>זיכרון</dt><dd>{((app.memory || 0) / 1024 / 1024).toFixed(1)} MB</dd></div>
+                      <div><dt>בדיקת תקינות</dt><dd dir={healthTarget ? 'ltr' : 'rtl'}>{healthTarget || 'ללא'}</dd></div>
                       <div><dt>דומיין לוג</dt><dd dir="ltr">{app.log_host || '—'}</dd></div>
                       <div><dt>נתיבים לכלול</dt><dd dir="ltr">{app.log_filter || 'הכול'}</dd></div>
                       <div><dt>נתיבים להוציא</dt><dd dir="ltr">{app.log_exclude || '—'}</dd></div>
                     </dl>
-                    {app.log_path && <Link className="btn btn--wide" to={`/visitors/${app.id}`}>תמונת המבקרים</Link>}
+                    {Boolean(app.analytics_enabled && app.log_path) && <Link className="btn btn--wide" to={`/visitors/${app.id}`}>תמונת המבקרים</Link>}
                   </Panel>
 
                   <Panel title="לוג חי" className="panel--terminal" bleed>

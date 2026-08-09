@@ -40,7 +40,6 @@ function getPm2Snapshot() {
             const stdout = execFileSync('/usr/bin/pm2', ['jlist'], {
                 env: { ...process.env, PM2_HOME: '/root/.pm2' }
             }).toString().trim();
-
             pm2SnapshotCache = {
                 fetchedAt: now,
                 processes: JSON.parse(stdout || '[]')
@@ -186,9 +185,10 @@ function enrichAppStatus(app) {
     }
 
     const pm2Data = getLivePm2Metrics(app.pm2_name);
+    const healthFailure = Boolean(app.health_url || app.health_port) && ['error', 'offline'].includes(app.status);
     const enriched = { 
         ...app, 
-        status: pm2Data.status,
+        status: pm2Data.status === 'online' && healthFailure ? app.status : pm2Data.status,
         cpu: pm2Data.cpu,
         memory: pm2Data.memory 
     };
@@ -307,16 +307,26 @@ router.get('/', (req, res) => {
 router.post('/', (req, res) => {
     const {
         name, url, pm2_name, log_path, health_port, health_path,
-        log_filter, log_host, log_exclude
+        log_filter, log_host, log_exclude, health_url,
+        analytics_enabled, reporting_enabled
     } = req.body;
     
     if (!name) return res.status(400).json({ error: 'App name is required' });
+    if (health_url) {
+        try {
+            const parsedHealthUrl = new URL(health_url);
+            if (!['http:', 'https:'].includes(parsedHealthUrl.protocol)) throw new Error('Unsupported protocol');
+        } catch (error) {
+            return res.status(400).json({ error: 'Health URL must be a valid HTTP or HTTPS URL' });
+        }
+    }
     
     const info = db.prepare(`
         INSERT INTO apps (
             name, url, pm2_name, log_path, health_port, health_path,
-            log_filter, log_host, log_exclude
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            log_filter, log_host, log_exclude, health_url,
+            analytics_enabled, reporting_enabled
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
         name,
         url || null,
@@ -326,7 +336,11 @@ router.post('/', (req, res) => {
         health_path || null,
         log_filter || null,
         log_host || null,
-        log_exclude || null
+        log_exclude || null,
+        health_url || null,
+        analytics_enabled === false || analytics_enabled === 0 ? 0 : 1,
+        analytics_enabled === false || analytics_enabled === 0 ||
+            (reporting_enabled !== true && reporting_enabled !== 1) ? 0 : 1
     );
                    
     res.json({ id: info.lastInsertRowid, message: 'App added successfully' });
@@ -380,8 +394,10 @@ router.post('/:id/action', (req, res) => {
     if (!app.pm2_name) return res.status(400).json({ error: 'This app is not configured with PM2' });
     
     // Run PM2 action safely via CLI to prevent socket concurrency crashes (using absolute path and PM2_HOME env)
-    const { exec } = require('child_process');
-    exec(`PM2_HOME=/root/.pm2 /usr/bin/pm2 ${action} ${app.pm2_name}`, (err, stdout, stderr) => {
+    const { execFile } = require('child_process');
+    execFile('/usr/bin/pm2', [action, app.pm2_name], {
+        env: { ...process.env, PM2_HOME: '/root/.pm2' }
+    }, (err, stdout, stderr) => {
         if (err) {
             console.error(`[PM2 Action Error]:`, err.message, stderr);
             return res.status(500).json({ error: `PM2 action ${action} failed: ${stderr || err.message}` });

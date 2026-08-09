@@ -30,7 +30,11 @@ db.exec(`
         health_path TEXT,
         log_filter TEXT,
         log_host TEXT,
-        log_exclude TEXT
+        log_exclude TEXT,
+        health_url TEXT,
+        analytics_enabled INTEGER DEFAULT 1,
+        reporting_enabled INTEGER DEFAULT 1,
+        alerts_enabled INTEGER DEFAULT 1
     );
 
     CREATE TABLE IF NOT EXISTS metrics (
@@ -179,121 +183,99 @@ db.exec(`
         ON visitor_events (app_id, is_bot, is_page_view, occurred_at DESC);
 `);
 
-// Insert Pixel Dungeon app if not exists
-const pdExists = db.prepare('SELECT id FROM apps WHERE name = ?').get('Pixel Dungeon');
-if (!pdExists) {
-    db.prepare('INSERT INTO apps (name, url, pm2_name, log_path, log_filter) VALUES (?, ?, ?, ?, ?)').run(
-        'Pixel Dungeon',
-        'https://vee-app.co.il/pixel-dungeon/',
-        null,
-        '/var/log/nginx/access.log',
-        '/pixel-dungeon/'
-    );
-    console.log('Pixel Dungeon app entry created in database.');
+try {
+    db.exec(`ALTER TABLE apps ADD COLUMN health_url TEXT`);
+    console.log('Added column health_url to apps table');
+} catch (e) {
+    // Column already exists
 }
 
-// Insert Miryam Zelig static site if not exists
-const miryamExists = db.prepare('SELECT id FROM apps WHERE name = ?').get('Miryam Zelig');
-if (!miryamExists) {
-    db.prepare('INSERT INTO apps (name, url, pm2_name, log_path, log_filter) VALUES (?, ?, ?, ?, ?)').run(
-        'Miryam Zelig',
-        'https://vee-app.co.il/Miryam_Zelig/',
-        null,
-        '/var/log/nginx/access.log',
-        '/Miryam_Zelig|/miryam_zelig'
-    );
-    console.log('Miryam Zelig app entry created in database.');
+try {
+    db.exec(`ALTER TABLE apps ADD COLUMN analytics_enabled INTEGER DEFAULT 1`);
+    console.log('Added column analytics_enabled to apps table');
+} catch (e) {
+    // Column already exists
 }
 
-const hostAwareLogPath = '/var/log/nginx/monitor_host_access.log';
-
-const libiExists = db.prepare('SELECT id FROM apps WHERE name = ?').get('Libi Diamonds');
-if (!libiExists) {
-    db.prepare(`
-        INSERT INTO apps (
-            name, url, pm2_name, log_path, log_host, log_filter, log_exclude
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
-        'Libi Diamonds',
-        'https://www.libidiamonds.co.il/',
-        'libi-diamonds-live',
-        hostAwareLogPath,
-        'libidiamonds.co.il|www.libidiamonds.co.il',
-        null,
-        null
-    );
-    console.log('Libi Diamonds app entry created in database.');
+try {
+    db.exec(`ALTER TABLE apps ADD COLUMN reporting_enabled INTEGER DEFAULT 1`);
+    console.log('Added column reporting_enabled to apps table');
+} catch (e) {
+    // Column already exists
 }
 
-const hostAwareAppConfig = [
-    {
-        name: 'Vee Main App',
-        host: 'vee-app.co.il|www.vee-app.co.il',
-        filter: null,
-        exclude: '/text-to-pdf|/serve-monitor|/pixel-dungeon|/Miryam_Zelig|/miryam_zelig|/Manager_Site|/OnYourWay|/onyourway|/sos|/LibiDiamonds2'
-    },
-    {
-        name: 'PDF Generator',
-        host: 'vee-app.co.il|www.vee-app.co.il',
-        filter: '/text-to-pdf',
-        exclude: null
-    },
-    {
-        name: 'Pixel Dungeon',
-        host: 'vee-app.co.il|www.vee-app.co.il',
-        filter: '/pixel-dungeon/',
-        exclude: null
-    },
-    {
-        name: 'Miryam Zelig',
-        host: 'vee-app.co.il|www.vee-app.co.il',
-        filter: '/Miryam_Zelig|/miryam_zelig',
-        exclude: null
-    },
-    {
-        name: 'SOS Landing',
-        host: 'sosbaderech.co.il|www.sosbaderech.co.il',
-        filter: null,
-        exclude: null
-    },
-    {
-        name: 'Libi Diamonds',
-        host: 'libidiamonds.co.il|www.libidiamonds.co.il',
-        filter: null,
-        exclude: null
-    }
+try {
+    db.exec(`ALTER TABLE apps ADD COLUMN alerts_enabled INTEGER DEFAULT 1`);
+    console.log('Added column alerts_enabled to apps table');
+} catch (e) {
+    // Column already exists
+}
+
+const sharedNginxLog = '/var/log/nginx/monitor_host_access.log';
+const veeExcludedPaths = [
+    '/text-to-pdf', '/serve-monitor', '/pixel-dungeon', '/OnYourWay', '/onyourway',
+    '/Manager_Site', '/manager_site', '/Miryam_Zelig', '/miryam_zelig', '/miryamzelig2',
+    '/DfusReuven', '/dfusreuven', '/sos', '/LibiDiamonds2'
+].join('|');
+
+const productionApps = [
+    { name: 'Vee Main App', url: 'https://vee-app.co.il/', pm2_name: 'vee-app', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_exclude: veeExcludedPaths, health_url: 'http://127.0.0.1:3001/api/health', analytics_enabled: 1, reporting_enabled: 1 },
+    { name: 'WhatsApp Worker', pm2_name: 'vee-whatsapp-worker', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'SSH Security', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'PDF Generator', url: 'https://vee-app.co.il/text-to-pdf', pm2_name: 'text-to-pdf', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/text-to-pdf', health_url: 'http://127.0.0.1:3002/text-to-pdf', analytics_enabled: 1, reporting_enabled: 0 },
+    { name: 'Pixel Dungeon', url: 'https://vee-app.co.il/pixel-dungeon/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/pixel-dungeon', health_url: 'https://vee-app.co.il/pixel-dungeon/', analytics_enabled: 1, reporting_enabled: 0 },
+    { name: 'SOS Landing', url: 'https://sosbaderech.co.il/', pm2_name: 'sos-landing-standalone', log_path: sharedNginxLog, log_host: 'sosbaderech.co.il|www.sosbaderech.co.il', health_url: 'http://127.0.0.1:3200/', analytics_enabled: 1, reporting_enabled: 1 },
+    { name: 'Cleanup Summary', log_path: '/var/log/server_cleanup_summary.log', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'Miryam Zelig', url: 'https://miryamzelig.co.il/', log_path: sharedNginxLog, log_host: 'miryamzelig.co.il|www.miryamzelig.co.il', health_url: 'https://miryamzelig.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
+    { name: 'Libi Diamonds', url: 'https://www.libidiamonds.co.il/', pm2_name: 'libi-diamonds-live', log_path: sharedNginxLog, log_host: 'libidiamonds.co.il|www.libidiamonds.co.il', health_url: 'http://127.0.0.1:3105/', analytics_enabled: 1, reporting_enabled: 1 },
+    { name: 'Server Monitor', url: 'https://monitor.vee-app.co.il/', pm2_name: 'server-monitor', health_url: 'http://127.0.0.1:4010/serve-monitor/', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'Manager Site', url: 'https://vee-app.co.il/Manager_Site/', pm2_name: 'manager-site', health_url: 'http://127.0.0.1:3027/Manager_Site/', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'On Your Way', url: 'https://vee-app.co.il/OnYourWay', pm2_name: 'on-your-way-frontend', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/OnYourWay|/onyourway', health_url: 'http://127.0.0.1:3101/OnYourWay', analytics_enabled: 1, reporting_enabled: 1 },
+    { name: 'On Your Way API', pm2_name: 'on-your-way-backend', health_url: 'http://127.0.0.1:3004/health', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'Dfus Reuven Preview', url: 'https://vee-app.co.il/DfusReuven', pm2_name: 'dfus-reuven', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/DfusReuven|/dfusreuven', health_url: 'http://127.0.0.1:3104/DfusReuven', analytics_enabled: 1, reporting_enabled: 0 },
+    { name: 'Dfus Reuven', url: 'https://www.dfusreuven.co.il/', pm2_name: 'dfus-reuven-live', log_path: sharedNginxLog, log_host: 'dfusreuven.co.il|www.dfusreuven.co.il', health_url: 'http://127.0.0.1:3106/', analytics_enabled: 1, reporting_enabled: 1 },
+    { name: 'Miryam Zelig Preview', url: 'https://vee-app.co.il/miryamzelig2/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/miryamzelig2|/Miryam_Zelig|/miryam_zelig', health_url: 'https://vee-app.co.il/miryamzelig2/', analytics_enabled: 1, reporting_enabled: 0 },
+    { name: 'Toren Hazak', url: 'https://63.250.61.126.sslip.io/', health_url: 'https://63.250.61.126.sslip.io/', analytics_enabled: 0, reporting_enabled: 0, alerts_enabled: 0 }
 ];
 
-const updateHostAwareApp = db.prepare(`
-    UPDATE apps
-    SET log_path = ?, log_host = ?, log_filter = ?, log_exclude = ?
-    WHERE name = ?
-`);
-const contaminatedHistoryApps = new Set(['Vee Main App', 'SOS Landing']);
-const applyHostAwareConfig = db.transaction(() => {
-    hostAwareAppConfig.forEach((app) => {
-        const existing = db.prepare(`
-            SELECT id, log_path, log_host, log_filter, log_exclude
-            FROM apps WHERE name = ?
-        `).get(app.name);
-        if (!existing) return;
+function syncProductionApps() {
+    const fields = ['url', 'pm2_name', 'log_path', 'health_port', 'health_path', 'log_filter', 'log_host', 'log_exclude', 'health_url', 'analytics_enabled', 'reporting_enabled', 'alerts_enabled'];
+    const findApp = db.prepare('SELECT * FROM apps WHERE name = ? ORDER BY id ASC LIMIT 1');
+    const insertApp = db.prepare(`INSERT INTO apps
+        (name, url, pm2_name, log_path, health_port, health_path, log_filter, log_host, log_exclude, health_url, analytics_enabled, reporting_enabled, alerts_enabled)
+        VALUES (@name, @url, @pm2_name, @log_path, @health_port, @health_path, @log_filter, @log_host, @log_exclude, @health_url, @analytics_enabled, @reporting_enabled, @alerts_enabled)`);
+    const updateApp = db.prepare(`UPDATE apps SET
+        url = @url, pm2_name = @pm2_name, log_path = @log_path, health_port = @health_port,
+        health_path = @health_path, log_filter = @log_filter, log_host = @log_host,
+        log_exclude = @log_exclude, health_url = @health_url,
+        analytics_enabled = @analytics_enabled, reporting_enabled = @reporting_enabled,
+        alerts_enabled = @alerts_enabled WHERE id = @id`);
+    const clearEvents = db.prepare('DELETE FROM visitor_events WHERE app_id = ?');
+    const clearState = db.prepare('DELETE FROM visitor_ingestion_state WHERE app_id = ?');
 
-        const changed = existing.log_path !== hostAwareLogPath ||
-            existing.log_host !== app.host ||
-            existing.log_filter !== app.filter ||
-            existing.log_exclude !== app.exclude;
-        if (changed) {
-            db.prepare('DELETE FROM visitor_ingestion_state WHERE app_id = ?').run(existing.id);
-            if (contaminatedHistoryApps.has(app.name)) {
-                db.prepare('DELETE FROM visitor_events WHERE app_id = ?').run(existing.id);
-                console.log(`Reset contaminated visitor analytics for ${app.name} before enabling host-aware logging.`);
-            } else {
-                console.log(`Reset visitor ingestion cursor for ${app.name} before enabling host-aware logging.`);
+    db.transaction(() => {
+        productionApps.forEach((definition) => {
+            const normalized = Object.fromEntries(fields.map((field) => [field,
+                definition[field] ?? (['analytics_enabled', 'reporting_enabled', 'alerts_enabled'].includes(field) ? 1 : null)]));
+            const existing = findApp.get(definition.name);
+            if (!existing) {
+                insertApp.run({ name: definition.name, ...normalized });
+                console.log(`Created production app monitor: ${definition.name}`);
+                return;
             }
-        }
-        updateHostAwareApp.run(hostAwareLogPath, app.host, app.filter, app.exclude, app.name);
-    });
-});
-applyHostAwareConfig();
+
+            const visitorConfigChanged = ['log_path', 'log_filter', 'log_host', 'log_exclude', 'analytics_enabled']
+                .some((field) => (existing[field] ?? null) !== (normalized[field] ?? null));
+            if (visitorConfigChanged) {
+                clearEvents.run(existing.id);
+                clearState.run(existing.id);
+                console.log(`Reset visitor ingestion after configuration change: ${definition.name}`);
+            }
+            updateApp.run({ id: existing.id, ...normalized });
+        });
+    })();
+}
+
+syncProductionApps();
 
 module.exports = db;

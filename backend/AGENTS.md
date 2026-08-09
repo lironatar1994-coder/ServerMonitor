@@ -22,6 +22,7 @@
 
 - Keep public API paths compatible with the deployed `/serve-monitor/api/...` prefix unless deployment config changes with it.
 - Keep schema migrations idempotent and safe against existing production databases.
+- Treat the production app catalog in `database.js` as declarative configuration: update matching named records without deleting user-created records, and reset visitor ingestion only when a catalog app's log ownership/filter changes.
 - Do not hard-code local-only paths into server monitoring logic unless they are explicitly production paths.
 - Avoid logging secrets or authentication tokens.
 - For web apps, `metrics.visitors` and `metrics.requests` are candidate traffic that was not identified as bot traffic. Never describe this heuristic remainder as confirmed human activity; bot-looking traffic remains visible as `agent: "Bot"`.
@@ -39,6 +40,9 @@
 - Version bot and page-view rules through `monitor_metadata`, and reclassify stored events when the ruleset changes so historical dashboards and emails do not keep stale classifications.
 - `/apps/server-stats` reports Linux `MemAvailable`-based RAM use, swap details, root-filesystem usage, load, and top processes. Its `resources` payload attributes descendant RSS and `/proc` Swap to every running PM2 app, enriches database-mapped apps with display names, and ranks memory-heavy processes by their combined footprint.
 - Storage visibility must scan only the production paths declared in `resourceUsage.js`, run `du` without blocking the Node event loop and at idle I/O priority when available, avoid redundant whole-root scans, cache snapshots for 30 minutes, refresh stale data in the background, distinguish dependency, rollback, backup, log, and cache bytes, and return stale cached data when a refresh fails.
+- App runtime health requires both an online PM2 process, when configured, and a successful 2xx/3xx `health_url`.
+- `analytics_enabled` separates visitor websites from operational services. Only enabled apps may ingest events or appear in visitor dashboards; `reporting_enabled` independently limits daily and weekly client emails to canonical client sites.
+- `alerts_enabled` may suppress repeated outage messages only for explicitly known legacy endpoints; their failed status must remain visible.
 - Sampled `metrics` rows are retained for 90 days; purge maintenance must run at most daily and remain indexed by timestamp.
 - Reject analytics ranges longer than 90 days, cap visitor pages at 100 rows, keep all analytics endpoints authenticated, and use parameterized SQL.
 - Email reports use completed Israel calendar periods: daily compares yesterday with the day before; weekly compares the previous Monday–Sunday with the preceding week. Reports must use candidate language and state that the classification is an estimate.

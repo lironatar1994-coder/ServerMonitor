@@ -15,11 +15,14 @@ const PROJECTS = [
     { id: 'server-monitor', name: 'Server Monitor', path: '/root/ServerMonitor', dependencies: ['/root/ServerMonitor/backend/node_modules', '/root/ServerMonitor/frontend/node_modules'] },
     { id: 'pixel-dungeon', name: 'Pixel Dungeon', path: '/root/PixelDungeon', dependencies: ['/root/PixelDungeon/node_modules'] },
     { id: 'manager-site', name: 'Manager Site', path: '/root/Manager_Site', dependencies: ['/root/Manager_Site/node_modules'] },
+    { id: 'dfus-reuven-preview', name: 'Dfus Reuven Preview', path: '/root/DfusReuven', dependencies: ['/root/DfusReuven/node_modules'] },
+    { id: 'dfus-reuven-live', name: 'Dfus Reuven', path: '/root/DfusReuven-live', dependencies: ['/root/DfusReuven-live/node_modules'] },
     { id: 'miryam-zelig', name: 'Miryam Zelig', path: '/root/Miryam_Zelig', dependencies: [] }
 ];
 
 const OTHER_STORAGE = [
     { id: 'monitor-backups', name: 'Monitor backups', path: '/root/server-monitor-backups', type: 'backup' },
+    { id: 'deployment-backups', name: 'Deployment backups', path: '/root/deployment-backups', type: 'backup' },
     { id: 'database-backups', name: 'Database backups', path: '/root/db_backups', type: 'backup' },
     { id: 'pm2-logs', name: 'PM2 logs', path: '/root/.pm2/logs', type: 'log' },
     { id: 'system-logs', name: 'System logs', path: '/var/log', type: 'log' },

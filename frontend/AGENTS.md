@@ -28,6 +28,7 @@
 - Keep visible visitor terminology honest: unique candidates are distinct IPs not identified as bots in the selected range, active candidates are from the last five minutes, and IP-derived locations are approximate. Never label candidates as confirmed people or human traffic.
 - Present successful page views as the primary activity metric. Do not label asset, script, font, API, or failed requests as visitor engagement.
 - The Libi Diamonds deep view must expose a dedicated storefront-interest section with product and category rankings (toggled within one panel), direct storefront links, candidate counts, page views, and the same classification caveat used elsewhere.
+- Service configuration supports full health-check URLs plus separate visitor-analytics and client-report toggles; operational services must not link into visitor analytics.
 - Preserve RTL Hebrew presentation, `he-IL` formatting, and `Asia/Jerusalem` timestamps.
 
 ## Work Guidance

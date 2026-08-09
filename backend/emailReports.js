@@ -108,7 +108,8 @@ function buildReportData(period) {
     const apps = db.prepare(`
         SELECT id, name, url, status
         FROM apps
-        WHERE NULLIF(TRIM(url), '') IS NOT NULL AND log_path IS NOT NULL
+        WHERE analytics_enabled = 1 AND reporting_enabled = 1
+          AND NULLIF(TRIM(url), '') IS NOT NULL AND log_path IS NOT NULL
         ORDER BY name ASC
     `).all();
 
