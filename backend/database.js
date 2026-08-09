@@ -234,7 +234,7 @@ const productionApps = [
     { name: 'On Your Way API', pm2_name: 'on-your-way-backend', health_url: 'http://127.0.0.1:3004/health', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Dfus Reuven Preview', url: 'https://vee-app.co.il/DfusReuven', pm2_name: 'dfus-reuven', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/DfusReuven|/dfusreuven', health_url: 'http://127.0.0.1:3104/DfusReuven', analytics_enabled: 1, reporting_enabled: 0 },
     { name: 'Dfus Reuven', url: 'https://www.dfusreuven.co.il/', pm2_name: 'dfus-reuven-live', log_path: sharedNginxLog, log_host: 'dfusreuven.co.il|www.dfusreuven.co.il', health_url: 'http://127.0.0.1:3106/', analytics_enabled: 1, reporting_enabled: 1 },
-    { name: 'Miryam Zelig Preview', url: 'https://vee-app.co.il/miryamzelig2/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/miryamzelig2|/Miryam_Zelig|/miryam_zelig', health_url: 'https://vee-app.co.il/miryamzelig2/', analytics_enabled: 1, reporting_enabled: 0 },
+    { name: 'Miryam Zelig Preview', url: 'https://vee-app.co.il/Miryam_Zelig/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/miryamzelig2|/Miryam_Zelig|/miryam_zelig', health_url: 'https://vee-app.co.il/miryamzelig2/', analytics_enabled: 1, reporting_enabled: 0 },
     { name: 'Toren Hazak', url: 'https://63.250.61.126.sslip.io/', health_url: 'https://63.250.61.126.sslip.io/', analytics_enabled: 0, reporting_enabled: 0, alerts_enabled: 0 }
 ];
 

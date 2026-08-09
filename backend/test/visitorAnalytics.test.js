@@ -95,6 +95,14 @@ test('seeds Libi Diamonds with dedicated production hosts and runtime', () => {
     ), false);
 });
 
+test('keeps the Manager Site Miryam URL mapped to the preview monitor', () => {
+    const app = db.prepare('SELECT url, health_url, reporting_enabled FROM apps WHERE name = ?')
+        .get('Miryam Zelig Preview');
+    assert.equal(app.url, 'https://vee-app.co.il/Miryam_Zelig/');
+    assert.equal(app.health_url, 'https://vee-app.co.il/miryamzelig2/');
+    assert.equal(app.reporting_enabled, 0);
+});
+
 test('catches production scanner signatures previously counted as candidates', () => {
     const gobuster = parseNginxAccessLine(
         '5.5.5.5 - - [12/Jul/2026:12:04:00 +0300] "GET /.git/config HTTP/1.1" 404 10 "-" "gobuster/3.8.2" "vee-app.co.il"'
