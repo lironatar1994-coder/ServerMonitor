@@ -4,7 +4,7 @@ const db = require('./database');
 const {
     CLASSIFICATION_RULESET_VERSION,
     getAgentType,
-    getBotReason,
+    getBotClassification,
     isPageView,
     isTargetAppLine,
     parseAccessLogTimestamp,
@@ -33,8 +33,8 @@ const insertEvent = db.prepare(`
     INSERT OR IGNORE INTO visitor_events (
         app_id, source_file_id, source_offset, occurred_at, ip, method, path,
         status, referrer, host, user_agent, device_type, is_bot, bot_reason,
-        is_page_view, country_code, region, city
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        bot_classification, bot_confidence, is_page_view, country_code, region, city
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const upsertState = db.prepare(`
@@ -76,7 +76,7 @@ function ingestLine(app, line, sourceFileId, sourceOffset) {
     const timestamp = parseAccessLogTimestamp(entry.timestamp);
     if (!timestamp) return 0;
 
-    const botReason = getBotReason(entry, line);
+    const bot = getBotClassification(entry, line);
     const location = enrichLocation(entry.ip);
     return insertEvent.run(
         app.id,
@@ -91,8 +91,10 @@ function ingestLine(app, line, sourceFileId, sourceOffset) {
         entry.host,
         entry.userAgent,
         getAgentType(entry, line),
-        botReason ? 1 : 0,
-        botReason || null,
+        bot.classification === 'candidate' ? 0 : 1,
+        bot.reason,
+        bot.classification,
+        bot.confidence,
         isPageView(entry) ? 1 : 0,
         location.countryCode,
         location.region,
@@ -223,7 +225,9 @@ function ingestApp(app) {
 
 function purgeExpiredEvents() {
     const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
-    return db.prepare('DELETE FROM visitor_events WHERE occurred_at < ?').run(cutoff).changes;
+    const events = db.prepare('DELETE FROM visitor_events WHERE occurred_at < ?').run(cutoff).changes;
+    db.prepare('DELETE FROM browser_signals WHERE occurred_at < ?').run(cutoff);
+    return events;
 }
 
 function refreshStoredEventClassifications() {
@@ -232,12 +236,13 @@ function refreshStoredEventClassifications() {
     if (current?.value === CLASSIFICATION_RULESET_VERSION) return { scanned: 0, updated: 0 };
 
     const rows = db.prepare(`
-        SELECT id, method, path, status, user_agent, is_bot, bot_reason, is_page_view
+        SELECT id, ip, method, path, status, user_agent, is_bot, bot_reason,
+               bot_classification, bot_confidence, is_page_view
         FROM visitor_events
     `).all();
     const update = db.prepare(`
         UPDATE visitor_events
-        SET is_bot = ?, bot_reason = ?, is_page_view = ?
+        SET is_bot = ?, bot_reason = ?, bot_classification = ?, bot_confidence = ?, is_page_view = ?
         WHERE id = ?
     `);
     let updated = 0;
@@ -247,14 +252,27 @@ function refreshStoredEventClassifications() {
                 method: row.method,
                 path: row.path,
                 status: row.status,
-                userAgent: row.user_agent
+                userAgent: row.user_agent,
+                ip: row.ip
             };
-            const addedReason = getBotReason(entry);
-            const isBot = Boolean(row.is_bot || addedReason);
-            const botReason = row.bot_reason || addedReason || null;
+            let bot = getBotClassification(entry, row.path || '');
+            if (bot.classification === 'candidate' && Number(row.is_bot) === 1) {
+                bot = {
+                    classification: row.bot_classification === 'likely_bot' ? 'likely_bot' : 'bot',
+                    confidence: Number(row.bot_confidence) || 100,
+                    reason: row.bot_reason || 'previous bot classification'
+                };
+            }
+            const isBot = bot.classification !== 'candidate';
             const pageView = isPageView(entry) ? 1 : 0;
-            if (Number(row.is_bot) !== Number(isBot) || row.bot_reason !== botReason || Number(row.is_page_view) !== pageView) {
-                update.run(isBot ? 1 : 0, botReason, pageView, row.id);
+            if (
+                Number(row.is_bot) !== Number(isBot) ||
+                row.bot_reason !== bot.reason ||
+                row.bot_classification !== bot.classification ||
+                Number(row.bot_confidence) !== bot.confidence ||
+                Number(row.is_page_view) !== pageView
+            ) {
+                update.run(isBot ? 1 : 0, bot.reason, bot.classification, bot.confidence, pageView, row.id);
                 updated++;
             }
         });

@@ -18,6 +18,7 @@ BACKUP_MAX_COUNT=10
 NGINX_LOG_CONFIG="/etc/nginx/conf.d/server-monitor-host-log.conf"
 SSH_HARDENING_CONFIG="/etc/ssh/sshd_config.d/00-server-monitor-hardening.conf"
 MANAGER_SITE_ANALYTICS_KEY_FILE="${MANAGER_SITE_ANALYTICS_KEY_FILE:-/root/.manager-site-analytics-key}"
+VISITOR_SIGNAL_KEY_FILE="${VISITOR_SIGNAL_KEY_FILE:-/root/.visitor-signal-key}"
 
 echo "[INFO] Starting Deployment..."
 cd "$APP_ROOT"
@@ -94,6 +95,18 @@ if [ ! -s "$MANAGER_SITE_ANALYTICS_KEY_FILE" ]; then
 fi
 chmod 600 "$MANAGER_SITE_ANALYTICS_KEY_FILE"
 
+if [ ! -s "$VISITOR_SIGNAL_KEY_FILE" ]; then
+  echo "[INFO] Creating the first-party browser signal service key..."
+  umask 077
+  openssl rand -hex 32 > "$VISITOR_SIGNAL_KEY_FILE"
+fi
+chmod 600 "$VISITOR_SIGNAL_KEY_FILE"
+
+if [ -f "$APP_ROOT/install_static_visitor_signals.sh" ]; then
+  echo "[INFO] Installing first-party signal bridges for canonical static sites..."
+  VISITOR_SIGNAL_KEY_FILE="$VISITOR_SIGNAL_KEY_FILE" bash "$APP_ROOT/install_static_visitor_signals.sh"
+fi
+
 # 7. PM2 Start
 echo "[INFO] Starting PM2 process..."
 # We serve the frontend via Nginx or we can use the backend to serve it
@@ -101,6 +114,8 @@ echo "[INFO] Starting PM2 process..."
 export PORT="$BACKEND_PORT"
 export GEOIP_DB_PATH
 export MANAGER_SITE_ANALYTICS_KEY="$(tr -d '\r\n' < "$MANAGER_SITE_ANALYTICS_KEY_FILE")"
+export VISITOR_SIGNAL_KEY="$(tr -d '\r\n' < "$VISITOR_SIGNAL_KEY_FILE")"
+export VISITOR_SIGNAL_KEY_FILE
 if pm2 describe "$APP_NAME" > /dev/null 2>&1; then
     pm2 restart "$APP_NAME" --update-env
 else

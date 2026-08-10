@@ -2,7 +2,7 @@ const fs = require('fs');
 
 const DEFAULT_TAIL_BYTES = 65536;
 const VISITOR_TAIL_BYTES = 2097152;
-const CLASSIFICATION_RULESET_VERSION = '2026-08-02.1';
+const CLASSIFICATION_RULESET_VERSION = '2026-08-10.1';
 
 const botUserAgentPatterns = [
     /bot/i,
@@ -56,7 +56,31 @@ const botUserAgentPatterns = [
     /wordpress\//i,
     /modatscanner/i,
     /infrawatch/i,
-    /google-read-aloud/i
+    /google-read-aloud/i,
+    /cyberconvoyscout/i,
+    /\bodin\b/i
+];
+
+const distributedAutomationFingerprints = [
+    {
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1',
+        ipPrefixes: [
+            '43.130.', '43.131.', '43.134.', '43.135.', '43.153.', '43.155.',
+            '43.156.', '43.157.', '43.159.', '43.160.', '43.161.', '43.162.',
+            '43.164.', '43.165.', '43.166.', '43.167.', '49.51.', '124.156.',
+            '162.14.', '170.106.'
+        ],
+        reason: 'distributed hosting fingerprint'
+    },
+    {
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
+        ipPrefixes: [
+            '51.38.', '51.75.', '51.77.', '51.89.', '51.91.', '57.129.',
+            '141.94.', '141.95.', '145.239.', '149.202.', '151.80.', '213.32.',
+            '217.182.'
+        ],
+        reason: 'distributed crawl fingerprint'
+    }
 ];
 
 const suspiciousPathPatterns = [
@@ -191,18 +215,40 @@ function parseAccessLogTimestamp(timestamp) {
     return sign === '+' ? localTime - offset : localTime + offset;
 }
 
-function getBotReason(entry, rawLine = '') {
+function getBotClassification(entry, rawLine = '') {
     const userAgent = (entry?.userAgent || '').trim();
     const path = entry?.path || '';
     const method = entry?.method || '';
 
-    if (!userAgent || userAgent === '-') return 'missing user agent';
-    if (botUserAgentPatterns.some((pattern) => pattern.test(userAgent))) return 'bot user agent';
-    if (suspiciousPathPatterns.some((pattern) => pattern.test(path))) return 'scanner path';
-    if (['PROPFIND', 'OPTIONS', 'CONNECT', 'TRACE'].includes(method)) return 'scanner method';
-    if (/sql|eval\(|etc\/passwd|base64_decode|union.*select/i.test(rawLine)) return 'attack signature';
+    if (!userAgent || userAgent === '-') {
+        return { classification: 'bot', confidence: 100, reason: 'missing user agent' };
+    }
+    if (botUserAgentPatterns.some((pattern) => pattern.test(userAgent))) {
+        return { classification: 'bot', confidence: 100, reason: 'bot user agent' };
+    }
+    if (suspiciousPathPatterns.some((pattern) => pattern.test(path))) {
+        return { classification: 'bot', confidence: 100, reason: 'scanner path' };
+    }
+    if (['PROPFIND', 'OPTIONS', 'CONNECT', 'TRACE'].includes(method)) {
+        return { classification: 'bot', confidence: 100, reason: 'scanner method' };
+    }
+    if (/sql|eval\(|etc\/passwd|base64_decode|union.*select/i.test(rawLine)) {
+        return { classification: 'bot', confidence: 100, reason: 'attack signature' };
+    }
 
-    return '';
+    const fingerprint = distributedAutomationFingerprints.find((candidate) =>
+        userAgent === candidate.userAgent &&
+        candidate.ipPrefixes.some((prefix) => (entry?.ip || '').startsWith(prefix))
+    );
+    if (fingerprint) {
+        return { classification: 'likely_bot', confidence: 95, reason: fingerprint.reason };
+    }
+
+    return { classification: 'candidate', confidence: 0, reason: null };
+}
+
+function getBotReason(entry, rawLine = '') {
+    return getBotClassification(entry, rawLine).reason || '';
 }
 
 function isPageView(entry) {
@@ -451,6 +497,7 @@ function getUniqueVisitors(logPath, appName, logFilter, logHost, logExclude, lim
 module.exports = {
     CLASSIFICATION_RULESET_VERSION,
     getAgentType,
+    getBotClassification,
     getBotReason,
     getRecentVisitors,
     getUniqueVisitors,

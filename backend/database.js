@@ -65,6 +65,8 @@ db.exec(`
         device_type TEXT DEFAULT 'Unknown',
         is_bot INTEGER DEFAULT 0,
         bot_reason TEXT,
+        bot_classification TEXT DEFAULT 'candidate',
+        bot_confidence INTEGER DEFAULT 0,
         is_page_view INTEGER DEFAULT 0,
         country_code TEXT,
         region TEXT,
@@ -72,6 +74,22 @@ db.exec(`
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (app_id) REFERENCES apps (id) ON DELETE CASCADE,
         UNIQUE (app_id, source_file_id, source_offset)
+    );
+
+    CREATE TABLE IF NOT EXISTS browser_signals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        app_id INTEGER NOT NULL,
+        event_id TEXT NOT NULL,
+        occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        ip TEXT NOT NULL,
+        visitor_hash TEXT NOT NULL,
+        session_hash TEXT NOT NULL,
+        path TEXT NOT NULL,
+        user_agent TEXT,
+        automation_hint INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (app_id) REFERENCES apps (id) ON DELETE CASCADE,
+        UNIQUE (app_id, event_id)
     );
 
     CREATE TABLE IF NOT EXISTS visitor_ingestion_state (
@@ -109,6 +127,10 @@ db.exec(`
         ON visitor_events (app_id, ip, occurred_at DESC);
     CREATE INDEX IF NOT EXISTS idx_visitor_events_app_bot_time
         ON visitor_events (app_id, is_bot, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_browser_signals_app_time
+        ON browser_signals (app_id, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_browser_signals_app_visitor_time
+        ON browser_signals (app_id, visitor_hash, occurred_at DESC);
     CREATE INDEX IF NOT EXISTS idx_metrics_timestamp
         ON metrics (timestamp);
 `);
@@ -178,9 +200,27 @@ try {
     // Column already exists
 }
 
+try {
+    db.exec(`ALTER TABLE visitor_events ADD COLUMN bot_classification TEXT DEFAULT 'candidate'`);
+    console.log('Added column bot_classification to visitor_events table');
+} catch (e) {
+    // Column already exists
+}
+
+try {
+    db.exec(`ALTER TABLE visitor_events ADD COLUMN bot_confidence INTEGER DEFAULT 0`);
+    console.log('Added column bot_confidence to visitor_events table');
+} catch (e) {
+    // Column already exists
+}
+
 db.exec(`
     CREATE INDEX IF NOT EXISTS idx_visitor_events_app_page_time
         ON visitor_events (app_id, is_bot, is_page_view, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_browser_signals_app_time
+        ON browser_signals (app_id, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_browser_signals_app_visitor_time
+        ON browser_signals (app_id, visitor_hash, occurred_at DESC);
 `);
 
 try {

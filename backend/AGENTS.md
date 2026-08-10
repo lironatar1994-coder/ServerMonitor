@@ -12,6 +12,7 @@
 - `monitor.js` owns background health, PM2, log, metric, and alert collection.
 - `logParser.js` owns host-aware Nginx access-log filtering, visitor parsing, and heuristic bot classification.
 - `visitorAnalytics.js` owns cursor-based access-log ingestion, initial bounded backfill, GeoIP enrichment, and raw-event retention.
+- `browserSignals.js` owns authenticated first-party browser-signal site matching, validation, identifier hashing, path/IP normalization, deduplication, and persistence.
 - `jewelryAnalytics.js` owns canonical Libi product/collection path aggregation, catalog labels, category inference, and equal-period comparisons.
 - `resourceUsage.js` owns complete PM2 process-tree attribution and cached, bounded production-storage scans.
 - `emailReports.js` owns daily and weekly client comparison reports, Resend delivery, scheduling, and delivery deduplication.
@@ -38,6 +39,9 @@
 - Persistent analytics count unique candidates as distinct non-bot-classified IPs in the selected range. Candidate means “not identified as a bot,” not verified human. GeoIP is local and optional via `GEOIP_DB_PATH`; missing data must remain an explicit unknown rather than failing ingestion.
 - A unique candidate must have at least one successful page view. `visitor_events.is_page_view` excludes assets, API calls, robots/sitemaps, failed responses, and non-navigation methods; raw requests remain available for bot and diagnostic totals.
 - Version bot and page-view rules through `monitor_metadata`, and reclassify stored events when the ruleset changes so historical dashboards and emails do not keep stale classifications.
+- Bot classification has three explicit outcomes: `bot`, `likely_bot`, and `candidate`. Only strong signatures or observed hosting-network fingerprints may become `likely_bot`; ordinary cloud/VPN use alone is insufficient.
+- `/browser-signals/site` accepts only the shared server-to-server key, an exact stored website URL, and trusted visitor metadata forwarded by a client-site server bridge. Keep `/browser-signals/libi` only as a temporary compatibility route during migration. Store only site-scoped HMAC hashes of anonymous browser/session IDs, deduplicate by event ID, retain signals for 90 days, and exclude `automation_hint` rows from browser-signal metrics.
+- Browser-signal visitors, sessions, and navigations confirm first-party JavaScript execution, not a human or customer. Keep them separate from IP candidates in APIs, dashboards, and email reports.
 - `/apps/server-stats` reports Linux `MemAvailable`-based RAM use, swap details, root-filesystem usage, load, and top processes. Its `resources` payload attributes descendant RSS and `/proc` Swap to every running PM2 app, enriches database-mapped apps with display names, and ranks memory-heavy processes by their combined footprint.
 - Storage visibility must scan only the production paths declared in `resourceUsage.js`, run `du` without blocking the Node event loop and at idle I/O priority when available, avoid redundant whole-root scans, cache snapshots for 30 minutes, refresh stale data in the background, distinguish dependency, rollback, backup, log, and cache bytes, and return stale cached data when a refresh fails.
 - App runtime health requires both an online PM2 process, when configured, and a successful 2xx/3xx `health_url`.
@@ -65,6 +69,7 @@
 - Run backend syntax checks with `node --check <file>` for touched backend JavaScript files.
 - When API behavior changes, run the server or exercise the relevant endpoint when practical.
 - Run `npm test` for visitor parser, ingestion, deduplication, and retention behavior.
+- Keep browser-signal authorization, validation, hashing, and event deduplication tests passing.
 - Keep process-tree parsing and descendant-attribution tests passing when resource reporting changes.
 - Keep report period, comparison, and HTML escaping tests passing; production delivery uses the existing Resend configuration.
 

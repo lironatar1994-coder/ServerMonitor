@@ -9,6 +9,7 @@ import { formatAgo, formatNumber, formatTime } from '../lib/format';
 
 const CANDIDATE_HINT = 'מועמד = כתובת IP שלא זוהתה כבוט. הערכה מהלוגים, לא אימות של אדם.';
 const PAGE_VIEW_HINT = 'ניווטים מוצלחים בלבד — ללא תמונות, קוד, גופנים, API או בקשות שנכשלו.';
+const BROWSER_SIGNAL_HINT = 'אות דפדפן = העמוד הפעיל קוד בדפדפן ושלח מזהה אקראי ואנונימי. זה חזק יותר מלוג IP, אך עדיין לא הוכחה לאדם או ללקוח.';
 
 const BREAKDOWN_TABS = [
   { id: 'pages', label: 'עמודים' },
@@ -82,17 +83,19 @@ const VisitorOverview = () => {
 
       <DataState loading={loading && !data} error={error} onRetry={() => fetchAnalytics()}>
         <StatRow>
-          <Stat label="מועמדים ייחודיים" value={summary.unique_candidates} delta={data?.comparison?.unique_candidates_percent} tone="forest" hint={CANDIDATE_HINT} />
-          <Stat label="פעילים עכשיו" value={summary.active_candidates} tone="vermilion" foot="5 דקות אחרונות" />
-          <Stat label="צפיות בעמודים" value={summary.page_views} delta={data?.comparison?.page_views_percent} hint={PAGE_VIEW_HINT} />
+          <Stat label="אותות דפדפן" value={summary.browser_signal_visitors} delta={data?.comparison?.browser_signal_visitors_percent} tone="forest" hint={BROWSER_SIGNAL_HINT} />
+          <Stat label="מועמדי IP" value={summary.unique_candidates} delta={data?.comparison?.unique_candidates_percent} hint={CANDIDATE_HINT} />
+          <Stat label="כתובות פעילות" value={summary.active_candidates} tone="vermilion" foot="5 דקות אחרונות" />
+          <Stat label="צפיות לוג משוערות" value={summary.page_views} delta={data?.comparison?.page_views_percent} hint={PAGE_VIEW_HINT} />
           <Stat label="תנועת בוטים" value={`${botShare.toFixed(0)}%`} tone="ochre" foot={`${formatNumber(summary.bot_requests)} סוננו`} />
         </StatRow>
 
         <div className="grid grid--2-1">
           <Panel title="תנועה לאורך זמן" action={
             <div className="legend">
-              <span className="legend__item legend__item--forest">צפיות</span>
-              <span className="legend__item legend__item--vermilion">מועמדים</span>
+              <span className="legend__item legend__item--forest">אותות דפדפן</span>
+              <span className="legend__item legend__item--vermilion">מועמדי IP</span>
+              <span className="legend__item legend__item--ochre">צפיות לוג</span>
             </div>
           }>
             <div className="chart chart--tall">
@@ -109,8 +112,9 @@ const VisitorOverview = () => {
                     <XAxis dataKey="label" axisLine={false} tickLine={false} minTickGap={24} tick={{ fill: '#6f695f', fontSize: 11 }} />
                     <YAxis axisLine={false} tickLine={false} width={40} tick={{ fill: '#6f695f', fontSize: 11 }} allowDecimals={false} />
                     <Tooltip contentStyle={{ background: '#171713', border: 0, borderRadius: 4, color: '#f2ebdd', fontSize: 12 }} />
-                    <Area type="monotone" dataKey="page_views" name="צפיות בעמודים" stroke="#1f5a47" strokeWidth={2.5} fill="url(#visitorInk)" />
-                    <Area type="monotone" dataKey="unique_candidates" name="מועמדים ייחודיים" stroke="#d5543f" strokeWidth={2} fill="transparent" />
+                    <Area type="monotone" dataKey="browser_signal_visitors" name="אותות דפדפן" stroke="#1f5a47" strokeWidth={2.5} fill="url(#visitorInk)" />
+                    <Area type="monotone" dataKey="unique_candidates" name="מועמדי IP" stroke="#d5543f" strokeWidth={2} fill="transparent" />
+                    <Area type="monotone" dataKey="page_views" name="צפיות לוג משוערות" stroke="#9a6b16" strokeWidth={1.5} strokeDasharray="4 4" fill="transparent" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : <Empty text="אין תנועה בטווח שנבחר" />}
@@ -125,9 +129,12 @@ const VisitorOverview = () => {
                     <Link to={`/visitors/${site.app_id}`}>
                       <span className="site-ranking__name">
                         <b>{site.name}</b>
-                        <small>{formatNumber(site.page_views)} צפיות</small>
+                        <small>{formatNumber(site.browser_signal_visitors)} אותות דפדפן · {formatNumber(site.page_views)} צפיות לוג</small>
                       </span>
-                      <strong>{formatNumber(site.unique_candidates)}</strong>
+                      <span className="site-ranking__metric">
+                        <strong>{formatNumber(site.unique_candidates)}</strong>
+                        <small>מועמדי IP</small>
+                      </span>
                       <ChevronLeft aria-hidden="true" />
                     </Link>
                   </li>

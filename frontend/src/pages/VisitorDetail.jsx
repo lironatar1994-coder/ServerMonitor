@@ -10,6 +10,7 @@ import { formatDateTime, formatNumber } from '../lib/format';
 
 const CANDIDATE_HINT = 'מועמד = כתובת IP שלא זוהתה כבוט. הערכה מהלוגים, לא אימות של אדם.';
 const PAGE_VIEW_HINT = 'ניווטים מוצלחים בלבד — ללא תמונות, קוד, גופנים, API או בקשות שנכשלו.';
+const BROWSER_SIGNAL_HINT = 'אות דפדפן = העמוד הפעיל קוד בדפדפן ושלח מזהה אקראי ואנונימי. זה חזק יותר מלוג IP, אך עדיין לא הוכחה לאדם או ללקוח.';
 
 const BREAKDOWN_TABS = [
   { id: 'pages', label: 'עמודים' },
@@ -132,12 +133,12 @@ const VisitorDetail = () => {
 
       <DataState loading={loading && !data} error={error} onRetry={fetchAnalytics}>
         <StatRow>
-          <Stat label="מועמדים ייחודיים" value={summary.unique_candidates} delta={data?.comparison?.unique_candidates_percent} tone="forest" hint={CANDIDATE_HINT} />
-          <Stat label="פעילים עכשיו" value={summary.active_candidates} tone="vermilion" foot="5 דקות אחרונות" />
-          <Stat label="צפיות בעמודים" value={summary.page_views} delta={data?.comparison?.page_views_percent} hint={PAGE_VIEW_HINT} />
-          <Stat label="חדשים" value={summary.new_candidates} foot="נצפו לראשונה בטווח" />
-          <Stat label="חוזרים" value={summary.returning_candidates} foot="נראו גם לפני הטווח" />
-          <Stat label="בוטים שסוננו" value={summary.bot_requests} tone="ochre" foot="לא נספרו כמבקרים" />
+          <Stat label="אותות דפדפן" value={summary.browser_signal_visitors} delta={data?.comparison?.browser_signal_visitors_percent} tone="forest" hint={BROWSER_SIGNAL_HINT} />
+          <Stat label="סשנים עם אות" value={summary.browser_signal_sessions} foot="מזהים אנונימיים לסשן" />
+          <Stat label="ניווטים עם אות" value={summary.browser_signal_page_views} delta={data?.comparison?.browser_signal_page_views_percent} hint={BROWSER_SIGNAL_HINT} />
+          <Stat label="מועמדי IP" value={summary.unique_candidates} delta={data?.comparison?.unique_candidates_percent} hint={CANDIDATE_HINT} />
+          <Stat label="צפיות לוג משוערות" value={summary.page_views} delta={data?.comparison?.page_views_percent} hint={PAGE_VIEW_HINT} />
+          <Stat label="בוטים שסוננו" value={summary.bot_requests} tone="ochre" foot={`${formatNumber(summary.known_bot_requests)} ודאיים · ${formatNumber(summary.likely_bot_requests)} כנראה`} />
         </StatRow>
 
         <JewelryInterest interest={data?.jewelry_interest} siteUrl={data?.app?.url} />
@@ -225,13 +226,13 @@ const VisitorDetail = () => {
               ))}
             </ul>
 
-            {!visitors.visitors.length && <Empty text={search ? 'אין תוצאות לחיפוש הזה' : 'אין מבקרים בטווח הזה'} />}
+            {!visitors.visitors.length && <Empty text={search ? 'אין תוצאות לחיפוש הזה' : 'אין מועמדי IP בטווח הזה'} />}
           </div>
 
           {pageCount > 1 && (
             <div className="pagination">
               <button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)} aria-label="עמוד קודם"><ChevronRight aria-hidden="true" /></button>
-              <span>{page} / {pageCount} · {formatNumber(visitors.total)} מבקרים</span>
+              <span>{page} / {pageCount} · {formatNumber(visitors.total)} מועמדי IP</span>
               <button type="button" disabled={page >= pageCount} onClick={() => setPage(page + 1)} aria-label="עמוד הבא"><ChevronLeft aria-hidden="true" /></button>
             </div>
           )}

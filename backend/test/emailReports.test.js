@@ -38,6 +38,9 @@ test('builds per-client comparisons and safe HTML', () => {
     insert.run(appId, 3, '2026-07-11T12:00:00.000Z', '9.9.9.9', '/scan', 1, 1);
     insert.run(appId, 4, '2026-07-10T10:00:00.000Z', '1.1.1.1', '/', 0, 1);
     insert.run(appId, 5, '2026-07-11T13:00:00.000Z', '1.1.1.1', '/images/hero.webp', 0, 0);
+    db.prepare(`INSERT INTO browser_signals (
+        app_id, event_id, occurred_at, ip, visitor_hash, session_hash, path
+    ) VALUES (?, 'email-signal-event', '2026-07-11T10:01:00.000Z', '1.1.1.1', 'visitor-hash', 'session-hash', '/pricing')`).run(appId);
 
     const period = {
         type: 'daily', periodKey: '2026-07-11',
@@ -50,12 +53,15 @@ test('builds per-client comparisons and safe HTML', () => {
     assert.equal(row.candidateRequests, 3);
     assert.equal(row.pageViews, 2);
     assert.equal(row.botRequests, 1);
+    assert.equal(row.browserSignalVisitors, 1);
+    assert.equal(row.browserSignalSessions, 1);
+    assert.equal(row.browserSignalPageViews, 1);
     assert.equal(row.topPage, '/pricing');
 
     const rendered = renderEmail('daily', period, [row]);
     assert.match(rendered.subject, /דוח תנועה יומי/);
-    assert.match(rendered.html, /זו הערכה, לא אימות של אדם/);
-    assert.match(rendered.html, /צפיות בעמודים/);
+    assert.match(rendered.html, /אינו הוכחה לאדם או ללקוח/);
+    assert.match(rendered.html, /צפיות לוג/);
     assert.match(rendered.html, /monitor\.vee-app\.co\.il\/serve-monitor\/visitors/);
     assert.match(rendered.html, /Client &lt;One&gt;/);
     assert.doesNotMatch(rendered.html, /Client <One>/);

@@ -7,6 +7,7 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const authRoutes = require('./routes/auth');
 const apiRoutes = require('./routes/api');
+const browserSignalRoutes = require('./routes/browserSignals');
 const visitorAnalyticsRoutes = require('./routes/visitorAnalytics');
 const { startVisitorIngestion } = require('./visitorAnalytics');
 const { startEmailReports } = require('./emailReports');
@@ -26,6 +27,7 @@ app.use(morgan('dev'));
 // Routes
 app.use('/serve-monitor/api/auth', authRoutes);
 app.use('/serve-monitor/api/apps', apiRoutes);
+app.use('/serve-monitor/api/browser-signals', browserSignalRoutes);
 app.use('/serve-monitor/api/visitor-analytics', visitorAnalyticsRoutes);
 
 // Serve frontend

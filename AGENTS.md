@@ -94,9 +94,11 @@ When the user requests a durable behavior change, record it here or in the relev
 - In the Libi Diamonds deep visitor view, rank exact product and collection paths by candidate page views and distinct candidate IPs, compare them with the preceding equal period, and link directly to the viewed storefront page.
 - Attribute runtime memory and CPU to complete PM2 process trees, not only their wrapper processes. In `שרת ומשאבים`, expose ranked application, process, and bounded storage ownership, including dependency, rollback, backup, log, and cache totals.
 - Keep the production app catalog synchronized from `backend/database.js`, including canonical and preview sites, PM2 services, health URLs, visitor-log ownership, and the intentionally visible failed Toren Hazak route until it is explicitly retired; show that known failure without sending hourly alerts.
+- Measure every canonical client website with two separate signals where a trusted server bridge is installed: conservative host-aware log candidates and signed first-party browser signals. Hash anonymous browser/session identifiers per site at ingestion, exclude automation hints, and never present either signal as proof of a person or customer.
+- Share the browser-signal secret only through `/root/.visitor-signal-key` (or matching server-only environment variables); never expose it through browser code or public build-time values such as `NEXT_PUBLIC_*` or `VITE_*`.
 
 ## Child DOX Index
 
 - `backend/AGENTS.md` - Express API, persistent visitor analytics, SQLite monitor database, PM2/system monitoring logic, authentication routes, and background checks.
 - `frontend/AGENTS.md` - Vite React visitor, infrastructure, services, settings, authentication, responsive design, static assets, and production build.
-- Root-owned deployment and host files: `deploy.ps1`, `deploy_linux.sh`, `server_maintenance.sh`, `monitor.vee-app.co.il.conf`, `nginx-monitor-host-log.conf`, `ssh-hardening.conf`, `start.bat`, `.claude/launch.json`, `.gitignore`, and repository-level operational artifacts.
+- Root-owned deployment and host files: `deploy.ps1`, `deploy_linux.sh`, `install_static_visitor_signals.sh`, `server_maintenance.sh`, `monitor.vee-app.co.il.conf`, `nginx-monitor-host-log.conf`, `ssh-hardening.conf`, `start.bat`, `.claude/launch.json`, `.gitignore`, and repository-level operational artifacts.

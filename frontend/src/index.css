@@ -204,6 +204,7 @@ svg { width: 1rem; height: 1rem; flex: none; stroke-width: 1.9; }
 .legend__item::before { content: ''; width: .6rem; height: .18rem; border-radius: 2px; background: currentColor; }
 .legend__item--forest { color: var(--forest); }
 .legend__item--vermilion { color: var(--vermilion); }
+.legend__item--ochre { color: var(--ochre); }
 
 .chart { height: 15rem; direction: ltr; overflow: hidden; }
 .chart--tall { height: 18rem; }
@@ -242,7 +243,9 @@ svg { width: 1rem; height: 1rem; flex: none; stroke-width: 1.9; }
 .site-ranking__name { min-width: 0; display: flex; flex-direction: column; }
 .site-ranking__name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; }
 .site-ranking__name small { color: var(--ink-muted); font-size: .68rem; }
-.site-ranking strong { font: 700 1.2rem var(--serif); color: var(--forest); }
+.site-ranking__metric { display: flex; flex-direction: column; align-items: end; min-width: 4.5rem; }
+.site-ranking__metric strong { font: 700 1.2rem var(--serif); color: var(--forest); }
+.site-ranking__metric small { color: var(--ink-muted); font-size: .62rem; white-space: nowrap; }
 .site-ranking svg { color: var(--ink-muted); }
 
 .feed a { grid-template-columns: minmax(7rem, 1fr) minmax(0, 1.4fr) auto; }
@@ -491,6 +494,7 @@ svg { width: 1rem; height: 1rem; flex: none; stroke-width: 1.9; }
 
 @media (max-width: 760px) {
   .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat-row > .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .resource-summary { grid-template-columns: 1fr; }
   .data-table { display: none; }
   .record-list { display: block; }

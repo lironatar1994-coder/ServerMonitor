@@ -8,9 +8,11 @@ const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'server-monitor-analytics-
 process.env.NODE_ENV = 'test';
 process.env.MONITOR_DB_PATH = path.join(tempDir, 'test.db');
 process.env.GEOIP_DB_PATH = path.join(tempDir, 'missing.mmdb');
+process.env.VISITOR_SIGNAL_KEY = 'test-visitor-signal-key';
 
 const db = require('../database');
 const {
+    getBotClassification,
     getBotReason,
     isPageView,
     isTargetAppLine,
@@ -18,6 +20,7 @@ const {
     parseNginxAccessLine
 } = require('../logParser');
 const { ingestApp, purgeExpiredEvents, refreshStoredEventClassifications } = require('../visitorAnalytics');
+const { findSignalApp, isAuthorizedSignal, recordBrowserSignal } = require('../browserSignals');
 const { getLibiJewelryInterest, humanizeSlug, inferCategory } = require('../jewelryAnalytics');
 
 const humanLine = '1.2.3.4 - - [12/Jul/2026:12:00:00 +0300] "GET /site/ HTTP/1.1" 200 120 "https://google.com" "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"';
@@ -115,6 +118,68 @@ test('catches production scanner signatures previously counted as candidates', (
     assert.equal(getBotReason({ userAgent: 'WordPress/6.4.3; https://wordpress.org/', path: '/', method: 'GET' }), 'bot user agent');
     assert.equal(getBotReason({ userAgent: 'Mozilla/5.0 (Windows NT) WindowsPowerShell/5.1', path: '/', method: 'GET' }), 'bot user agent');
     assert.equal(getBotReason({ userAgent: 'Python/3.11 aiohttp/3.8.4', path: '/', method: 'GET' }), 'bot user agent');
+    assert.equal(getBotReason({ userAgent: 'Mozilla/5.0 (compatible; Odin; https://docs.getodin.com/)', path: '/', method: 'GET' }), 'bot user agent');
+    assert.equal(getBotReason({ userAgent: 'Mozilla/5.0 (compatible; CyberConvoyScout/1.0)', path: '/', method: 'GET' }), 'bot user agent');
+});
+
+test('marks only the observed distributed hosting fingerprints as likely bots', () => {
+    const safariAutomation = {
+        ip: '43.157.147.3',
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1',
+        method: 'GET', path: '/', status: 200
+    };
+    const likely = getBotClassification(safariAutomation);
+    assert.equal(likely.classification, 'likely_bot');
+    assert.equal(likely.confidence, 95);
+    assert.equal(getBotClassification({ ...safariAutomation, ip: '1.2.3.4' }).classification, 'candidate');
+});
+
+test('stores deduplicated first-party browser signals against an exact configured site', () => {
+    const payload = {
+        event_id: 'event_1234567890abcdef',
+        visitor_id: 'visitor_1234567890abcdef',
+        session_id: 'session_1234567890abcdef',
+        path: '/product/aura-solitaire-ring?metal=white',
+        webdriver: false
+    };
+    assert.equal(isAuthorizedSignal('test-visitor-signal-key'), true);
+    assert.equal(isAuthorizedSignal('wrong-key'), false);
+    const siteUrl = 'https://www.libidiamonds.co.il/';
+    assert.equal(findSignalApp(siteUrl).name, 'Libi Diamonds');
+    assert.equal(findSignalApp('https://unknown.example/'), null);
+    assert.deepEqual(recordBrowserSignal({ body: payload, ip: '1.2.3.4', userAgent: 'Mozilla/5.0', siteUrl }), {
+        accepted: true, duplicate: false, app: 'Libi Diamonds'
+    });
+    assert.deepEqual(recordBrowserSignal({ body: payload, ip: '1.2.3.4', userAgent: 'Mozilla/5.0', siteUrl }), {
+        accepted: true, duplicate: true, app: 'Libi Diamonds'
+    });
+    const stored = db.prepare(`
+        SELECT event_id, ip, visitor_hash, session_hash, path, automation_hint
+        FROM browser_signals WHERE event_id = ?
+    `).get(payload.event_id);
+    assert.equal(stored.ip, '1.2.3.4');
+    assert.notEqual(stored.visitor_hash, payload.visitor_id);
+    assert.notEqual(stored.session_hash, payload.session_id);
+    assert.equal(stored.path, '/product/aura-solitaire-ring');
+    assert.equal(stored.automation_hint, 0);
+    assert.throws(
+        () => recordBrowserSignal({ body: { ...payload, event_id: 'event_unknown_12345678' }, ip: '1.2.3.4', userAgent: 'Mozilla/5.0', siteUrl: 'https://unknown.example/' }),
+        /not configured/
+    );
+});
+
+test('resolves every supported public site for first-party browser signals', () => {
+    const canonicalSites = new Map([
+        ['https://vee-app.co.il/', 'Vee Main App'],
+        ['https://vee-app.co.il/text-to-pdf', 'PDF Generator'],
+        ['https://vee-app.co.il/pixel-dungeon/', 'Pixel Dungeon'],
+        ['https://sosbaderech.co.il/', 'SOS Landing'],
+        ['https://miryamzelig.co.il/', 'Miryam Zelig'],
+        ['https://www.libidiamonds.co.il/', 'Libi Diamonds'],
+        ['https://vee-app.co.il/OnYourWay', 'On Your Way'],
+        ['https://www.dfusreuven.co.il/', 'Dfus Reuven']
+    ]);
+    canonicalSites.forEach((name, url) => assert.equal(findSignalApp(url)?.name, name));
 });
 
 test('separates page views from assets, API calls, errors, and non-navigation methods', () => {
@@ -160,12 +225,20 @@ test('reclassifies stored automation and page views when rules change', () => {
         app_id, source_file_id, source_offset, occurred_at, ip, method, path,
         status, user_agent, is_bot, is_page_view
     ) VALUES (?, 'reclassify', 1001, '2026-07-12T10:00:00.000Z', '8.8.8.8', 'GET', '/', 200, 'WordPress/6.4.3; https://wordpress.org/', 0, 0)`).run(app.id);
+    db.prepare(`INSERT INTO visitor_events (
+        app_id, source_file_id, source_offset, occurred_at, ip, method, path,
+        status, user_agent, is_bot, bot_reason, is_page_view
+    ) VALUES (?, 'preserve-bot', 1002, '2026-07-12T10:01:00.000Z', '8.8.4.4', 'GET', '/', 200, 'Mozilla/5.0', 1, 'attack signature', 1)`).run(app.id);
     const result = refreshStoredEventClassifications();
-    const event = db.prepare("SELECT is_bot, bot_reason, is_page_view FROM visitor_events WHERE source_file_id = 'reclassify'").get();
+    const event = db.prepare("SELECT is_bot, bot_reason, bot_classification, bot_confidence, is_page_view FROM visitor_events WHERE source_file_id = 'reclassify'").get();
     assert.ok(result.scanned > 0);
     assert.equal(event.is_bot, 1);
     assert.equal(event.bot_reason, 'bot user agent');
+    assert.equal(event.bot_classification, 'bot');
+    assert.equal(event.bot_confidence, 100);
     assert.equal(event.is_page_view, 1);
+    const preserved = db.prepare("SELECT is_bot, bot_reason, bot_classification FROM visitor_events WHERE source_file_id = 'preserve-bot'").get();
+    assert.deepEqual(preserved, { is_bot: 1, bot_reason: 'attack signature', bot_classification: 'bot' });
 });
 
 test('ranks Libi products and collections from canonical candidate page views', () => {

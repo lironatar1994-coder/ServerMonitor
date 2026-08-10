@@ -45,6 +45,26 @@ function parseRange(query) {
     return { from: from.toISOString(), to: to.toISOString(), duration: to - from };
 }
 
+function getBrowserSignalSummary(appId, range) {
+    const params = [range.from, range.to];
+    if (appId) params.push(appId);
+    const result = db.prepare(`
+        SELECT
+            COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN visitor_hash END) AS browser_signal_visitors,
+            COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN session_hash END) AS browser_signal_sessions,
+            SUM(CASE WHEN automation_hint = 0 THEN 1 ELSE 0 END) AS browser_signal_page_views,
+            SUM(CASE WHEN automation_hint = 1 THEN 1 ELSE 0 END) AS automated_browser_signals
+        FROM browser_signals
+        WHERE occurred_at >= ? AND occurred_at < ? ${appId ? 'AND app_id = ?' : ''}
+    `).get(...params);
+    return {
+        browser_signal_visitors: Number(result.browser_signal_visitors) || 0,
+        browser_signal_sessions: Number(result.browser_signal_sessions) || 0,
+        browser_signal_page_views: Number(result.browser_signal_page_views) || 0,
+        automated_browser_signals: Number(result.automated_browser_signals) || 0
+    };
+}
+
 function getSummary(appId, range) {
     const appClause = appId ? 'AND app_id = ?' : '';
     const params = appId ? [range.from, range.to, appId] : [range.from, range.to];
@@ -54,6 +74,8 @@ function getSummary(appId, range) {
             SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) AS candidate_requests,
             SUM(CASE WHEN is_bot = 0 AND is_page_view = 1 THEN 1 ELSE 0 END) AS page_views,
             SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) AS bot_requests,
+            SUM(CASE WHEN bot_classification = 'bot' THEN 1 ELSE 0 END) AS known_bot_requests,
+            SUM(CASE WHEN bot_classification = 'likely_bot' THEN 1 ELSE 0 END) AS likely_bot_requests,
             COUNT(DISTINCT CASE WHEN is_bot = 0 AND is_page_view = 1 THEN ip END) AS unique_candidates,
             COUNT(DISTINCT CASE WHEN is_bot = 1 THEN ip END) AS unique_bots
         FROM visitor_events
@@ -88,11 +110,14 @@ function getSummary(appId, range) {
         candidate_requests: Number(summary.candidate_requests) || 0,
         page_views: Number(summary.page_views) || 0,
         bot_requests: Number(summary.bot_requests) || 0,
+        known_bot_requests: Number(summary.known_bot_requests) || 0,
+        likely_bot_requests: Number(summary.likely_bot_requests) || 0,
         unique_candidates: Number(summary.unique_candidates) || 0,
         unique_bots: Number(summary.unique_bots) || 0,
         active_candidates: Number(active.active_candidates) || 0,
         new_candidates: Number(mix.new_candidates) || 0,
-        returning_candidates: Number(mix.returning_candidates) || 0
+        returning_candidates: Number(mix.returning_candidates) || 0,
+        ...getBrowserSignalSummary(appId, range)
     };
 }
 
@@ -107,6 +132,8 @@ function getComparison(appId, range, summary) {
     return {
         unique_candidates_percent: delta(summary.unique_candidates, previousSummary.unique_candidates),
         page_views_percent: delta(summary.page_views, previousSummary.page_views),
+        browser_signal_visitors_percent: delta(summary.browser_signal_visitors, previousSummary.browser_signal_visitors),
+        browser_signal_page_views_percent: delta(summary.browser_signal_page_views, previousSummary.browser_signal_page_views),
         candidate_requests_percent: delta(summary.candidate_requests, previousSummary.candidate_requests),
         previous: previousSummary
     };
@@ -118,7 +145,7 @@ function getSeries(appId, range) {
         ? "strftime('%Y-%m-%dT%H:00:00Z', occurred_at)"
         : "strftime('%Y-%m-%d', occurred_at)";
     const params = appId ? [range.from, range.to, appId] : [range.from, range.to];
-    return db.prepare(`
+    const eventRows = db.prepare(`
         SELECT ${bucket} AS bucket,
             COUNT(DISTINCT CASE WHEN is_bot = 0 AND is_page_view = 1 THEN ip END) AS unique_candidates,
             SUM(CASE WHEN is_bot = 0 AND is_page_view = 1 THEN 1 ELSE 0 END) AS page_views,
@@ -128,6 +155,32 @@ function getSeries(appId, range) {
         WHERE occurred_at >= ? AND occurred_at < ? ${appId ? 'AND app_id = ?' : ''}
         GROUP BY bucket ORDER BY bucket ASC
     `).all(...params);
+    const signalBucket = hourly
+        ? "strftime('%Y-%m-%dT%H:00:00Z', occurred_at)"
+        : "strftime('%Y-%m-%d', occurred_at)";
+    const signalRows = db.prepare(`
+        SELECT ${signalBucket} AS bucket,
+            COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN visitor_hash END) AS browser_signal_visitors,
+            SUM(CASE WHEN automation_hint = 0 THEN 1 ELSE 0 END) AS browser_signal_page_views
+        FROM browser_signals
+        WHERE occurred_at >= ? AND occurred_at < ? ${appId ? 'AND app_id = ?' : ''}
+        GROUP BY bucket ORDER BY bucket ASC
+    `).all(...params);
+    const byBucket = new Map(eventRows.map((row) => [row.bucket, row]));
+    signalRows.forEach((row) => {
+        byBucket.set(row.bucket, { ...(byBucket.get(row.bucket) || { bucket: row.bucket }), ...row });
+    });
+    return Array.from(byBucket.values())
+        .map((row) => ({
+            unique_candidates: 0,
+            page_views: 0,
+            candidate_requests: 0,
+            bot_requests: 0,
+            browser_signal_visitors: 0,
+            browser_signal_page_views: 0,
+            ...row
+        }))
+        .sort((left, right) => left.bucket.localeCompare(right.bucket));
 }
 
 function getRankedDimension(appId, range, column, limit = 8) {
@@ -163,7 +216,7 @@ function getRecent(appId, range, limit = 12) {
 }
 
 function getSiteRanking(range) {
-    return db.prepare(`
+    const sites = db.prepare(`
         SELECT a.id AS app_id, a.name, a.url,
             COUNT(DISTINCT CASE WHEN e.is_bot = 0 AND e.is_page_view = 1 THEN e.ip END) AS unique_candidates,
             SUM(CASE WHEN e.is_bot = 0 AND e.is_page_view = 1 THEN 1 ELSE 0 END) AS page_views,
@@ -175,6 +228,23 @@ function getSiteRanking(range) {
         WHERE a.analytics_enabled = 1 AND a.log_path IS NOT NULL
         GROUP BY a.id ORDER BY unique_candidates DESC, candidate_requests DESC, a.name ASC
     `).all(range.from, range.to);
+    const signals = db.prepare(`
+        SELECT app_id,
+            COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN visitor_hash END) AS browser_signal_visitors,
+            COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN session_hash END) AS browser_signal_sessions,
+            SUM(CASE WHEN automation_hint = 0 THEN 1 ELSE 0 END) AS browser_signal_page_views
+        FROM browser_signals
+        WHERE occurred_at >= ? AND occurred_at < ?
+        GROUP BY app_id
+    `).all(range.from, range.to);
+    const signalsByApp = new Map(signals.map((row) => [row.app_id, row]));
+    return sites.map((site) => ({
+        ...site,
+        browser_signal_visitors: 0,
+        browser_signal_sessions: 0,
+        browser_signal_page_views: 0,
+        ...(signalsByApp.get(site.app_id) || {})
+    }));
 }
 
 function getHourly(appId, range) {
@@ -315,7 +385,7 @@ function getVisitorTimeline(app, range, query) {
     }
     const events = db.prepare(`
         SELECT occurred_at, method, path, status, referrer, device_type,
-               is_bot, bot_reason, city, region
+               is_bot, bot_reason, bot_classification, bot_confidence, city, region
         FROM visitor_events
         WHERE app_id = ? AND ip = ? AND occurred_at >= ? AND occurred_at < ?
         ORDER BY occurred_at DESC LIMIT 250
