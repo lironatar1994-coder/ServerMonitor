@@ -42,21 +42,6 @@ NGINX
 write_snippet "$VEE_SNIPPET" "https://vee-app.co.il/"
 write_snippet "$MIRYAM_SNIPPET" "https://miryamzelig.co.il/"
 
-cat >> "$VEE_SNIPPET" <<NGINX
-location = /pixel-dungeon/.well-known/vee-visitor-signal {
-    limit_except POST { deny all; }
-    client_max_body_size 4k;
-    proxy_pass $MONITOR_UPSTREAM;
-    proxy_http_version 1.1;
-    proxy_set_header Content-Type application/json;
-    proxy_set_header X-Visitor-Signal-Key "$SIGNAL_KEY";
-    proxy_set_header X-Visitor-Site-Url "https://vee-app.co.il/pixel-dungeon/";
-    proxy_set_header X-Visitor-IP \$remote_addr;
-    proxy_set_header X-Visitor-User-Agent \$http_user_agent;
-}
-NGINX
-chmod 600 "$VEE_SNIPPET"
-
 timestamp="$(date +%Y%m%d-%H%M%S)"
 for conf in "$VEE_CONF" "$MIRYAM_CONF"; do
   if [ ! -f "$conf" ]; then

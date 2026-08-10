@@ -24,6 +24,7 @@
 - Keep public API paths compatible with the deployed `/serve-monitor/api/...` prefix unless deployment config changes with it.
 - Keep schema migrations idempotent and safe against existing production databases.
 - Treat the production app catalog in `database.js` as declarative configuration: update matching named records without deleting user-created records, and reset visitor ingestion only when a catalog app's log ownership/filter changes.
+- Keep `Pixel Dungeon` in the explicit retired-app purge list so legacy metrics, visitor events, browser signals, ingestion state, and catalog rows cannot reappear after a restart.
 - Do not hard-code local-only paths into server monitoring logic unless they are explicitly production paths.
 - Avoid logging secrets or authentication tokens.
 - For web apps, `metrics.visitors` and `metrics.requests` are candidate traffic that was not identified as bot traffic. Never describe this heuristic remainder as confirmed human activity; bot-looking traffic remains visible as `agent: "Bot"`.

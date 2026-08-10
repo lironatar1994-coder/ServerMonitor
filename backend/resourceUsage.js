@@ -13,7 +13,6 @@ const PROJECTS = [
     { id: 'text-to-pdf', name: 'Text to PDF', path: '/root/TextToPDF', dependencies: ['/root/TextToPDF/node_modules'] },
     { id: 'sos', name: 'SOS Landing', path: '/root/sos-landing-standalone', dependencies: ['/root/sos-landing-standalone/node_modules'] },
     { id: 'server-monitor', name: 'Server Monitor', path: '/root/ServerMonitor', dependencies: ['/root/ServerMonitor/backend/node_modules', '/root/ServerMonitor/frontend/node_modules'] },
-    { id: 'pixel-dungeon', name: 'Pixel Dungeon', path: '/root/PixelDungeon', dependencies: ['/root/PixelDungeon/node_modules'] },
     { id: 'manager-site', name: 'Manager Site', path: '/root/Manager_Site', dependencies: ['/root/Manager_Site/node_modules'] },
     { id: 'dfus-reuven-preview', name: 'Dfus Reuven Preview', path: '/root/DfusReuven', dependencies: ['/root/DfusReuven/node_modules'] },
     { id: 'dfus-reuven-live', name: 'Dfus Reuven', path: '/root/DfusReuven-live', dependencies: ['/root/DfusReuven-live/node_modules'] },

@@ -263,7 +263,6 @@ const productionApps = [
     { name: 'WhatsApp Worker', pm2_name: 'vee-whatsapp-worker', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'SSH Security', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'PDF Generator', url: 'https://vee-app.co.il/text-to-pdf', pm2_name: 'text-to-pdf', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/text-to-pdf', health_url: 'http://127.0.0.1:3002/text-to-pdf', analytics_enabled: 1, reporting_enabled: 0 },
-    { name: 'Pixel Dungeon', url: 'https://vee-app.co.il/pixel-dungeon/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/pixel-dungeon', health_url: 'https://vee-app.co.il/pixel-dungeon/', analytics_enabled: 1, reporting_enabled: 0 },
     { name: 'SOS Landing', url: 'https://sosbaderech.co.il/', pm2_name: 'sos-landing-standalone', log_path: sharedNginxLog, log_host: 'sosbaderech.co.il|www.sosbaderech.co.il', health_url: 'http://127.0.0.1:3200/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Cleanup Summary', log_path: '/var/log/server_cleanup_summary.log', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Miryam Zelig', url: 'https://miryamzelig.co.il/', log_path: sharedNginxLog, log_host: 'miryamzelig.co.il|www.miryamzelig.co.il', health_url: 'https://miryamzelig.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
@@ -277,6 +276,25 @@ const productionApps = [
     { name: 'Miryam Zelig Preview', url: 'https://vee-app.co.il/Miryam_Zelig/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/miryamzelig2|/Miryam_Zelig|/miryam_zelig', health_url: 'https://vee-app.co.il/miryamzelig2/', analytics_enabled: 1, reporting_enabled: 0 },
     { name: 'Toren Hazak', url: 'https://63.250.61.126.sslip.io/', health_url: 'https://63.250.61.126.sslip.io/', analytics_enabled: 0, reporting_enabled: 0, alerts_enabled: 0 }
 ];
+
+const retiredProductionApps = ['Pixel Dungeon'];
+
+function purgeRetiredProductionApps() {
+    const findApps = db.prepare('SELECT id FROM apps WHERE name = ?');
+    const deleteMetrics = db.prepare('DELETE FROM metrics WHERE app_id = ?');
+    const deleteApp = db.prepare('DELETE FROM apps WHERE id = ?');
+
+    db.transaction(() => {
+        retiredProductionApps.forEach((name) => {
+            const retiredApps = findApps.all(name);
+            retiredApps.forEach(({ id }) => {
+                deleteMetrics.run(id);
+                deleteApp.run(id);
+            });
+            if (retiredApps.length) console.log(`Purged retired production app monitor: ${name}`);
+        });
+    })();
+}
 
 function syncProductionApps() {
     const fields = ['url', 'pm2_name', 'log_path', 'health_port', 'health_path', 'log_filter', 'log_host', 'log_exclude', 'health_url', 'analytics_enabled', 'reporting_enabled', 'alerts_enabled'];
@@ -316,6 +334,7 @@ function syncProductionApps() {
     })();
 }
 
+purgeRetiredProductionApps();
 syncProductionApps();
 
 module.exports = db;
