@@ -171,7 +171,7 @@ test('stores deduplicated first-party browser signals against an exact configure
 test('resolves every supported public site for first-party browser signals', () => {
     const canonicalSites = new Map([
         ['https://vee-app.co.il/', 'Vee Main App'],
-        ['https://vee-app.co.il/text-to-pdf', 'PDF Generator'],
+        ['https://vee-app.co.il/pdf-studio/', 'PDF Studio'],
         ['https://sosbaderech.co.il/', 'SOS Landing'],
         ['https://miryamzelig.co.il/', 'Miryam Zelig'],
         ['https://www.libidiamonds.co.il/', 'Libi Diamonds'],
@@ -179,6 +179,7 @@ test('resolves every supported public site for first-party browser signals', () 
         ['https://www.dfusreuven.co.il/', 'Dfus Reuven']
     ]);
     canonicalSites.forEach((name, url) => assert.equal(findSignalApp(url)?.name, name));
+    assert.equal(findSignalApp('https://vee-app.co.il/text-to-pdf'), null);
     assert.equal(findSignalApp('https://vee-app.co.il/pixel-dungeon/'), null);
 });
 

@@ -10,7 +10,7 @@ const PROJECTS = [
     { id: 'on-your-way', name: 'On Your Way', path: '/root/OnYourWay', dependencies: ['/root/OnYourWay/backend/node_modules', '/root/OnYourWay/frontend/node_modules', '/root/OnYourWay/admin/node_modules'] },
     { id: 'libi-live', name: 'Libi Diamonds', path: '/root/LibiDiamonds-live', dependencies: ['/root/LibiDiamonds-live/node_modules'] },
     { id: 'libi-rollback', name: 'Libi rollback', path: '/root/LibiDiamonds-live.rollback', type: 'rollback', dependencies: ['/root/LibiDiamonds-live.rollback/node_modules'] },
-    { id: 'text-to-pdf', name: 'Text to PDF', path: '/root/TextToPDF', dependencies: ['/root/TextToPDF/node_modules'] },
+    { id: 'pdf-studio', name: 'PDF Studio', path: '/root/PDFStudio', dependencies: ['/root/PDFStudio/node_modules'] },
     { id: 'sos', name: 'SOS Landing', path: '/root/sos-landing-standalone', dependencies: ['/root/sos-landing-standalone/node_modules'] },
     { id: 'server-monitor', name: 'Server Monitor', path: '/root/ServerMonitor', dependencies: ['/root/ServerMonitor/backend/node_modules', '/root/ServerMonitor/frontend/node_modules'] },
     { id: 'manager-site', name: 'Manager Site', path: '/root/Manager_Site', dependencies: ['/root/Manager_Site/node_modules'] },

@@ -253,7 +253,7 @@ try {
 
 const sharedNginxLog = '/var/log/nginx/monitor_host_access.log';
 const veeExcludedPaths = [
-    '/text-to-pdf', '/serve-monitor', '/pixel-dungeon', '/OnYourWay', '/onyourway',
+    '/text-to-pdf', '/pdf-studio', '/serve-monitor', '/pixel-dungeon', '/OnYourWay', '/onyourway',
     '/Manager_Site', '/manager_site', '/Miryam_Zelig', '/miryam_zelig', '/miryamzelig2',
     '/DfusReuven', '/dfusreuven', '/sos', '/LibiDiamonds2'
 ].join('|');
@@ -262,7 +262,7 @@ const productionApps = [
     { name: 'Vee Main App', url: 'https://vee-app.co.il/', pm2_name: 'vee-app', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_exclude: veeExcludedPaths, health_url: 'http://127.0.0.1:3001/api/health', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'WhatsApp Worker', pm2_name: 'vee-whatsapp-worker', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'SSH Security', analytics_enabled: 0, reporting_enabled: 0 },
-    { name: 'PDF Generator', url: 'https://vee-app.co.il/text-to-pdf', pm2_name: 'text-to-pdf', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/text-to-pdf', health_url: 'http://127.0.0.1:3002/text-to-pdf', analytics_enabled: 1, reporting_enabled: 0 },
+    { name: 'PDF Studio', url: 'https://vee-app.co.il/pdf-studio/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/pdf-studio', health_url: 'https://vee-app.co.il/pdf-studio/', analytics_enabled: 1, reporting_enabled: 0 },
     { name: 'SOS Landing', url: 'https://sosbaderech.co.il/', pm2_name: 'sos-landing-standalone', log_path: sharedNginxLog, log_host: 'sosbaderech.co.il|www.sosbaderech.co.il', health_url: 'http://127.0.0.1:3200/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Cleanup Summary', log_path: '/var/log/server_cleanup_summary.log', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Miryam Zelig', url: 'https://miryamzelig.co.il/', log_path: sharedNginxLog, log_host: 'miryamzelig.co.il|www.miryamzelig.co.il', health_url: 'https://miryamzelig.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
@@ -277,7 +277,7 @@ const productionApps = [
     { name: 'Toren Hazak', url: 'https://63.250.61.126.sslip.io/', health_url: 'https://63.250.61.126.sslip.io/', analytics_enabled: 0, reporting_enabled: 0, alerts_enabled: 0 }
 ];
 
-const retiredProductionApps = ['Pixel Dungeon'];
+const retiredProductionApps = ['Pixel Dungeon', 'PDF Generator'];
 
 function purgeRetiredProductionApps() {
     const findApps = db.prepare('SELECT id FROM apps WHERE name = ?');
