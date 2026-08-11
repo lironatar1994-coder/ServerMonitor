@@ -92,6 +92,35 @@ db.exec(`
         UNIQUE (app_id, event_id)
     );
 
+    CREATE TABLE IF NOT EXISTS engagement_signals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        app_id INTEGER NOT NULL,
+        event_id TEXT NOT NULL,
+        occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        session_hash TEXT NOT NULL,
+        path TEXT NOT NULL,
+        scroll_depth INTEGER NOT NULL,
+        dwell_ms INTEGER DEFAULT 0,
+        viewport_width INTEGER,
+        automation_hint INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (app_id) REFERENCES apps (id) ON DELETE CASCADE,
+        UNIQUE (app_id, event_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS engagement_zones (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        app_id INTEGER NOT NULL,
+        event_id TEXT NOT NULL,
+        occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        path TEXT NOT NULL,
+        zone TEXT NOT NULL,
+        taps INTEGER NOT NULL DEFAULT 1,
+        automation_hint INTEGER DEFAULT 0,
+        FOREIGN KEY (app_id) REFERENCES apps (id) ON DELETE CASCADE,
+        UNIQUE (app_id, event_id, zone)
+    );
+
     CREATE TABLE IF NOT EXISTS visitor_ingestion_state (
         app_id INTEGER PRIMARY KEY,
         log_path TEXT NOT NULL,
@@ -131,6 +160,10 @@ db.exec(`
         ON browser_signals (app_id, occurred_at DESC);
     CREATE INDEX IF NOT EXISTS idx_browser_signals_app_visitor_time
         ON browser_signals (app_id, visitor_hash, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_engagement_signals_app_time
+        ON engagement_signals (app_id, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_engagement_zones_app_time
+        ON engagement_zones (app_id, occurred_at DESC);
     CREATE INDEX IF NOT EXISTS idx_metrics_timestamp
         ON metrics (timestamp);
 `);
@@ -221,6 +254,10 @@ db.exec(`
         ON browser_signals (app_id, occurred_at DESC);
     CREATE INDEX IF NOT EXISTS idx_browser_signals_app_visitor_time
         ON browser_signals (app_id, visitor_hash, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_engagement_signals_app_time
+        ON engagement_signals (app_id, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_engagement_zones_app_time
+        ON engagement_zones (app_id, occurred_at DESC);
 `);
 
 try {

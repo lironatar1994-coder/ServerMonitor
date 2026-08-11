@@ -1,5 +1,5 @@
 const express = require('express');
-const { isAuthorizedSignal, recordBrowserSignal } = require('../browserSignals');
+const { isAuthorizedSignal, recordBrowserSignal, recordEngagementSignal } = require('../browserSignals');
 
 const router = express.Router();
 
@@ -8,7 +8,9 @@ function collectSignal(req, res, fixedSiteUrl = null) {
         return res.status(401).json({ error: 'Unauthorized browser signal integration' });
     }
     try {
-        const result = recordBrowserSignal({
+        // The Nginx bridge exposes one path, so the payload selects the signal kind.
+        const record = req.body?.kind === 'engagement' ? recordEngagementSignal : recordBrowserSignal;
+        const result = record({
             body: req.body,
             ip: req.get('x-visitor-ip'),
             userAgent: req.get('x-visitor-user-agent'),

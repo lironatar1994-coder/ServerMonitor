@@ -13,6 +13,7 @@ managerSiteRouter.use(authenticateManagerSite);
 managerSiteRouter.get('/site', handleManagerSiteAnalytics);
 managerSiteRouter.get('/site/visitors', handleManagerSiteVisitors);
 managerSiteRouter.get('/site/timeline', handleManagerSiteTimeline);
+managerSiteRouter.get('/site/engagement', handleManagerSiteEngagement);
 router.use('/manager-site', managerSiteRouter);
 router.use(authenticateToken);
 
@@ -420,6 +421,84 @@ function handleManagerSiteTimeline(req, res) {
     } catch (error) {
         respondError(res, error);
     }
+}
+
+function handleManagerSiteEngagement(req, res) {
+    try {
+        const app = getManagerSiteApp(req.query.site_url);
+        res.json(getEngagement(app, parseRange(req.query)));
+    } catch (error) {
+        respondError(res, error);
+    }
+}
+
+/* Scroll reach and tapped zones from the first-party engagement beacon.
+   Automation-hinted rows are excluded, matching browser-signal reporting. */
+function getEngagement(app, range) {
+    const params = [app.id, range.from, range.to];
+    const totals = db.prepare(`
+        SELECT
+            COUNT(*) AS sessions,
+            AVG(scroll_depth) AS average_scroll_depth,
+            SUM(CASE WHEN scroll_depth >= 25 THEN 1 ELSE 0 END) AS reached_25,
+            SUM(CASE WHEN scroll_depth >= 50 THEN 1 ELSE 0 END) AS reached_50,
+            SUM(CASE WHEN scroll_depth >= 75 THEN 1 ELSE 0 END) AS reached_75,
+            SUM(CASE WHEN scroll_depth >= 90 THEN 1 ELSE 0 END) AS reached_end,
+            AVG(dwell_ms) AS average_dwell_ms
+        FROM engagement_signals
+        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0
+    `).get(...params);
+
+    const sessions = Number(totals.sessions) || 0;
+    const share = (value) => (sessions ? Math.round((Number(value) || 0) / sessions * 100) : 0);
+
+    const exitBands = db.prepare(`
+        SELECT
+            CASE
+                WHEN scroll_depth < 25 THEN '0-25'
+                WHEN scroll_depth < 50 THEN '25-50'
+                WHEN scroll_depth < 75 THEN '50-75'
+                WHEN scroll_depth < 90 THEN '75-90'
+                ELSE '90-100'
+            END AS band,
+            COUNT(*) AS sessions
+        FROM engagement_signals
+        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0
+        GROUP BY band
+    `).all(...params);
+
+    const zones = db.prepare(`
+        SELECT zone, SUM(taps) AS taps, COUNT(DISTINCT event_id) AS sessions
+        FROM engagement_zones
+        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0
+        GROUP BY zone
+        ORDER BY taps DESC
+        LIMIT 20
+    `).all(...params);
+
+    return {
+        app: { id: app.id, name: app.name, url: app.url },
+        range,
+        engagement_sessions: sessions,
+        average_scroll_depth: Math.round(Number(totals.average_scroll_depth) || 0),
+        average_dwell_seconds: Math.round((Number(totals.average_dwell_ms) || 0) / 1000),
+        scroll_reach: {
+            reached_25: share(totals.reached_25),
+            reached_50: share(totals.reached_50),
+            reached_75: share(totals.reached_75),
+            reached_end: share(totals.reached_end)
+        },
+        exit_bands: exitBands.map((row) => ({
+            band: row.band,
+            sessions: Number(row.sessions) || 0,
+            share: share(row.sessions)
+        })),
+        zones: zones.map((row) => ({
+            zone: row.zone,
+            taps: Number(row.taps) || 0,
+            sessions: Number(row.sessions) || 0
+        }))
+    };
 }
 
 function respondError(res, error) {
