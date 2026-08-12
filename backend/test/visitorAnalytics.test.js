@@ -20,13 +20,29 @@ const {
     parseNginxAccessLine
 } = require('../logParser');
 const { ingestApp, purgeExpiredEvents, refreshStoredEventClassifications } = require('../visitorAnalytics');
-const { findSignalApp, isAuthorizedSignal, recordBrowserSignal } = require('../browserSignals');
+const {
+    findSignalApp,
+    isAuthorizedSignal,
+    recordBrowserSignal,
+    recordEngagementSignal,
+    recordProductEvent,
+    validateProductEventBody
+} = require('../browserSignals');
 const { getLibiJewelryInterest, humanizeSlug, inferCategory } = require('../jewelryAnalytics');
+const { getEngagement } = require('../routes/visitorAnalytics');
 
 const humanLine = '1.2.3.4 - - [12/Jul/2026:12:00:00 +0300] "GET /site/ HTTP/1.1" 200 120 "https://google.com" "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"';
 const botLine = '5.6.7.8 - - [12/Jul/2026:12:01:00 +0300] "GET /site/wp-login.php HTTP/1.1" 404 12 "-" "curl/8.1"';
 const secondHumanLine = '1.2.3.4 - - [12/Jul/2026:12:02:00 +0300] "GET /site/about HTTP/1.1" 200 100 "-" "Mozilla/5.0 (Windows NT 10.0)"';
 const hostAwareLine = '1.2.3.4 - - [12/Jul/2026:12:03:00 +0300] "GET / HTTP/1.1" 200 100 "-" "Mozilla/5.0 (Windows NT 10.0)" "sosbaderech.co.il"';
+
+function withRecentTimestamp(line, minutesAgo = 0) {
+    const date = new Date(Date.now() - minutesAgo * 60 * 1000);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const pad = (value) => String(value).padStart(2, '0');
+    const timestamp = `${pad(date.getUTCDate())}/${months[date.getUTCMonth()]}/${date.getUTCFullYear()}:${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())} +0000`;
+    return line.replace(/\[[^\]]+\]/, `[${timestamp}]`);
+}
 
 test.after(() => {
     db.close();
@@ -168,6 +184,75 @@ test('stores deduplicated first-party browser signals against an exact configure
     );
 });
 
+test('stores privacy-safe PDF Studio product, visibility, and heatmap events while filtering automation', () => {
+    const siteUrl = 'https://vee-app.co.il/pdf-studio/';
+    const common = {
+        visitor_id: 'visitor_product_1234567890',
+        session_id: 'session_product_1234567890',
+        path: '/pdf-studio/pdf-editor',
+        webdriver: false
+    };
+    assert.deepEqual(recordEngagementSignal({
+        body: {
+            ...common,
+            kind: 'engagement',
+            event_id: 'engagement_1234567890abc',
+            scroll_depth: 75,
+            dwell_ms: 45000,
+            viewport_width: 1440,
+            viewport_class: 'desktop',
+            zones: [{ zone: 'editor-save', taps: 2 }],
+            views: [{ zone: 'editor-canvas', views: 1, dwell_ms: 32000 }],
+            heatmap: [{ x: 8, y: 3, taps: 2 }]
+        },
+        ip: '1.2.3.4',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0)',
+        siteUrl
+    }), { accepted: true, duplicate: false, app: 'PDF Studio' });
+
+    recordProductEvent({
+        body: {
+            ...common,
+            kind: 'product',
+            event_id: 'product_1234567890abcdef',
+            event_type: 'editor_saved',
+            label: 'editor',
+            value: 2048
+        },
+        ip: '1.2.3.4',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0)',
+        siteUrl
+    });
+    recordProductEvent({
+        body: {
+            ...common,
+            event_id: 'product_bot_1234567890abc',
+            event_type: 'tool_opened',
+            label: 'merge'
+        },
+        ip: '5.6.7.8',
+        userAgent: 'curl/8.1',
+        siteUrl
+    });
+
+    const app = db.prepare('SELECT id FROM apps WHERE name = ?').get('PDF Studio');
+    assert.deepEqual(db.prepare('SELECT zone, taps FROM engagement_zones WHERE app_id = ?').get(app.id), { zone: 'editor-save', taps: 2 });
+    assert.deepEqual(db.prepare('SELECT zone, views, dwell_ms FROM engagement_zone_views WHERE app_id = ?').get(app.id), { zone: 'editor-canvas', views: 1, dwell_ms: 32000 });
+    assert.deepEqual(db.prepare('SELECT viewport_class, cell_x, cell_y, taps FROM engagement_heatmap_cells WHERE app_id = ?').get(app.id), { viewport_class: 'desktop', cell_x: 8, cell_y: 3, taps: 2 });
+    assert.deepEqual(db.prepare('SELECT event_type, label, value, automation_hint FROM product_events WHERE event_id = ?').get('product_1234567890abcdef'), { event_type: 'editor_saved', label: 'editor', value: 2048, automation_hint: 0 });
+    assert.equal(db.prepare('SELECT automation_hint FROM product_events WHERE event_id = ?').get('product_bot_1234567890abc').automation_hint, 1);
+    assert.throws(() => validateProductEventBody({ ...common, event_id: 'invalid_product_123456789', event_type: 'document_content', label: 'private.pdf' }), /Invalid product event/);
+
+    const analytics = getEngagement(
+        { id: app.id, name: 'PDF Studio', url: siteUrl },
+        { from: new Date(Date.now() - 60000).toISOString(), to: new Date(Date.now() + 60000).toISOString() }
+    );
+    assert.equal(analytics.product.summary.saves, 1);
+    assert.equal(analytics.product.summary.automated_events, 1);
+    assert.equal(analytics.heatmaps[0].cells[0].taps, 2);
+    assert.equal(analytics.viewed_zones[0].zone, 'editor-canvas');
+});
+
 test('resolves every supported public site for first-party browser signals', () => {
     const canonicalSites = new Map([
         ['https://vee-app.co.il/', 'Vee Main App'],
@@ -196,7 +281,7 @@ test('separates page views from assets, API calls, errors, and non-navigation me
 
 test('backfills, classifies, deduplicates, and incrementally ingests', () => {
     const logPath = path.join(tempDir, 'access.log');
-    fs.writeFileSync(logPath, `${humanLine}\n${botLine}\n`, 'utf8');
+    fs.writeFileSync(logPath, `${withRecentTimestamp(humanLine, 3)}\n${withRecentTimestamp(botLine, 2)}\n`, 'utf8');
     const appId = db.prepare('INSERT INTO apps (name, log_path, log_filter) VALUES (?, ?, ?)')
         .run('Test Site', logPath, '/site/').lastInsertRowid;
     const app = db.prepare('SELECT * FROM apps WHERE id = ?').get(appId);
@@ -207,7 +292,7 @@ test('backfills, classifies, deduplicates, and incrementally ingests', () => {
         { is_bot: 0, count: 1 }, { is_bot: 1, count: 1 }
     ]);
 
-    fs.appendFileSync(logPath, `${secondHumanLine}\n`, 'utf8');
+    fs.appendFileSync(logPath, `${withRecentTimestamp(secondHumanLine, 1)}\n`, 'utf8');
     assert.equal(ingestApp(app), 1);
     assert.equal(db.prepare('SELECT COUNT(*) AS count FROM visitor_events WHERE app_id = ?').get(appId).count, 3);
 });

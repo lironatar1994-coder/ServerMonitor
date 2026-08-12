@@ -438,7 +438,8 @@ function getEngagement(app, range) {
     const params = [app.id, range.from, range.to];
     const totals = db.prepare(`
         SELECT
-            COUNT(*) AS sessions,
+            COUNT(*) AS samples,
+            COUNT(DISTINCT session_hash) AS sessions,
             AVG(scroll_depth) AS average_scroll_depth,
             SUM(CASE WHEN scroll_depth >= 25 THEN 1 ELSE 0 END) AS reached_25,
             SUM(CASE WHEN scroll_depth >= 50 THEN 1 ELSE 0 END) AS reached_50,
@@ -449,8 +450,14 @@ function getEngagement(app, range) {
         WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0
     `).get(...params);
 
+    const automatedSamples = db.prepare(`
+        SELECT COUNT(*) AS count
+        FROM engagement_signals
+        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 1
+    `).get(...params).count || 0;
+    const samples = Number(totals.samples) || 0;
     const sessions = Number(totals.sessions) || 0;
-    const share = (value) => (sessions ? Math.round((Number(value) || 0) / sessions * 100) : 0);
+    const share = (value) => (samples ? Math.round((Number(value) || 0) / samples * 100) : 0);
 
     const exitBands = db.prepare(`
         SELECT
@@ -476,10 +483,96 @@ function getEngagement(app, range) {
         LIMIT 20
     `).all(...params);
 
+    const viewedZones = db.prepare(`
+        SELECT zone, SUM(views) AS views, COUNT(DISTINCT event_id) AS samples,
+               AVG(dwell_ms) AS average_dwell_ms
+        FROM engagement_zone_views
+        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0
+        GROUP BY zone
+        ORDER BY samples DESC, average_dwell_ms DESC
+        LIMIT 20
+    `).all(...params);
+
+    const heatmapPages = db.prepare(`
+        SELECT path, viewport_class, SUM(taps) AS taps, COUNT(DISTINCT event_id) AS samples
+        FROM engagement_heatmap_cells
+        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0
+        GROUP BY path, viewport_class
+        ORDER BY taps DESC
+        LIMIT 12
+    `).all(...params);
+    const heatmaps = heatmapPages.map((page) => ({
+        path: page.path,
+        viewport_class: page.viewport_class,
+        taps: Number(page.taps) || 0,
+        samples: Number(page.samples) || 0,
+        cells: db.prepare(`
+            SELECT cell_x AS x, cell_y AS y, SUM(taps) AS taps
+            FROM engagement_heatmap_cells
+            WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ?
+              AND automation_hint = 0 AND path = ? AND viewport_class = ?
+            GROUP BY cell_x, cell_y
+            ORDER BY taps DESC
+        `).all(...params, page.path, page.viewport_class).map((cell) => ({
+            x: Number(cell.x),
+            y: Number(cell.y),
+            taps: Number(cell.taps) || 0
+        }))
+    }));
+
+    const productTotals = db.prepare(`
+        SELECT
+            COUNT(DISTINCT session_hash) AS sessions,
+            SUM(CASE WHEN event_type = 'tool_opened' THEN 1 ELSE 0 END) AS tool_opens,
+            SUM(CASE WHEN event_type = 'file_opened' THEN 1 ELSE 0 END) AS files_opened,
+            SUM(CASE WHEN event_type = 'tool_completed' THEN 1 ELSE 0 END) AS tool_completions,
+            SUM(CASE WHEN event_type = 'file_downloaded' THEN 1 ELSE 0 END) AS downloads,
+            SUM(CASE WHEN event_type = 'editor_saved' THEN 1 ELSE 0 END) AS saves,
+            SUM(CASE WHEN event_type = 'operation_failed' THEN 1 ELSE 0 END) AS failures,
+            SUM(CASE WHEN event_type = 'file_downloaded' THEN COALESCE(value, 0) ELSE 0 END) AS downloaded_bytes
+        FROM product_events
+        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0
+    `).get(...params);
+    const automatedEvents = db.prepare(`
+        SELECT COUNT(*) AS count
+        FROM product_events
+        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 1
+    `).get(...params).count || 0;
+
+    const tools = db.prepare(`
+        SELECT label,
+            COUNT(DISTINCT CASE WHEN event_type = 'tool_opened' THEN session_hash END) AS sessions,
+            SUM(CASE WHEN event_type = 'tool_opened' THEN 1 ELSE 0 END) AS opens,
+            SUM(CASE WHEN event_type = 'tool_completed' THEN 1 ELSE 0 END) AS completions,
+            SUM(CASE WHEN event_type = 'file_downloaded' THEN 1 ELSE 0 END) AS downloads,
+            SUM(CASE WHEN event_type = 'editor_saved' THEN 1 ELSE 0 END) AS saves,
+            SUM(CASE WHEN event_type = 'operation_failed' THEN 1 ELSE 0 END) AS failures
+        FROM product_events
+        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0
+        GROUP BY label
+        HAVING opens > 0 OR completions > 0 OR downloads > 0 OR saves > 0 OR failures > 0
+        ORDER BY completions DESC, opens DESC
+        LIMIT 24
+    `).all(...params);
+
+    const productSummary = {
+        sessions: Number(productTotals.sessions) || 0,
+        tool_opens: Number(productTotals.tool_opens) || 0,
+        files_opened: Number(productTotals.files_opened) || 0,
+        tool_completions: Number(productTotals.tool_completions) || 0,
+        downloads: Number(productTotals.downloads) || 0,
+        saves: Number(productTotals.saves) || 0,
+        failures: Number(productTotals.failures) || 0,
+        downloaded_bytes: Number(productTotals.downloaded_bytes) || 0,
+        automated_events: Number(automatedEvents) || 0
+    };
+
     return {
         app: { id: app.id, name: app.name, url: app.url },
         range,
         engagement_sessions: sessions,
+        engagement_samples: samples,
+        automated_engagement_samples: Number(automatedSamples) || 0,
         average_scroll_depth: Math.round(Number(totals.average_scroll_depth) || 0),
         average_dwell_seconds: Math.round((Number(totals.average_dwell_ms) || 0) / 1000),
         scroll_reach: {
@@ -497,7 +590,26 @@ function getEngagement(app, range) {
             zone: row.zone,
             taps: Number(row.taps) || 0,
             sessions: Number(row.sessions) || 0
-        }))
+        })),
+        viewed_zones: viewedZones.map((row) => ({
+            zone: row.zone,
+            views: Number(row.views) || 0,
+            samples: Number(row.samples) || 0,
+            average_dwell_seconds: Math.round((Number(row.average_dwell_ms) || 0) / 1000)
+        })),
+        heatmaps,
+        product: {
+            summary: productSummary,
+            tools: tools.map((row) => ({
+                label: row.label,
+                sessions: Number(row.sessions) || 0,
+                opens: Number(row.opens) || 0,
+                completions: Number(row.completions) || 0,
+                downloads: Number(row.downloads) || 0,
+                saves: Number(row.saves) || 0,
+                failures: Number(row.failures) || 0
+            }))
+        }
     };
 }
 
@@ -540,6 +652,15 @@ router.get('/apps/:id', (req, res) => {
     }
 });
 
+router.get('/apps/:id/engagement', (req, res) => {
+    try {
+        const app = assertApp(req.params.id);
+        res.json(getEngagement(app, parseRange(req.query)));
+    } catch (error) {
+        respondError(res, error);
+    }
+});
+
 router.get('/apps/:id/visitors', (req, res) => {
     try {
         const app = assertApp(req.params.id);
@@ -561,3 +682,4 @@ router.get('/apps/:id/timeline', (req, res) => {
 });
 
 module.exports = router;
+module.exports.getEngagement = getEngagement;

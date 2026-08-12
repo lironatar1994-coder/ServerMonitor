@@ -3,6 +3,7 @@ const fs = require('fs');
 const net = require('net');
 const db = require('./database');
 const { findAppForSiteUrl } = require('./siteIdentity');
+const { getBotClassification } = require('./logParser');
 
 const DEFAULT_KEY_PATH = '/root/.visitor-signal-key';
 const ID_PATTERN = /^[A-Za-z0-9_-]{16,96}$/;
@@ -64,6 +65,19 @@ function validateSignalBody(body) {
 
 const ZONE_PATTERN = /^[A-Za-z0-9_.:\-֐-׿ ]{1,64}$/;
 const MAX_ZONES_PER_EVENT = 30;
+const MAX_VIEWS_PER_EVENT = 24;
+const MAX_HEATMAP_CELLS_PER_EVENT = 60;
+const PRODUCT_EVENT_TYPES = new Set([
+    'editor_saved',
+    'file_downloaded',
+    'file_opened',
+    'operation_failed',
+    'session_restored',
+    'tool_completed',
+    'tool_opened'
+]);
+const PRODUCT_LABEL_PATTERN = /^[a-z0-9][a-z0-9-]{0,47}$/;
+const VIEWPORT_CLASSES = new Set(['mobile', 'tablet', 'desktop']);
 
 function clampInteger(value, min, max) {
     const number = Number(value);
@@ -89,25 +103,84 @@ function validateEngagementBody(body) {
         zones.push({ zone, taps });
         if (zones.length >= MAX_ZONES_PER_EVENT) break;
     }
+    const views = [];
+    const seenViews = new Set();
+    for (const entry of Array.isArray(body?.views) ? body.views : []) {
+        const zone = String(entry?.zone || '').trim().slice(0, 64);
+        const count = clampInteger(entry?.views, 1, 100);
+        const dwellMs = clampInteger(entry?.dwell_ms, 0, 86400000);
+        if (!zone || !ZONE_PATTERN.test(zone) || count === null || dwellMs === null || seenViews.has(zone)) continue;
+        seenViews.add(zone);
+        views.push({ zone, views: count, dwellMs });
+        if (views.length >= MAX_VIEWS_PER_EVENT) break;
+    }
+    const heatmap = [];
+    const seenCells = new Set();
+    for (const entry of Array.isArray(body?.heatmap) ? body.heatmap : []) {
+        const x = clampInteger(entry?.x, 0, 11);
+        const y = clampInteger(entry?.y, 0, 11);
+        const taps = clampInteger(entry?.taps, 1, 500);
+        const cellKey = `${x}:${y}`;
+        if (x === null || y === null || taps === null || seenCells.has(cellKey)) continue;
+        seenCells.add(cellKey);
+        heatmap.push({ x, y, taps });
+        if (heatmap.length >= MAX_HEATMAP_CELLS_PER_EVENT) break;
+    }
     return {
         ...base,
         scrollDepth,
         zones,
+        views,
+        heatmap,
         dwellMs: clampInteger(body?.dwell_ms, 0, 86400000) ?? 0,
-        viewportWidth: clampInteger(body?.viewport_width, 0, 10000)
+        viewportWidth: clampInteger(body?.viewport_width, 0, 10000),
+        viewportClass: VIEWPORT_CLASSES.has(body?.viewport_class) ? body.viewport_class : 'desktop'
     };
+}
+
+function validateProductEventBody(body) {
+    const base = validateSignalBody(body);
+    const eventType = String(body?.event_type || '').trim();
+    const label = String(body?.label || '').trim().toLowerCase();
+    if (!PRODUCT_EVENT_TYPES.has(eventType) || !PRODUCT_LABEL_PATTERN.test(label)) {
+        const error = new Error('Invalid product event');
+        error.status = 400;
+        throw error;
+    }
+    const value = body?.value === undefined || body?.value === null
+        ? null
+        : clampInteger(body.value, 0, 1000000000);
+    if (body?.value !== undefined && body?.value !== null && value === null) {
+        const error = new Error('Invalid product event value');
+        error.status = 400;
+        throw error;
+    }
+    return { ...base, eventType, label, value };
+}
+
+function getAutomationHint({ body, ip, userAgent, path }) {
+    if (body?.webdriver === true) return 1;
+    const classification = getBotClassification({
+        ip,
+        userAgent: String(userAgent || ''),
+        path,
+        method: 'GET',
+        status: 200
+    });
+    return classification.classification === 'candidate' ? 0 : 1;
 }
 
 /* Engagement is a second, later beacon for the same page view. It must never
    create visitor or page-view rows, or one visit would be counted twice. */
-function recordEngagementSignal({ body, ip, siteUrl }) {
+function recordEngagementSignal({ body, ip, userAgent, siteUrl }) {
     const key = getSignalKey();
     if (!key) {
         const error = new Error('Browser signal integration is not configured');
         error.status = 503;
         throw error;
     }
-    if (!normalizeIp(ip)) {
+    const normalizedIp = normalizeIp(ip);
+    if (!normalizedIp) {
         const error = new Error('Invalid visitor address');
         error.status = 400;
         throw error;
@@ -119,7 +192,7 @@ function recordEngagementSignal({ body, ip, siteUrl }) {
         error.status = 400;
         throw error;
     }
-    const automationHint = body?.webdriver === true ? 1 : 0;
+    const automationHint = getAutomationHint({ body, ip: normalizedIp, userAgent, path: signal.path });
     const occurredAt = new Date().toISOString();
 
     const result = db.prepare(`
@@ -151,6 +224,74 @@ function recordEngagementSignal({ body, ip, siteUrl }) {
             }
         })(signal.zones);
     }
+
+    if (result.changes > 0 && signal.views.length) {
+        const insertView = db.prepare(`
+            INSERT OR IGNORE INTO engagement_zone_views (
+                app_id, event_id, occurred_at, path, zone, views, dwell_ms, automation_hint
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        db.transaction((rows) => {
+            for (const row of rows) {
+                insertView.run(app.id, signal.eventId, occurredAt, signal.path, row.zone, row.views, row.dwellMs, automationHint);
+            }
+        })(signal.views);
+    }
+
+    if (result.changes > 0 && signal.heatmap.length) {
+        const insertCell = db.prepare(`
+            INSERT OR IGNORE INTO engagement_heatmap_cells (
+                app_id, event_id, occurred_at, path, viewport_class, cell_x, cell_y, taps, automation_hint
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        db.transaction((rows) => {
+            for (const row of rows) {
+                insertCell.run(app.id, signal.eventId, occurredAt, signal.path, signal.viewportClass, row.x, row.y, row.taps, automationHint);
+            }
+        })(signal.heatmap);
+    }
+
+    return { accepted: true, duplicate: result.changes === 0, app: app.name };
+}
+
+function recordProductEvent({ body, ip, userAgent, siteUrl }) {
+    const key = getSignalKey();
+    if (!key) {
+        const error = new Error('Browser signal integration is not configured');
+        error.status = 503;
+        throw error;
+    }
+    const normalizedIp = normalizeIp(ip);
+    if (!normalizedIp) {
+        const error = new Error('Invalid visitor address');
+        error.status = 400;
+        throw error;
+    }
+    const signal = validateProductEventBody(body);
+    const app = findSignalApp(siteUrl);
+    if (!app) {
+        const error = new Error('Browser signal site is not configured');
+        error.status = 400;
+        throw error;
+    }
+    const automationHint = getAutomationHint({ body, ip: normalizedIp, userAgent, path: signal.path });
+    const result = db.prepare(`
+        INSERT OR IGNORE INTO product_events (
+            app_id, event_id, occurred_at, visitor_hash, session_hash, path,
+            event_type, label, value, automation_hint
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+        app.id,
+        signal.eventId,
+        new Date().toISOString(),
+        hashIdentifier(`${app.id}:${signal.visitorId}`, key),
+        hashIdentifier(`${app.id}:${signal.sessionId}`, key),
+        signal.path,
+        signal.eventType,
+        signal.label,
+        signal.value,
+        automationHint
+    );
 
     return { accepted: true, duplicate: result.changes === 0, app: app.name };
 }
@@ -185,6 +326,7 @@ function recordBrowserSignal({ body, ip, userAgent, siteUrl }) {
         throw error;
     }
 
+    const automationHint = getAutomationHint({ body, ip: normalizedIp, userAgent, path: signal.path });
     const result = db.prepare(`
         INSERT OR IGNORE INTO browser_signals (
             app_id, event_id, occurred_at, ip, visitor_hash, session_hash,
@@ -199,7 +341,7 @@ function recordBrowserSignal({ body, ip, userAgent, siteUrl }) {
         hashIdentifier(`${app.id}:${signal.sessionId}`, key),
         signal.path,
         String(userAgent || '').slice(0, 1024) || null,
-        body?.webdriver === true ? 1 : 0
+        automationHint
     );
 
     return { accepted: true, duplicate: result.changes === 0, app: app.name };
@@ -213,6 +355,8 @@ module.exports = {
     normalizePath,
     recordBrowserSignal,
     recordEngagementSignal,
+    recordProductEvent,
     validateSignalBody,
-    validateEngagementBody
+    validateEngagementBody,
+    validateProductEventBody
 };

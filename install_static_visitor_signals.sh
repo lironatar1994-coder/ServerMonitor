@@ -26,7 +26,7 @@ write_snippet() {
   cat > "$output" <<NGINX
 location = /.well-known/vee-visitor-signal {
     limit_except POST { deny all; }
-    client_max_body_size 4k;
+    client_max_body_size 16k;
     proxy_pass $MONITOR_UPSTREAM;
     proxy_http_version 1.1;
     proxy_set_header Content-Type application/json;
@@ -45,7 +45,7 @@ write_snippet "$MIRYAM_SNIPPET" "https://miryamzelig.co.il/"
 cat >> "$VEE_SNIPPET" <<NGINX
 location = /pdf-studio/.well-known/vee-visitor-signal {
     limit_except POST { deny all; }
-    client_max_body_size 4k;
+    client_max_body_size 16k;
     proxy_pass $MONITOR_UPSTREAM;
     proxy_http_version 1.1;
     proxy_set_header Content-Type application/json;

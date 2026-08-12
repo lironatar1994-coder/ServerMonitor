@@ -227,6 +227,11 @@ function purgeExpiredEvents() {
     const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
     const events = db.prepare('DELETE FROM visitor_events WHERE occurred_at < ?').run(cutoff).changes;
     db.prepare('DELETE FROM browser_signals WHERE occurred_at < ?').run(cutoff);
+    db.prepare('DELETE FROM engagement_signals WHERE occurred_at < ?').run(cutoff);
+    db.prepare('DELETE FROM engagement_zones WHERE occurred_at < ?').run(cutoff);
+    db.prepare('DELETE FROM engagement_zone_views WHERE occurred_at < ?').run(cutoff);
+    db.prepare('DELETE FROM engagement_heatmap_cells WHERE occurred_at < ?').run(cutoff);
+    db.prepare('DELETE FROM product_events WHERE occurred_at < ?').run(cutoff);
     return events;
 }
 

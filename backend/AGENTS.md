@@ -12,7 +12,7 @@
 - `monitor.js` owns background health, PM2, log, metric, and alert collection.
 - `logParser.js` owns host-aware Nginx access-log filtering, visitor parsing, and heuristic bot classification.
 - `visitorAnalytics.js` owns cursor-based access-log ingestion, initial bounded backfill, GeoIP enrichment, and raw-event retention.
-- `browserSignals.js` owns authenticated first-party browser-signal site matching, validation, identifier hashing, path/IP normalization, deduplication, and persistence.
+- `browserSignals.js` owns authenticated first-party browser-signal site matching, validation, identifier hashing, path/IP normalization, bot filtering, deduplication, and persistence for navigation, engagement, heatmap, and product-use events.
 - `jewelryAnalytics.js` owns canonical Libi product/collection path aggregation, catalog labels, category inference, and equal-period comparisons.
 - `resourceUsage.js` owns complete PM2 process-tree attribution and cached, bounded production-storage scans.
 - `emailReports.js` owns daily and weekly client comparison reports, Resend delivery, scheduling, and delivery deduplication.
@@ -43,6 +43,8 @@
 - Version bot and page-view rules through `monitor_metadata`, and reclassify stored events when the ruleset changes so historical dashboards and emails do not keep stale classifications.
 - Bot classification has three explicit outcomes: `bot`, `likely_bot`, and `candidate`. Only strong signatures or observed hosting-network fingerprints may become `likely_bot`; ordinary cloud/VPN use alone is insufficient.
 - `/browser-signals/site` accepts only the shared server-to-server key, an exact stored website URL, and trusted visitor metadata forwarded by a client-site server bridge. Keep `/browser-signals/libi` only as a temporary compatibility route during migration. Store only site-scoped HMAC hashes of anonymous browser/session IDs, deduplicate by event ID, retain signals for 90 days, and exclude `automation_hint` rows from browser-signal metrics.
+- PDF Studio product analytics may store only allow-listed event types and labels, coarse 12x12 viewport heat cells, named click/visibility zones, counts, durations, and byte totals. Never ingest file names, free text, or document contents; classify the forwarded IP/user agent at ingestion and keep automated rows excluded but auditable.
+- `/visitor-analytics/apps/:id/engagement` serves authenticated engagement, heatmap, and product-use aggregates. Keep per-tool opens, completions, downloads, saves, failures, exposure, and filtered automation totals distinct from candidate-IP traffic.
 - Browser-signal visitors, sessions, and navigations confirm first-party JavaScript execution, not a human or customer. Keep them separate from IP candidates in APIs, dashboards, and email reports.
 - `/apps/server-stats` reports Linux `MemAvailable`-based RAM use, swap details, root-filesystem usage, load, and top processes. Its `resources` payload attributes descendant RSS and `/proc` Swap to every running PM2 app, enriches database-mapped apps with display names, and ranks memory-heavy processes by their combined footprint.
 - Storage visibility must scan only the production paths declared in `resourceUsage.js`, run `du` without blocking the Node event loop and at idle I/O priority when available, avoid redundant whole-root scans, cache snapshots for 30 minutes, refresh stale data in the background, distinguish dependency, rollback, backup, log, and cache bytes, and return stale cached data when a refresh fails.

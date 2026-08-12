@@ -6,6 +6,7 @@ import { apiFetch, rangeQuery } from '../lib/api';
 import { useRange } from '../lib/useRange';
 import { DataState, Empty, Panel, PageHead, RangePicker, RankedList, Stat, StatRow, Tabs } from '../components/AnalyticsParts';
 import JewelryInterest from '../components/JewelryInterest';
+import ProductAnalytics from '../components/ProductAnalytics';
 import { formatDateTime, formatNumber } from '../lib/format';
 
 const CANDIDATE_HINT = 'מועמד = כתובת IP שלא זוהתה כבוט. הערכה מהלוגים, לא אימות של אדם.';
@@ -33,6 +34,7 @@ const VisitorDetail = () => {
   const { days, custom, setDays, setCustom, resolveRange } = useRange(7);
   const [data, setData] = useState(null);
   const [visitors, setVisitors] = useState({ visitors: [], total: 0, page: 1, limit: 25 });
+  const [engagement, setEngagement] = useState(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -45,7 +47,13 @@ const VisitorDetail = () => {
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      setData(await apiFetch(`/visitor-analytics/apps/${id}?${rangeQuery(resolveRange())}`));
+      const query = rangeQuery(resolveRange());
+      const [analytics, productEngagement] = await Promise.all([
+        apiFetch(`/visitor-analytics/apps/${id}?${query}`),
+        apiFetch(`/visitor-analytics/apps/${id}/engagement?${query}`).catch(() => null)
+      ]);
+      setData(analytics);
+      setEngagement(productEngagement);
       setError('');
     } catch (fetchError) {
       setError(fetchError.message);
@@ -142,6 +150,10 @@ const VisitorDetail = () => {
         </StatRow>
 
         <JewelryInterest interest={data?.jewelry_interest} siteUrl={data?.app?.url} />
+
+        {(data?.app?.name === 'PDF Studio' || engagement?.engagement_samples || engagement?.product?.summary?.sessions) && (
+          <ProductAnalytics engagement={engagement || {}} />
+        )}
 
         <div className="grid grid--2-1">
           <Panel title="תנועה לאורך זמן">

@@ -1,5 +1,15 @@
 const express = require('express');
-const { isAuthorizedSignal, recordBrowserSignal, recordEngagementSignal } = require('../browserSignals');
+const {
+    isAuthorizedSignal,
+    recordBrowserSignal,
+    recordEngagementSignal,
+    recordProductEvent
+} = require('../browserSignals');
+
+const SIGNAL_RECORDERS = {
+    engagement: recordEngagementSignal,
+    product: recordProductEvent
+};
 
 const router = express.Router();
 
@@ -9,7 +19,7 @@ function collectSignal(req, res, fixedSiteUrl = null) {
     }
     try {
         // The Nginx bridge exposes one path, so the payload selects the signal kind.
-        const record = req.body?.kind === 'engagement' ? recordEngagementSignal : recordBrowserSignal;
+        const record = SIGNAL_RECORDERS[req.body?.kind] || recordBrowserSignal;
         const result = record({
             body: req.body,
             ip: req.get('x-visitor-ip'),

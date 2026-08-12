@@ -10,6 +10,7 @@
 - `src/App.jsx` owns client routing and session-level app shell behavior.
 - `src/components/AppShell.jsx` owns the collapsible desktop rail, mobile header/bottom navigation, and visitor/infrastructure visual-mode boundary.
 - `src/components/AnalyticsParts.jsx` owns the shared UI kit every screen composes from: `PageHead`, `Stat`/`StatRow`, `Panel`, `Tabs`, `RangePicker`, `RankedList`, `Hint`, `Empty`, `DataState`.
+- `src/components/ProductAnalytics.jsx` owns PDF Studio usage totals, per-tool outcomes, coarse click heatmaps, named click/visibility zones, and scroll-reach presentation.
 - `src/lib/useRange.js` owns the analytics time range shared across screens.
 - `src/pages/` owns route-level screens.
 - `src/components/` owns reusable dashboard widgets and app templates.
@@ -27,6 +28,7 @@
 - `/infrastructure` must default to complete memory ownership by service, with in-panel toggles for project storage and raw process rankings. Show resident RAM and per-service Swap separately, and keep dependency, rollback, backup, and cache visibility concise.
 - Keep visible visitor terminology honest: unique candidates are distinct IPs not identified as bots in the selected range, active candidates are from the last five minutes, and IP-derived locations are approximate. Never label candidates as confirmed people or human traffic.
 - Present first-party browser signals separately from IP candidates. Label them as anonymous JavaScript execution signals and keep the caveat that they do not prove a person or customer.
+- Present PDF Studio product events as anonymous usage estimates: disclose bot filtering, keep file names/content absent, and label heatmaps as coarse viewport positions rather than recordings or proof of people.
 - Present successful page views as the primary activity metric. Do not label asset, script, font, API, or failed requests as visitor engagement.
 - The Libi Diamonds deep view must expose a dedicated storefront-interest section with product and category rankings (toggled within one panel), direct storefront links, candidate counts, page views, and the same classification caveat used elsewhere.
 - Service configuration supports full health-check URLs plus separate visitor-analytics and client-report toggles; operational services must not link into visitor analytics.

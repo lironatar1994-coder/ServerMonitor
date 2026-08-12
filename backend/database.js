@@ -121,6 +121,51 @@ db.exec(`
         UNIQUE (app_id, event_id, zone)
     );
 
+    CREATE TABLE IF NOT EXISTS engagement_zone_views (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        app_id INTEGER NOT NULL,
+        event_id TEXT NOT NULL,
+        occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        path TEXT NOT NULL,
+        zone TEXT NOT NULL,
+        views INTEGER NOT NULL DEFAULT 1,
+        dwell_ms INTEGER NOT NULL DEFAULT 0,
+        automation_hint INTEGER DEFAULT 0,
+        FOREIGN KEY (app_id) REFERENCES apps (id) ON DELETE CASCADE,
+        UNIQUE (app_id, event_id, zone)
+    );
+
+    CREATE TABLE IF NOT EXISTS engagement_heatmap_cells (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        app_id INTEGER NOT NULL,
+        event_id TEXT NOT NULL,
+        occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        path TEXT NOT NULL,
+        viewport_class TEXT NOT NULL,
+        cell_x INTEGER NOT NULL,
+        cell_y INTEGER NOT NULL,
+        taps INTEGER NOT NULL DEFAULT 1,
+        automation_hint INTEGER DEFAULT 0,
+        FOREIGN KEY (app_id) REFERENCES apps (id) ON DELETE CASCADE,
+        UNIQUE (app_id, event_id, viewport_class, cell_x, cell_y)
+    );
+
+    CREATE TABLE IF NOT EXISTS product_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        app_id INTEGER NOT NULL,
+        event_id TEXT NOT NULL,
+        occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        visitor_hash TEXT NOT NULL,
+        session_hash TEXT NOT NULL,
+        path TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        label TEXT NOT NULL,
+        value INTEGER,
+        automation_hint INTEGER DEFAULT 0,
+        FOREIGN KEY (app_id) REFERENCES apps (id) ON DELETE CASCADE,
+        UNIQUE (app_id, event_id)
+    );
+
     CREATE TABLE IF NOT EXISTS visitor_ingestion_state (
         app_id INTEGER PRIMARY KEY,
         log_path TEXT NOT NULL,
@@ -164,6 +209,14 @@ db.exec(`
         ON engagement_signals (app_id, occurred_at DESC);
     CREATE INDEX IF NOT EXISTS idx_engagement_zones_app_time
         ON engagement_zones (app_id, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_engagement_zone_views_app_time
+        ON engagement_zone_views (app_id, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_engagement_heatmap_app_time
+        ON engagement_heatmap_cells (app_id, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_product_events_app_time
+        ON product_events (app_id, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_product_events_app_type_time
+        ON product_events (app_id, event_type, occurred_at DESC);
     CREATE INDEX IF NOT EXISTS idx_metrics_timestamp
         ON metrics (timestamp);
 `);
@@ -258,6 +311,14 @@ db.exec(`
         ON engagement_signals (app_id, occurred_at DESC);
     CREATE INDEX IF NOT EXISTS idx_engagement_zones_app_time
         ON engagement_zones (app_id, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_engagement_zone_views_app_time
+        ON engagement_zone_views (app_id, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_engagement_heatmap_app_time
+        ON engagement_heatmap_cells (app_id, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_product_events_app_time
+        ON product_events (app_id, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_product_events_app_type_time
+        ON product_events (app_id, event_type, occurred_at DESC);
 `);
 
 try {

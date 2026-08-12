@@ -96,8 +96,11 @@ When the user requests a durable behavior change, record it here or in the relev
 - Keep the production app catalog synchronized from `backend/database.js`, including canonical and preview sites, PM2 services, health URLs, visitor-log ownership, and the intentionally visible failed Toren Hazak route until it is explicitly retired; show that known failure without sending hourly alerts.
 - Pixel Dungeon is fully retired from production. Keep its website, analytics records, static visitor bridge, storage ownership, and deployment artifacts absent unless the user explicitly requests a new deployment.
 - PDF Studio at `https://vee-app.co.il/pdf-studio/` replaces the retired `PDF Generator`/`text-to-pdf` runtime. Monitor PDF Studio as a static canonical application with exact `/pdf-studio` log ownership and a signed first-party browser signal; keep the legacy PM2 service and source checkout absent.
+- Measure PDF Studio product use through its first-party bridge: anonymous tool opens/completions, file opens, downloads, editor saves, failures, viewport heat cells, named click zones, visible-area dwell, scroll reach, and bot-filtered counts. Never transmit file names or document contents.
 - Measure every canonical client website with two separate signals where a trusted server bridge is installed: conservative host-aware log candidates and signed first-party browser signals. Hash anonymous browser/session identifiers per site at ingestion, exclude automation hints, and never present either signal as proof of a person or customer.
 - Share the browser-signal secret only through `/root/.visitor-signal-key` (or matching server-only environment variables); never expose it through browser code or public build-time values such as `NEXT_PUBLIC_*` or `VITE_*`.
+- Keep static visitor-signal bridges POST-only and cap request bodies at 16 KB so bounded engagement batches fit without opening a general upload surface.
+- After every successful change to a production-backed application, run the relevant verification and deploy it to production in the same task; do not leave verified application changes local unless the user explicitly asks not to deploy.
 
 ## Child DOX Index
 
