@@ -25,8 +25,9 @@ fi
 write_snippet() {
   local output="$1"
   local site_url="$2"
+  local location_path="${3:-/.well-known/vee-visitor-signal}"
   cat > "$output" <<NGINX
-location = /.well-known/vee-visitor-signal {
+location = $location_path {
     limit_except POST { deny all; }
     client_max_body_size 16k;
     proxy_pass $MONITOR_UPSTREAM;
@@ -43,7 +44,7 @@ NGINX
 
 write_snippet "$VEE_SNIPPET" "https://vee-app.co.il/"
 write_snippet "$MIRYAM_SNIPPET" "https://miryamzelig.co.il/"
-write_snippet "$SEDER_SNIPPET" "https://lawebs.co.il/seder"
+write_snippet "$SEDER_SNIPPET" "https://lawebs.co.il/seder" "/seder/.well-known/vee-visitor-signal"
 
 cat >> "$VEE_SNIPPET" <<NGINX
 location = /pdf-studio/.well-known/vee-visitor-signal {
