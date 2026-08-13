@@ -12,7 +12,7 @@ MIRYAM_SNIPPET="/etc/nginx/snippets/visitor-signal-miryam.conf"
 SEDER_SNIPPET="/etc/nginx/snippets/visitor-signal-seder.conf"
 
 if [ "$(id -u)" -ne 0 ]; then
-  echo "[ERROR] Static visitor-signal bridge installation requires root." >&2
+  echo "[ERROR] First-party visitor-signal bridge installation requires root." >&2
   exit 1
 fi
 

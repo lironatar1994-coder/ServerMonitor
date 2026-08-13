@@ -103,7 +103,7 @@ fi
 chmod 600 "$VISITOR_SIGNAL_KEY_FILE"
 
 if [ -f "$APP_ROOT/install_static_visitor_signals.sh" ]; then
-  echo "[INFO] Installing first-party signal bridges for canonical static sites..."
+  echo "[INFO] Installing first-party signal bridges for canonical sites..."
   VISITOR_SIGNAL_KEY_FILE="$VISITOR_SIGNAL_KEY_FILE" bash "$APP_ROOT/install_static_visitor_signals.sh"
 fi
 
