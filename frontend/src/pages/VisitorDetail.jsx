@@ -151,8 +151,8 @@ const VisitorDetail = () => {
 
         <JewelryInterest interest={data?.jewelry_interest} siteUrl={data?.app?.url} />
 
-        {(data?.app?.name === 'PDF Studio' || engagement?.engagement_samples || engagement?.product?.summary?.sessions) && (
-          <ProductAnalytics engagement={engagement || {}} />
+        {(data?.app?.name === 'PDF Studio' || data?.app?.name === 'Miryam Zelig' || data?.app?.name === 'Seder' || engagement?.engagement_samples || engagement?.product?.summary?.sessions) && (
+          <ProductAnalytics engagement={engagement || {}} mode={data?.app?.name === 'PDF Studio' ? 'product' : 'site'} />
         )}
 
         <div className="grid grid--2-1">

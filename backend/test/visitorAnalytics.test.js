@@ -114,6 +114,25 @@ test('seeds Libi Diamonds with dedicated production hosts and runtime', () => {
     ), false);
 });
 
+test('seeds Seder with exact host, path, runtime, and client reporting ownership', () => {
+    const app = db.prepare(`
+        SELECT name, url, pm2_name, log_path, log_host, log_filter,
+               health_url, analytics_enabled, reporting_enabled
+        FROM apps WHERE name = ?
+    `).get('Seder');
+    assert.deepEqual(app, {
+        name: 'Seder',
+        url: 'https://lawebs.co.il/seder',
+        pm2_name: 'seder-live',
+        log_path: '/var/log/nginx/monitor_host_access.log',
+        log_host: 'lawebs.co.il|www.lawebs.co.il',
+        log_filter: '/seder',
+        health_url: 'http://127.0.0.1:3107/seder',
+        analytics_enabled: 1,
+        reporting_enabled: 1
+    });
+});
+
 test('keeps the Manager Site Miryam URL mapped to the preview monitor', () => {
     const app = db.prepare('SELECT url, health_url, reporting_enabled FROM apps WHERE name = ?')
         .get('Miryam Zelig Preview');
@@ -260,6 +279,7 @@ test('resolves every supported public site for first-party browser signals', () 
         ['https://sosbaderech.co.il/', 'SOS Landing'],
         ['https://miryamzelig.co.il/', 'Miryam Zelig'],
         ['https://www.libidiamonds.co.il/', 'Libi Diamonds'],
+        ['https://lawebs.co.il/seder', 'Seder'],
         ['https://vee-app.co.il/OnYourWay', 'On Your Way'],
         ['https://www.dfusreuven.co.il/', 'Dfus Reuven']
     ]);

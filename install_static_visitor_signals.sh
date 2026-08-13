@@ -6,8 +6,10 @@ KEY_FILE="${VISITOR_SIGNAL_KEY_FILE:-/root/.visitor-signal-key}"
 MONITOR_UPSTREAM="${SERVER_MONITOR_SIGNAL_URL:-http://127.0.0.1:4010/serve-monitor/api/browser-signals/site}"
 VEE_CONF="/etc/nginx/sites-available/vee-app.co.il.conf"
 MIRYAM_CONF="/etc/nginx/sites-available/miryamzelig.co.il.conf"
+SEDER_CONF="/etc/nginx/sites-available/lawebs.co.il.conf"
 VEE_SNIPPET="/etc/nginx/snippets/visitor-signal-vee.conf"
 MIRYAM_SNIPPET="/etc/nginx/snippets/visitor-signal-miryam.conf"
+SEDER_SNIPPET="/etc/nginx/snippets/visitor-signal-seder.conf"
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "[ERROR] Static visitor-signal bridge installation requires root." >&2
@@ -41,6 +43,7 @@ NGINX
 
 write_snippet "$VEE_SNIPPET" "https://vee-app.co.il/"
 write_snippet "$MIRYAM_SNIPPET" "https://miryamzelig.co.il/"
+write_snippet "$SEDER_SNIPPET" "https://lawebs.co.il/seder"
 
 cat >> "$VEE_SNIPPET" <<NGINX
 location = /pdf-studio/.well-known/vee-visitor-signal {
@@ -54,11 +57,23 @@ location = /pdf-studio/.well-known/vee-visitor-signal {
     proxy_set_header X-Visitor-IP \$remote_addr;
     proxy_set_header X-Visitor-User-Agent \$http_user_agent;
 }
+
+location = /Miryam_Zelig/.well-known/vee-visitor-signal {
+    limit_except POST { deny all; }
+    client_max_body_size 16k;
+    proxy_pass $MONITOR_UPSTREAM;
+    proxy_http_version 1.1;
+    proxy_set_header Content-Type application/json;
+    proxy_set_header X-Visitor-Signal-Key "$SIGNAL_KEY";
+    proxy_set_header X-Visitor-Site-Url "https://vee-app.co.il/Miryam_Zelig/";
+    proxy_set_header X-Visitor-IP \$remote_addr;
+    proxy_set_header X-Visitor-User-Agent \$http_user_agent;
+}
 NGINX
 chmod 600 "$VEE_SNIPPET"
 
 timestamp="$(date +%Y%m%d-%H%M%S)"
-for conf in "$VEE_CONF" "$MIRYAM_CONF"; do
+for conf in "$VEE_CONF" "$MIRYAM_CONF" "$SEDER_CONF"; do
   if [ ! -f "$conf" ]; then
     echo "[ERROR] Required Nginx site config is missing: $conf" >&2
     exit 1
@@ -67,7 +82,8 @@ for conf in "$VEE_CONF" "$MIRYAM_CONF"; do
 done
 
 python3 - "$VEE_CONF" "$VEE_SNIPPET" "vee-app.co.il www.vee-app.co.il" \
-          "$MIRYAM_CONF" "$MIRYAM_SNIPPET" "miryamzelig.co.il www.miryamzelig.co.il" <<'PY'
+          "$MIRYAM_CONF" "$MIRYAM_SNIPPET" "miryamzelig.co.il www.miryamzelig.co.il" \
+          "$SEDER_CONF" "$SEDER_SNIPPET" "lawebs.co.il" <<'PY'
 from pathlib import Path
 import sys
 
@@ -88,10 +104,11 @@ PY
 if ! nginx -t; then
   cp "$VEE_CONF.visitor-signal-backup.$timestamp" "$VEE_CONF"
   cp "$MIRYAM_CONF.visitor-signal-backup.$timestamp" "$MIRYAM_CONF"
+  cp "$SEDER_CONF.visitor-signal-backup.$timestamp" "$SEDER_CONF"
   nginx -t
   echo "[ERROR] Restored Nginx configs after visitor-signal validation failed." >&2
   exit 1
 fi
 
 systemctl reload nginx
-echo "[INFO] Installed static first-party visitor-signal bridges for Vee and Miryam Zelig."
+echo "[INFO] Installed first-party visitor-signal bridges for Vee, Miryam Zelig, and Seder."

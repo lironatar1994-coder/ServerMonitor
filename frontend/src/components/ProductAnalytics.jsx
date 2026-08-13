@@ -52,7 +52,21 @@ const ZONE_LABELS = {
   'text-toolbar': 'סרגל טקסט ל-PDF',
   'text-settings': 'הגדרות המסמך',
   'text-editor': 'עורך הטקסט',
-  'text-preview': 'תצוגה מקדימה'
+  'text-preview': 'תצוגה מקדימה',
+  'site-header': 'כותרת וניווט עליון',
+  hero: 'פתיחת האתר',
+  'hero-whatsapp': 'וואטסאפ מהפתיחה',
+  gallery: 'גלריית עבודות',
+  'gallery-instagram': 'אינסטגרם מהגלריה',
+  'before-after': 'לפני ואחרי',
+  'mid-cta': 'הנעה לפעולה אחרי הגלריה',
+  'mid-whatsapp': 'וואטסאפ אחרי הגלריה',
+  services: 'שירותים',
+  about: 'אודות מרים',
+  faq: 'שאלות נפוצות',
+  contact: 'יצירת קשר',
+  'contact-whatsapp': 'וואטסאפ מיצירת קשר',
+  footer: 'תחתית האתר'
 };
 
 const VIEWPORT_LABELS = { mobile: 'נייד', tablet: 'טאבלט', desktop: 'מחשב' };
@@ -193,25 +207,38 @@ function ScrollReach({ engagement }) {
   );
 }
 
-export default function ProductAnalytics({ engagement }) {
+export default function ProductAnalytics({ engagement, mode = 'product' }) {
   const [zoneMode, setZoneMode] = useState('clicks');
   const summary = engagement?.product?.summary || {};
   const filtered = (Number(summary.automated_events) || 0) + (Number(engagement?.automated_engagement_samples) || 0);
   const hint = 'אירועי שימוש אנונימיים בלבד. אין שמות קבצים או תוכן מסמכים. אותות אוטומציה ובוטים מוכרים מסוננים מהמדדים.';
+  const isSite = mode === 'site';
+  const siteHint = 'אותות אנונימיים מהדפדפן, לא ספירת אנשים. אוטומציה ובוטים מוכרים מסוננים מהמדדים.';
 
   return (
-    <section className="product-analytics" aria-label="שימוש ב-PDF Studio">
-      <StatRow label="מדדי שימוש ב-PDF Studio">
-        <Stat label="כלים שנפתחו" value={summary.tool_opens} tone="forest" hint={hint} />
-        <Stat label="קבצים שנפתחו" value={summary.files_opened} />
-        <Stat label="פעולות שהושלמו" value={summary.tool_completions} tone="forest" />
-        <Stat label="הורדות" value={summary.downloads} foot={formatBytes(summary.downloaded_bytes)} />
-        <Stat label="שמירות בעורך" value={summary.saves} />
-        <Stat label="שגיאות" value={summary.failures} tone="vermilion" foot={`${formatNumber(filtered)} אירועי אוטומציה סוננו`} />
-      </StatRow>
+    <section className="product-analytics" aria-label={isSite ? 'מפת מעורבות באתר' : 'שימוש ב-PDF Studio'}>
+      {isSite && (
+        <StatRow label="מעורבות באתר">
+          <Stat label="סשנים עם מעורבות" value={engagement?.engagement_sessions} tone="forest" hint={siteHint} />
+          <Stat label="מדידות מסך" value={engagement?.engagement_samples} hint={siteHint} />
+          <Stat label="עומק ממוצע" value={`${formatNumber(engagement?.average_scroll_depth)}%`} />
+          <Stat label="זמן ממוצע" value={formatNumber(engagement?.average_dwell_seconds)} foot="שניות" />
+          <Stat label="אוטומציה שסוננה" value={filtered} tone="ochre" hint={siteHint} />
+        </StatRow>
+      )}
+      {!isSite && (
+        <StatRow label="מדדי שימוש ב-PDF Studio">
+          <Stat label="כלים שנפתחו" value={summary.tool_opens} tone="forest" hint={hint} />
+          <Stat label="קבצים שנפתחו" value={summary.files_opened} />
+          <Stat label="פעולות שהושלמו" value={summary.tool_completions} tone="forest" />
+          <Stat label="הורדות" value={summary.downloads} foot={formatBytes(summary.downloaded_bytes)} />
+          <Stat label="שמירות בעורך" value={summary.saves} />
+          <Stat label="שגיאות" value={summary.failures} tone="vermilion" foot={`${formatNumber(filtered)} אירועי אוטומציה סוננו`} />
+        </StatRow>
+      )}
 
       <div className="grid grid--1-1">
-        <Panel title="מפת לחיצות" hint="מיקום יחסי בתוך המסך, ללא צילום וללא תוכן מסמך.">
+        <Panel title="מפת לחיצות" hint={isSite ? 'מיקום יחסי וגס בתוך המסך. אין צילום מסך, הקלטה או תוכן אישי.' : 'מיקום יחסי בתוך המסך, ללא צילום וללא תוכן מסמך.'}>
           <HeatMap heatmaps={engagement?.heatmaps || []} />
         </Panel>
         <Panel title="אזורי עניין" action={<Tabs tabs={ZONE_TABS} value={zoneMode} onChange={setZoneMode} label="סוג מדידה" />}>
@@ -219,10 +246,12 @@ export default function ProductAnalytics({ engagement }) {
         </Panel>
       </div>
 
-      <div className="grid grid--2-1">
-        <Panel title="שימוש לפי כלי" hint="פתיחה היא בחירת כלי; השלמה נספרת כשהופק קובץ להורדה." bleed>
-          <ToolTable tools={engagement?.product?.tools || []} />
-        </Panel>
+      <div className={`grid ${isSite ? '' : 'grid--2-1'}`}>
+        {!isSite && (
+          <Panel title="שימוש לפי כלי" hint="פתיחה היא בחירת כלי; השלמה נספרת כשהופק קובץ להורדה." bleed>
+            <ToolTable tools={engagement?.product?.tools || []} />
+          </Panel>
+        )}
         <Panel title="עומק צפייה" hint="אחוז ממדידות המסך שהגיעו לכל עומק.">
           <ScrollReach engagement={engagement || {}} />
         </Panel>

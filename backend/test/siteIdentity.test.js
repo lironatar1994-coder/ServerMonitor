@@ -5,7 +5,8 @@ const { findAppForSiteUrl, normalizeWebsiteIdentity } = require('../siteIdentity
 const apps = [
     { id: 1, name: 'Vee', url: 'https://vee-app.co.il/' },
     { id: 8, name: 'Miryam Zelig', url: 'https://vee-app.co.il/Miryam_Zelig/' },
-    { id: 9, name: 'Libi Diamonds', url: 'https://www.libidiamonds.co.il/' }
+    { id: 9, name: 'Libi Diamonds', url: 'https://www.libidiamonds.co.il/' },
+    { id: 10, name: 'Seder', url: 'https://lawebs.co.il/seder' }
 ];
 
 test('normalizes protocol, www, path case, query strings, and trailing slashes', () => {
@@ -18,6 +19,7 @@ test('normalizes protocol, www, path case, query strings, and trailing slashes',
 test('maps a Manager Site URL to one exact monitored app', () => {
     assert.equal(findAppForSiteUrl(apps, 'https://vee-app.co.il/miryam_zelig').id, 8);
     assert.equal(findAppForSiteUrl(apps, 'https://libidiamonds.co.il').id, 9);
+    assert.equal(findAppForSiteUrl(apps, 'https://www.lawebs.co.il/seder/').id, 10);
 });
 
 test('does not fall back to a host-only match when the path identifies another app', () => {
