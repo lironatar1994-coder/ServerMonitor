@@ -1,6 +1,7 @@
 const { execFileSync } = require('child_process');
 const UNIT_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_.@-]*\.service$/;
 let cache = { key: '', time: 0, rows: [] };
+const cpuSamples = new Map();
 
 function parseSystemdSnapshot(output) {
     return String(output).trim().split(/\n\s*\n/).filter(Boolean).map((block) => {
@@ -10,7 +11,8 @@ function parseSystemdSnapshot(output) {
         }));
         return { name: fields.Id, systemd_unit: fields.Id, pid: Number(fields.MainPID) || 0,
             status: fields.LoadState === 'loaded' && fields.ActiveState === 'active' && Number(fields.MainPID) > 0 ? 'online' : 'offline',
-            memory: Number(fields.MemoryCurrent) || 0 };
+            memory: Number(fields.MemoryCurrent) || 0,
+            cpu_ns: /^\d+$/.test(fields.CPUUsageNSec || '') ? Number(fields.CPUUsageNSec) : null };
     }).filter((row) => UNIT_PATTERN.test(row.systemd_unit));
 }
 
@@ -22,11 +24,22 @@ function getSystemdSnapshot(apps, force = false) {
     let rows;
     try {
         rows = parseSystemdSnapshot(execFileSync('/usr/bin/systemctl', ['show', ...units,
-            '--property=Id,LoadState,ActiveState,MainPID,MemoryCurrent'], { encoding: 'utf8', timeout: 3000, maxBuffer: 128 * 1024 }));
+            '--property=Id,LoadState,ActiveState,MainPID,MemoryCurrent,CPUUsageNSec'], { encoding: 'utf8', timeout: 3000, maxBuffer: 128 * 1024 }));
     } catch {
         rows = units.map((unit) => ({ name: unit, systemd_unit: unit, pid: 0, status: 'unknown', memory: 0 }));
     }
-    cache = { key, time: Date.now(), rows };
+    const now = Date.now();
+    rows.forEach((row) => {
+        const previous = cpuSamples.get(row.systemd_unit);
+        row.cpu = row.status === 'offline' ? 0 : null;
+        if (row.cpu_ns != null) {
+            if (previous && now > previous.time && row.cpu_ns >= previous.value) {
+                row.cpu = ((row.cpu_ns - previous.value) / ((now - previous.time) * 1e6)) * 100;
+            }
+            cpuSamples.set(row.systemd_unit, { time: now, value: row.cpu_ns });
+        }
+    });
+    cache = { key, time: now, rows };
     return rows;
 }
 

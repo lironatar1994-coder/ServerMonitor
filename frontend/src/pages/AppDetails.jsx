@@ -81,7 +81,7 @@ const AppDetails = () => {
                   <Panel title="מצב השירות">
                     <dl className="spec-list">
                       <div><dt>סוג</dt><dd>{(app.pm2_name || app.systemd_unit) ? 'שירות מנוהל' : 'אתר סטטי'}</dd></div>
-                      <div><dt>CPU</dt><dd>{(app.cpu || 0).toFixed(1)}%</dd></div>
+                      <div><dt>CPU</dt><dd>{app.cpu == null ? '—' : `${app.cpu.toFixed(1)}%`}</dd></div>
                       <div><dt>זיכרון</dt><dd>{((app.memory || 0) / 1024 / 1024).toFixed(1)} MB</dd></div>
                       <div><dt>בדיקת תקינות</dt><dd dir={healthTarget ? 'ltr' : 'rtl'}>{healthTarget || 'ללא'}</dd></div>
                       <div><dt>דומיין לוג</dt><dd dir="ltr">{app.log_host || '—'}</dd></div>

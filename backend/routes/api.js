@@ -184,7 +184,7 @@ function enrichAppStatus(app) {
     if (app?.systemd_unit) {
         const unit = getSystemdSnapshot(db.prepare('SELECT systemd_unit FROM apps WHERE systemd_unit IS NOT NULL').all()).find((item) => item.systemd_unit === app.systemd_unit);
         const failedHealth = Boolean(app.health_url || app.health_port) && ['error', 'offline'].includes(app.status);
-        return { ...app, status: unit?.status === 'online' && failedHealth ? app.status : unit?.status || 'unknown', cpu: 0, memory: unit?.memory || 0 };
+        return { ...app, status: unit?.status === 'online' && failedHealth ? app.status : unit?.status || 'unknown', cpu: unit?.cpu ?? null, memory: unit?.memory || 0 };
     }
     if (!app?.pm2_name) {
         return { ...app, status: app.status || 'online', cpu: 0, memory: 0 };

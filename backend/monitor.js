@@ -145,6 +145,7 @@ async function runMonitorCycle() {
                 const unit = units.find((item) => item.systemd_unit === app.systemd_unit);
                 status = unit?.status || 'unknown';
                 appMemory = unit?.memory || 0;
+                appCpu = unit?.cpu || 0;
             }
 
             const healthUrl = app.health_url || (app.health_port
