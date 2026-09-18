@@ -291,11 +291,60 @@ function refreshStoredEventClassifications() {
     return { scanned: rows.length, updated };
 }
 
+
+// Complete only the history before the earliest already stored request. This
+// avoids counting requests twice when a former live log has since been gzipped.
+function backfillArchivedLogs(app) {
+    const crypto = require('crypto');
+    const zlib = require('zlib');
+    const signature = crypto.createHash('sha256').update(JSON.stringify([app.log_path, app.log_host, app.log_filter, app.log_exclude])).digest('hex').slice(0, 16);
+    const key = `archive-backfill-v1:${app.id}:${signature}`;
+    if (db.prepare('SELECT value FROM monitor_metadata WHERE key = ?').get(key)) return 0;
+    const earliest = db.prepare('SELECT MIN(occurred_at) AS first FROM visitor_events WHERE app_id = ?').get(app.id)?.first;
+    const upper = earliest ? Date.parse(earliest) : Date.now();
+    const cutoff = Date.now() - BACKFILL_DAYS * 86400000;
+    const directory = path.dirname(app.log_path);
+    const basename = path.basename(app.log_path);
+    const files = fs.readdirSync(directory).filter((name) => name.startsWith(basename + '.') && /^\d+(?:\.gz)?$/.test(name.slice(basename.length + 1)))
+        .sort((a, b) => Number(a.slice(basename.length + 1).split('.')[0]) - Number(b.slice(basename.length + 1).split('.')[0]));
+    let remaining = BACKFILL_BYTES;
+    let inserted = 0;
+    let skipped = 0;
+    for (const name of files.slice(0, 30)) {
+        const target = path.join(directory, name);
+        const stat = fs.lstatSync(target);
+        if (!stat.isFile() || stat.isSymbolicLink() || stat.size > remaining || remaining <= 0) { skipped++; continue; }
+        let buffer;
+        try {
+            const raw = fs.readFileSync(target);
+            buffer = name.endsWith('.gz') ? zlib.gunzipSync(raw, { maxOutputLength: remaining }) : raw;
+        } catch (error) {
+            if (error.code === 'ERR_BUFFER_TOO_LARGE') { skipped++; continue; }
+            throw error;
+        }
+        remaining -= buffer.length;
+        const source = 'archive:' + crypto.createHash('sha256').update(buffer).digest('hex');
+        let offset = 0;
+        db.transaction(() => {
+            for (const rawLine of buffer.toString('utf8').split('\n')) {
+                const line = rawLine.replace(/\r$/, '');
+                const entry = parseNginxAccessLine(line);
+                const timestamp = entry ? parseAccessLogTimestamp(entry.timestamp) : 0;
+                if (timestamp >= cutoff && timestamp < upper) inserted += ingestLine(app, line, source, offset);
+                offset += Buffer.byteLength(rawLine, 'utf8') + 1;
+            }
+        })();
+    }
+    db.prepare('INSERT OR REPLACE INTO monitor_metadata (key, value) VALUES (?, ?)').run(key, JSON.stringify({ completed: new Date().toISOString(), inserted, skipped }));
+    return inserted;
+}
+
 function runVisitorIngestion() {
     const apps = db.prepare("SELECT * FROM apps WHERE analytics_enabled = 1 AND log_path IS NOT NULL AND log_path != ''").all();
     let inserted = 0;
     apps.forEach((app) => {
         try {
+            inserted += backfillArchivedLogs(app);
             inserted += ingestApp(app);
         } catch (error) {
             console.error(`Visitor ingestion failed for ${app.name}:`, error.message);
@@ -316,6 +365,7 @@ function startVisitorIngestion() {
 }
 
 module.exports = {
+    backfillArchivedLogs,
     BACKFILL_BYTES,
     BACKFILL_DAYS,
     RETENTION_DAYS,

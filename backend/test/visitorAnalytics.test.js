@@ -399,3 +399,21 @@ test('path segment ownership isolates Koral routes, LA webs and Maavar', () => {
     assert.equal(matches('Seder', 'lawebs.co.il', '/seder-other'), false);
     assert.equal(db.prepare('SELECT analytics_enabled FROM apps WHERE name = ?').get('Maavar').analytics_enabled, 0);
 });
+
+
+test('restores older rotated and compressed logs once without replaying existing history', () => {
+    const { backfillArchivedLogs } = require('../visitorAnalytics');
+    const zlib = require('zlib');
+    const logPath = path.join(tempDir, 'history.log');
+    fs.writeFileSync(logPath, withRecentTimestamp(humanLine, 1) + '\n');
+    fs.writeFileSync(logPath + '.1', withRecentTimestamp(secondHumanLine, 2) + '\n');
+    fs.writeFileSync(logPath + '.2.gz', zlib.gzipSync(withRecentTimestamp(humanLine, 3) + '\n'));
+    const id = db.prepare('INSERT INTO apps (name, log_path, log_filter) VALUES (?, ?, ?)').run('History Site', logPath, '/site/').lastInsertRowid;
+    const app = db.prepare('SELECT * FROM apps WHERE id = ?').get(id);
+    assert.equal(ingestApp(app), 1);
+    assert.equal(backfillArchivedLogs(app), 2);
+    assert.equal(backfillArchivedLogs(app), 0);
+    db.prepare("DELETE FROM monitor_metadata WHERE key LIKE ?").run(`archive-backfill-v1:${id}:%`);
+    assert.equal(backfillArchivedLogs(app), 0);
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM visitor_events WHERE app_id = ?').get(id).n, 3);
+});

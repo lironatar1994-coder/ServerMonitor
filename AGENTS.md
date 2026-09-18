@@ -83,7 +83,7 @@ When the user requests a durable behavior change, record it here or in the relev
 - Optimise every screen for scanning and doing, not for reading. Keep copy minimal, put numbers and controls above the fold on desktop and mobile alike, and move explanations into on-demand hints. Do not reintroduce oversized display headlines or marketing paragraphs.
 - Production city/region enrichment reads `GEOIP_DB_PATH`, defaulting to `/usr/share/GeoIP/GeoLite2-City.mmdb`; deployment must warn but continue when the local database is unavailable.
 - Send one client-website comparison email daily and one weekly, using completed Israel calendar periods and the production recipient configured in `REPORT_EMAIL_TO`.
-- Install `server_maintenance.sh` as the daily 03:00 host-maintenance job. Keep seven days of compressed PM2 logs, SQLite backups, and Manager Site data/upload backups; retain only the newest three deployment backups; remove expired deployment/build caches and Libi rollback directories; report disk thresholds; and never force Linux kernel cache drops.
+- Use `ops/maintenance.py` through the single `lawebs-maintenance.timer` at 03:00; `server_maintenance.sh` is only a compatibility wrapper. Keep seven days of compressed PM2 logs, SQLite backups, and Manager Site data/upload backups; retain only the newest three deployment backups; remove expired deployment/build caches and Libi rollback directories; report disk thresholds; and never force Linux kernel cache drops.
 - Never present traffic that merely escaped bot heuristics as confirmed human. Use candidate/estimated language, keep classification uncertainty visible, and require exact host-aware log attribution for every monitored website.
 - Keep Libi Diamonds in visitor monitoring, infrastructure monitoring, and daily/weekly comparison emails as its own website, attributed only to `libidiamonds.co.il` and `www.libidiamonds.co.il`.
 - Use successful page-level navigations—not images, scripts, fonts, API calls, or failed requests—for visitor activity, page rankings, and email comparisons; retain raw requests only as diagnostic data.
@@ -93,7 +93,7 @@ When the user requests a durable behavior change, record it here or in the relev
 - Prefetch and reset the production checkout before invoking `deploy_linux.sh` so deploy-script changes apply in the same run; restart an existing PM2 monitor process without emitting a false launch error.
 - In the Libi Diamonds deep visitor view, rank exact product and collection paths by candidate page views and distinct candidate IPs, compare them with the preceding equal period, and link directly to the viewed storefront page.
 - Attribute runtime memory and CPU to complete PM2 process trees, not only their wrapper processes. In `שרת ומשאבים`, expose ranked application, process, and bounded storage ownership, including dependency, rollback, backup, log, and cache totals.
-- Keep the production app catalog synchronized from `backend/database.js`, including canonical and preview sites, PM2 services, health URLs, visitor-log ownership, and the intentionally visible failed Toren Hazak route until it is explicitly retired; show that known failure without sending hourly alerts.
+- Keep the production app catalog synchronized from `backend/database.js`, including canonical and preview sites, PM2 services, health URLs, visitor-log ownership, and exact log ownership. ToDoFast and Toren Hazak are retired at the user request; keep their runtime, routes, storage, and catalog entries absent.
 - Pixel Dungeon is fully retired from production. Keep its website, analytics records, static visitor bridge, storage ownership, and deployment artifacts absent unless the user explicitly requests a new deployment.
 - PDF Studio at `https://vee-app.co.il/pdf-studio/` replaces the retired `PDF Generator`/`text-to-pdf` runtime. Monitor PDF Studio as a static canonical application with exact `/pdf-studio` log ownership and a signed first-party browser signal; keep the legacy PM2 service and source checkout absent.
 - Monitor Seder at `https://lawebs.co.il/seder` as a canonical application through PM2 process `seder-live`, exact host-and-path access-log ownership, full process-tree and storage attribution, daily/weekly comparison reporting, and a signed first-party browser signal.
@@ -105,6 +105,8 @@ When the user requests a durable behavior change, record it here or in the relev
 - After every successful change to a production-backed application, run the relevant verification and deploy it to production in the same task; do not leave verified application changes local unless the user explicitly asks not to deploy.
 
 ## Child DOX Index
+
+- `ops/AGENTS.md` - Verified backups, safe cleanup, resource health, and one maintenance scheduler.
 
 - `backend/AGENTS.md` - Express API, persistent visitor analytics, SQLite monitor database, PM2/system monitoring logic, authentication routes, and background checks.
 - `frontend/AGENTS.md` - Vite React visitor, infrastructure, services, settings, authentication, responsive design, static assets, and production build.

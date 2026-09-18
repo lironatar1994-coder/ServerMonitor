@@ -14,7 +14,6 @@ const PROJECTS = [
     { id: 'koral2', name: 'Koral Events 2', path: '/opt/koralevents', dependencies: ['/opt/koralevents/current/node_modules'] },
     { id: 'maavar', name: 'Maavar', path: '/opt/maavar', dependencies: ['/opt/maavar/current/node_modules'] },
     { id: 'libi-preview', name: 'Libi Diamonds Preview', path: '/root/LibiDiamonds2', dependencies: ['/root/LibiDiamonds2/node_modules'] },
-    { id: 'todofast', name: 'ToDoFast (inactive)', path: '/opt/todofast', dependencies: ['/opt/todofast/venv'] },
     { id: 'vee', name: 'Vee', path: '/root/Vee', dependencies: ['/root/Vee/backend/node_modules', '/root/Vee/frontend/node_modules'] },
     { id: 'on-your-way', name: 'On Your Way', path: '/root/OnYourWay', dependencies: ['/root/OnYourWay/backend/node_modules', '/root/OnYourWay/frontend/node_modules', '/root/OnYourWay/admin/node_modules'] },
     { id: 'libi-live', name: 'Libi Diamonds', path: '/root/LibiDiamonds-live', dependencies: ['/root/LibiDiamonds-live/node_modules'] },

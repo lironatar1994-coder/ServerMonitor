@@ -370,7 +370,6 @@ const productionApps = [
     { name: 'Maavar Worker', systemd_unit: 'maavar-worker.service', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Seder WhatsApp', pm2_name: 'seder-whatsapp', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Libi Diamonds Preview', url: 'https://vee-app.co.il/LibiDiamonds2', pm2_name: 'libi-diamonds-2', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/LibiDiamonds2|/libidiamonds2', health_url: 'http://127.0.0.1:3103/LibiDiamonds2', analytics_enabled: 1, reporting_enabled: 0 },
-    { name: 'ToDoFast (inactive)', systemd_unit: 'todofast.service', analytics_enabled: 0, reporting_enabled: 0, alerts_enabled: 0 },
     { name: 'Vee Main App', url: 'https://vee-app.co.il/', pm2_name: 'vee-app', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_exclude: veeExcludedPaths, health_url: 'http://127.0.0.1:3001/api/health', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'WhatsApp Worker', pm2_name: 'vee-whatsapp-worker', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'SSH Security', analytics_enabled: 0, reporting_enabled: 0 },
@@ -387,10 +386,9 @@ const productionApps = [
     { name: 'Dfus Reuven Preview', url: 'https://vee-app.co.il/DfusReuven', pm2_name: 'dfus-reuven', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/DfusReuven|/dfusreuven', health_url: 'http://127.0.0.1:3104/DfusReuven', analytics_enabled: 1, reporting_enabled: 0 },
     { name: 'Dfus Reuven', url: 'https://www.dfusreuven.co.il/', pm2_name: 'dfus-reuven-live', log_path: sharedNginxLog, log_host: 'dfusreuven.co.il|www.dfusreuven.co.il', health_url: 'http://127.0.0.1:3106/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Miryam Zelig Preview', url: 'https://vee-app.co.il/Miryam_Zelig/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/miryamzelig2|/Miryam_Zelig|/miryam_zelig', health_url: 'https://vee-app.co.il/miryamzelig2/', analytics_enabled: 1, reporting_enabled: 0 },
-    { name: 'Toren Hazak', url: 'https://63.250.61.126.sslip.io/', health_url: 'https://63.250.61.126.sslip.io/', analytics_enabled: 0, reporting_enabled: 0, alerts_enabled: 0 }
 ];
 
-const retiredProductionApps = ['Pixel Dungeon', 'PDF Generator'];
+const retiredProductionApps = ['Pixel Dungeon', 'PDF Generator', 'ToDoFast (inactive)', 'Toren Hazak'];
 
 function purgeRetiredProductionApps() {
     const findApps = db.prepare('SELECT id FROM apps WHERE name = ?');

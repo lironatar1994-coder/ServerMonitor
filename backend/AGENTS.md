@@ -35,7 +35,7 @@
 - `/apps/:id/unique-visitors` groups the current access-log tail by IP and reports first seen, last seen, request counts, top paths, statuses, and human/bot/mixed classification; it is a bounded log-window view, not a permanent analytics ledger.
 - `/apps/:id/traffic-history?days=7|30` returns fixed daily buckets from sampled `metrics` rows for visitor charts; it is monitored traffic history, not exact per-visit or per-day unique analytics.
 - `visitor_events` is the persistent 90-day request ledger. It stores the requested host and full IPs for private analysis, and deduplicates by app, source-file identity, and byte offset.
-- Initial persistent ingestion backfills at most 30 days or 64 MB, then follows each log by cursor every 30 seconds and finishes an identifiable rotated file before switching.
+- Initial persistent ingestion backfills current logs and up to 30 numbered/gzipped archives within a separate 64 MB decompressed/30-day budget. Archive recovery is one-time per log configuration and only fills history older than the earliest stored event to avoid duplicate counts; oversized archives are recorded as skipped. Live ingestion backfills at most 30 days or 64 MB, then follows each log by cursor every 30 seconds and finishes an identifiable rotated file before switching.
 - `/visitor-analytics/overview` serves cross-site analytics; `/visitor-analytics/apps/:id`, `/visitors`, and `/timeline` serve per-site summary, paginated unique-IP rows, and IP request history.
 - `/visitor-analytics/manager-site/site`, `/visitors`, and `/timeline` are server-to-server variants for Manager Site. They require `MANAGER_SITE_ANALYTICS_KEY`, resolve one monitored app from the stored client website URL, and must fail closed on missing, path-only, or ambiguous matches; never accept a client-selected app ID.
 - The Libi response from `/visitor-analytics/apps/:id` includes `jewelry_interest`: canonical `/product/:slug` and `/jewelry/:category` rankings based only on candidate page views, with distinct candidate counts and previous-period comparisons. Query strings and trailing slashes must not split one product into multiple rows.
@@ -64,7 +64,7 @@
 
 - `systemd.js` owns bounded, cached systemd unit snapshots. Managed services use the same status, resource, action, and log APIs for PM2 and systemd; preserve systemd users, isolation, environment files, and memory limits.
 - Canonical traffic reports include LA webs, Pinhas Ratzon, PDF Studio, and both separately deployed Koral Events routes. Daily/weekly emails also include a last-check operational inventory of all registered apps, without implying historical uptime or visitor counts for non-analytics services.
-- Maavar and its worker remain operational-only: Nginx deliberately disables their access logging. ToDoFast is installed but inactive; keep it visible with alerts disabled, without starting it.
+- Maavar and its worker remain operational-only: Nginx deliberately disables their access logging. ToDoFast and Toren Hazak are retired; purge their catalog/history entries and keep their production runtimes and storage absent.
 - Koral Events uses `koralevents2.service` on port 3111 at `/Koralevents`; Koral Events 2 uses `koralevents.service` on port 3110 at `/Koralevents2`. Path filters match full path segments, never substring prefixes.
 - Include the new production roots in bounded storage attribution; do not scan arbitrary filesystem roots.
 
