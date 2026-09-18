@@ -2,7 +2,7 @@ const db = require('./database');
 const { campaignTag } = require('./growthSignals');
 const DAY = 86400000;
 const METRICS = ['contact_click', 'form_start', 'form_submit', 'lead_received', 'won', 'tool_completed', 'file_downloaded'];
-const LEAD_STATUSES = ['new', 'working', 'won', 'lost', 'irrelevant'];
+const LEAD_STATUSES = ['new', 'working', 'completed', 'won', 'lost', 'irrelevant'];
 const TASK_STATUSES = ['planned', 'working', 'waiting_client', 'published', 'done', 'cancelled'];
 const now = () => new Date().toISOString();
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
@@ -203,7 +203,7 @@ function save(id, kind, recordId, body, actor) {
             entity = Number(db.prepare(`INSERT INTO ${table}(${Object.keys(values).join(',')}) VALUES(${Object.keys(values).map(() => '?').join(',')})`).run(...Object.values(values)).lastInsertRowid);
         }
         const labels = { goals: 'מטרה', tasks: 'משימה', leads: 'פנייה', campaigns: 'קמפיין' };
-        const statuses = { new: 'חדש', working: 'בטיפול', won: 'נסגר בהצלחה', lost: 'לא נסגר', irrelevant: 'לא רלוונטי', planned: 'מתוכנן', waiting_client: 'ממתין ללקוח', published: 'פורסם', done: 'הושלם', cancelled: 'בוטל' };
+        const statuses = { new: 'חדש', working: 'בטיפול', completed: 'טופל במקור', won: 'נסגר בהצלחה', lost: 'לא נסגר', irrelevant: 'לא רלוונטי', planned: 'מתוכנן', waiting_client: 'ממתין ללקוח', published: 'פורסם', done: 'הושלם', cancelled: 'בוטל' };
         const change = existing && values.status && existing.status !== values.status ? ` (${statuses[existing.status]} ← ${statuses[values.status]})` : '';
         activity(app.id, actor, kind, entity, `${existing ? 'עודכנה' : 'נוספה'} ${labels[kind]}: ${values.title || values.name || values.reference}${change}`);
         return db.prepare(`SELECT * FROM ${table} WHERE id=?`).get(entity);

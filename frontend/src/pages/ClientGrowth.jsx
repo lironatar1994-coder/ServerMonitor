@@ -7,7 +7,7 @@ import { formatDateTime, formatNumber } from '../lib/format';
 import './client-growth.css';
 
 const metrics = { contact_click: 'סשנים עם לחיצת קשר', form_start: 'סשנים עם התחלת טופס', form_submit: 'סשנים עם ניסיון שליחה', lead_received: 'פניות שנקלטו ודווחו', won: 'פניות שסומנו כהצלחה', tool_completed: 'פעולות שהושלמו', file_downloaded: 'הורדות קובץ' };
-const leadStatuses = { new: 'חדש', working: 'בטיפול', won: 'נסגר בהצלחה', lost: 'לא נסגר', irrelevant: 'לא רלוונטי' };
+const leadStatuses = { new: 'חדש', working: 'בטיפול', completed: 'טופל במקור', won: 'נסגר בהצלחה', lost: 'לא נסגר', irrelevant: 'לא רלוונטי' };
 const taskStatuses = { planned: 'מתוכנן', working: 'בביצוע', waiting_client: 'ממתין ללקוח', published: 'פורסם · במדידה', done: 'הושלם', cancelled: 'בוטל' };
 const tabs = [{ id: 'overview', label: 'תמונת מצב' }, { id: 'leads', label: 'פניות' }, { id: 'tasks', label: 'שיפורים ותוכן' }, { id: 'goals', label: 'מטרות' }, { id: 'campaigns', label: 'קמפיינים' }, { id: 'activity', label: 'יומן עבודה' }, { id: 'share', label: 'סיכום לשיתוף' }];
 const origins = { manual: 'דיווח ידני', quotes: 'מערכת הצעות מחיר', contact: 'מערכת הטפסים', registrations: 'מערכת הרשמות', leads: 'מערכת הפניות' };

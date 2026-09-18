@@ -81,6 +81,15 @@ test('source errors remain visible and do not erase the last success', async () 
     const failed = db.prepare('SELECT * FROM growth_sources WHERE app_id=?').get(app.id);
     assert.equal(failed.status, 'error'); assert.equal(failed.last_success_at, previous.last_success_at);
 });
+test('source completion is not revenue and newly identified fixtures are excluded', () => {
+    const row = { id: 'registration-approved', created_at: at, name: 'Real name', status: 'approved' };
+    importRows(second.id, 'registrations', [row]);
+    const lead = db.prepare("SELECT * FROM growth_leads WHERE app_id=? AND origin='registrations'").get(second.id);
+    assert.equal(lead.status, 'completed');
+    assert.equal(growth.metrics(second.id, '2000-01-01', '2100-01-01').won, 0);
+    importRows(second.id, 'registrations', [{ ...row, name: 'בדיקת הרשמה' }]);
+    assert.equal(db.prepare('SELECT archived FROM growth_leads WHERE id=?').get(lead.id).archived, 1);
+});
 test('HTTP workspace requires internal JWT, not the Manager Site integration key', async () => {
     const express = require('express'), jwt = require('jsonwebtoken');
     const serverApp = express(); serverApp.use(express.json()); serverApp.use('/growth', require('../routes/clientGrowth'));

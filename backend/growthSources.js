@@ -21,7 +21,7 @@ function isTest(row) {
     const phone = String(row.phone || row.phoneNumber || '').replace(/\D/g, '');
     const name = String(row.fullname || row.fullName || row.name || '');
     return row.isTest === true || row.test === true || ['0500000000', '0000000000'].includes(phone)
-        || /(?:בדיקת דיפלוי|בדיקת מערכת|בדיקת טופס|smoke.?test|deploy.?test|playwright|^test(?:\s|$))/i.test(name);
+        || /(?:בדיק[הת]|דיפלוי|דמו|\b(?:smoke|deploy|playwright|test|demo|qa)(?:[\s_-]|\d|$))/i.test(name);
 }
 async function readRows(source) {
     if (['quotes', 'contact'].includes(source.type)) {
@@ -52,18 +52,30 @@ function importRows(appId, type, rows) {
     const update = db.prepare('UPDATE growth_leads SET source_status=? WHERE app_id=? AND origin=? AND external_key=?');
     db.transaction(() => {
         for (const row of rows) {
-            if (isTest(row)) { excluded++; continue; }
-            const occurred = timestamp(row.receivedAt || row.at || row.created_at || row.createdAt);
-            if (!occurred || Date.parse(occurred) < cutoff || Date.parse(occurred) > Date.now() + 60000) { excluded++; continue; }
             const identity = row.id ?? row.at;
             if (identity === undefined) { excluded++; continue; }
             const key = crypto.createHash('sha256').update(`${appId}:${type}:${identity}`).digest('hex');
+            if (isTest(row)) {
+                excluded++;
+                db.prepare("UPDATE growth_leads SET archived=1,source_status='excluded_test' WHERE app_id=? AND origin=? AND external_key=?")
+                    .run(appId, type, key);
+                continue;
+            }
+            const occurred = timestamp(row.receivedAt || row.at || row.created_at || row.createdAt);
+            if (!occurred || Date.parse(occurred) < cutoff || Date.parse(occurred) > Date.now() + 60000) { excluded++; continue; }
             const state = type === 'contact' ? (row.mailed === false ? 'notification_failed' : 'stored')
                 : String(row.status || 'stored').slice(0, 64);
             const sourceId = /^[a-zA-Z0-9_-]{1,64}$/.test(String(row.id || '')) ? String(row.id) : occurred;
             const result = insert.run(appId, `פנייה ${sourceId}`, type, key, occurred, stamp, stamp, state);
             imported += result.changes;
             update.run(state, appId, type, key);
+            // Respect authoritative operational completion without calling it a
+            // sale. Any internal user edit takes precedence over source status.
+            const workflow = state === 'cancelled' ? 'irrelevant' : ['approved', 'CLOSED'].includes(state) ? 'completed'
+                : state === 'ASSIGNED' ? 'working' : 'new';
+            db.prepare(`UPDATE growth_leads SET status=? WHERE app_id=? AND origin=? AND external_key=?
+                AND NOT EXISTS(SELECT 1 FROM growth_activity a WHERE a.app_id=growth_leads.app_id AND a.kind='leads' AND a.entity_id=growth_leads.id)`)
+                .run(workflow, appId, type, key);
         }
     })();
     return { imported, excluded };
