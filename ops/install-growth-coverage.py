@@ -70,7 +70,9 @@ def main():
                 navtext = navtext.replace("'<head>$monitor_navigation_tag';", "'<head>$monitor_navigation_tag$monitor_growth_tag';")
                 write(navigation, navtext)
             else:
-                content += ['sub_filter_once on;', "sub_filter '<head>' '<head>$monitor_growth_tag';"]
+                # Existing sites may already set sub_filter_once for canonical
+                # URL rewrites; preserve that setting (HTML has one head).
+                content += ["sub_filter '<head>' '<head>$monitor_growth_tag';"]
             content += ['location = /.well-known/server-monitor-growth.js {',
                 '    alias /var/lib/server-monitor/growth-tracker.js;', '    default_type application/javascript;',
                 '    add_header Cache-Control "no-cache";', '}']
@@ -93,7 +95,9 @@ def main():
                     conftext = conftext[:start] + block[:-1] + '\n' + include + '\n}' + conftext[end:]
             if include not in conftext: raise RuntimeError('No serving TLS block: '+config)
             write(conf, conftext); uncompress(conf)
-        subprocess.run(['nginx', '-t'], check=True, capture_output=True)
+        validation = subprocess.run(['nginx', '-t'], capture_output=True, text=True)
+        if validation.returncode:
+            raise RuntimeError('Nginx validation failed: ' + validation.stderr[-1800:])
         subprocess.run(['systemctl', 'reload', 'nginx'], check=True)
         print('Growth coverage installed for 12 canonical sites; backup: '+str(backup))
     except BaseException:
