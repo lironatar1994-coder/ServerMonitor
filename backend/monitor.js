@@ -160,6 +160,15 @@ async function runMonitorCycle() {
             }
             
             // 3. Parse logs
+            if (app.name === 'Cleanup Summary') {
+                try {
+                    const health = JSON.parse(fs.readFileSync('/var/lib/lawebs-maintenance/health.json', 'utf8'));
+                    const stale = Date.now() - Number(health.checked) * 1000 > 30 * 60 * 1000;
+                    status = stale || health.errors?.length ? 'error' : 'online';
+                } catch {
+                    status = 'unknown';
+                }
+            }
             if (app.log_path) {
                 metrics = parseNginxLogMetrics(
                     app.log_path,

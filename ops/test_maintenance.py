@@ -141,5 +141,20 @@ class Cleanup(unittest.TestCase):
             with self.assertRaises(RuntimeError): m.daily()
         self.assertEqual(calls, [('cleanup', False)])
 
+class VisitorHealth(unittest.TestCase):
+    def test_detects_stalled_ingestion_without_treating_zero_traffic_as_failure(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            log = root / 'access.log'
+            log.write_text('')
+            db_path = root / 'monitor.sqlite'
+            with sqlite3.connect(db_path) as db:
+                db.executescript('CREATE TABLE apps(id INTEGER, name TEXT, log_path TEXT, analytics_enabled INTEGER); CREATE TABLE visitor_ingestion_state(app_id INTEGER, last_ingested_at TEXT);')
+                db.execute('INSERT INTO apps VALUES(1, ?, ?, 1)', ('Empty but healthy', str(log)))
+                db.execute('INSERT INTO visitor_ingestion_state VALUES(1, ?)', ('2026-09-18 06:00:00',))
+            now = dt.datetime(2026, 9, 18, 6, 1, tzinfo=dt.timezone.utc).timestamp()
+            self.assertEqual(m.visitor_health(db_path, now), [])
+            self.assertIn('stalled', m.visitor_health(db_path, now + 600)[0])
+
 if __name__ == '__main__':
     unittest.main()

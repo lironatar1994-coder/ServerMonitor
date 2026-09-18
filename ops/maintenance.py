@@ -40,6 +40,10 @@ EXPECTED_PM2 = {'dfus-reuven', 'dfus-reuven-live', 'libi-diamonds-2',
                 'libi-diamonds-live', 'manager-site', 'on-your-way-backend',
                 'on-your-way-frontend', 'pinhas-ratzon-form', 'seder-live',
                 'seder-whatsapp', 'server-monitor', 'sos-landing-standalone', 'vee-app'}
+TRACKER_URLS = ['https://www.libidiamonds.co.il/', 'https://pinhasratzon.co.il/',
+                'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents',
+                'https://lawebs.co.il/Koralevents2', 'https://vee-app.co.il/DfusReuven',
+                'https://vee-app.co.il/LibiDiamonds2']
 
 def run(args, timeout=60):
     p = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
@@ -145,6 +149,11 @@ def process_paths():
     for proc in Path('/proc').glob('[0-9]*'):
         try:
             paths.add((proc / 'cwd').resolve(strict=True))
+            for argument in (proc / 'cmdline').read_bytes().split(b'\0'):
+                if argument.startswith(b'/'):
+                    candidate = Path(os.fsdecode(argument))
+                    if candidate.exists():
+                        paths.add(candidate.resolve(strict=True))
         except (OSError, RuntimeError):
             pass
     return paths
@@ -259,7 +268,36 @@ def daily():
     if errors:
         raise RuntimeError('Maintenance partially failed: ' + '; '.join(errors))
     (STATE / 'daily-failure.json').unlink(missing_ok=True)
+    write_summary(result)
     return result
+
+def write_summary(result=None, error=None):
+    lines = ['Server Cleanup Summary', 'Updated: ' + dt.datetime.now(dt.timezone.utc).isoformat()]
+    if error:
+        lines.append('ERROR: ' + str(error))
+    else:
+        lines += ['Verified backup: ' + result['backup'],
+                  f"Net freed: {result['net_freed_bytes'] / 1024**2:.1f} MiB",
+                  f"Removed items: {len(result['pre_cleanup']['files']) + len(result['cleanup']['files'])}",
+                  'Current releases, newest three versions and running-process releases preserved.']
+    Path('/var/log/server_cleanup_summary.log').write_text('\n'.join(lines) + '\n')
+
+def visitor_health(db_path=Path('/root/ServerMonitor/backend/monitor.db'), now=None):
+    errors = []
+    now = time.time() if now is None else now
+    try:
+        with closing(sqlite3.connect(db_path.as_uri() + '?mode=ro', uri=True)) as db:
+            rows = db.execute('SELECT a.name, a.log_path, s.last_ingested_at FROM apps a LEFT JOIN visitor_ingestion_state s ON s.app_id=a.id WHERE a.analytics_enabled=1').fetchall()
+        for name, log_path, last in rows:
+            if not log_path or not Path(log_path).is_file():
+                errors.append(f'Visitor log missing: {name}')
+            if not last:
+                errors.append(f'Visitor ingestion not initialized: {name}')
+            elif now - dt.datetime.strptime(last, '%Y-%m-%d %H:%M:%S').replace(tzinfo=dt.timezone.utc).timestamp() > 300:
+                errors.append(f'Visitor ingestion stalled: {name}')
+    except Exception as exc:
+        errors.append(f'Visitor ingestion check failed: {exc}')
+    return errors
 
 def health():
     errors, warnings = [], []
@@ -293,6 +331,14 @@ def health():
                 errors.append(f'HTTP {code}: {url}')
         except Exception:
             errors.append(f'HTTP check failed: {url}')
+    errors.extend(visitor_health())
+    for url in TRACKER_URLS:
+        try:
+            html = run(['curl', '--silent', '--show-error', '--location', '--fail', '--compressed', '--max-time', '10', url], timeout=15)
+            if 'src="/.well-known/server-monitor-visitor.js"' not in html:
+                errors.append(f'Browser tracker missing: {url}')
+        except Exception:
+            errors.append(f'Browser tracker check failed: {url}')
     for cert in Path('/etc/letsencrypt/live').glob('*/cert.pem'):
         try:
             run(['openssl', 'x509', '-checkend', str(21 * 86400), '-noout', '-in', str(cert)])
@@ -347,6 +393,7 @@ def main():
                 print(json.dumps(result, indent=2), flush=True)
             except Exception as exc:
                 write_json(STATE / 'daily-failure.json', {'failed': time.time(), 'error': str(exc)})
+                write_summary(error=exc)
                 raise
         return int(health())
 

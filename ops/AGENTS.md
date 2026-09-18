@@ -15,6 +15,7 @@
 - Never remove current releases, releases used by a running process, shared data, uploads, secrets, or the most recent three release candidates.
 - Pre-backup cleanup may remove only disposable caches; release retention runs only after a verified backup succeeds.
 - Maintenance must not send additional messages or restart applications, clear Linux kernel caches, or cycle swap.
+- Health checks every 15 minutes verify visitor-ingestion freshness and the presence of installed browser trackers without interpreting low or zero traffic as failure. Publish the latest cleanup result to `/var/log/server_cleanup_summary.log` for ServerMonitor.
 - Keep Maavar exports encrypted; do not copy its plaintext document/database store into general backups.
 - Use explicit bounded roots, reject symlink escapes, expose a dry-run plan, and report failures truthfully.
 

@@ -435,6 +435,10 @@ router.get('/:id/logs', (req, res) => {
             res.json({ logs: output.split('\n').filter(Boolean) });
         });
     }
+    if (app.name === 'Cleanup Summary') {
+        const summary = '/var/log/server_cleanup_summary.log';
+        return res.json({ logs: fs.existsSync(summary) ? fs.readFileSync(summary, 'utf8').split('\n').filter(Boolean).slice(-100) : ['Maintenance has not produced a summary yet'] });
+    }
     if (app.name === 'SSH Security') {
         const logPath = '/var/log/fail2ban.log';
         if (fs.existsSync(logPath)) {

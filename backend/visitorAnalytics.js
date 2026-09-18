@@ -344,7 +344,12 @@ function runVisitorIngestion() {
     let inserted = 0;
     apps.forEach((app) => {
         try {
-            inserted += backfillArchivedLogs(app);
+            try {
+                inserted += backfillArchivedLogs(app);
+            } catch (error) {
+                // A damaged historical archive must never stop current traffic.
+                console.warn(`Visitor archive backfill failed for ${app.name}:`, error.message);
+            }
             inserted += ingestApp(app);
         } catch (error) {
             console.error(`Visitor ingestion failed for ${app.name}:`, error.message);
