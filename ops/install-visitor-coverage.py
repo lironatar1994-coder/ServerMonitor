@@ -95,7 +95,8 @@ def main():
             blocks = list(server_blocks(text))
             for start, end in reversed(blocks):
                 block = text[start:end]
-                if re.search(r'listen\s+[^;]*443', block) and 'location ' in block and include not in block:
+                serving = 'location ' in block or re.search(r'include\s+/etc/nginx/snippets/[^;]*locations\.conf;', block)
+                if re.search(r'listen\s+[^;]*443', block) and serving and include not in block:
                     block = block[:-1] + '\n' + include + '\n}'
                     text = text[:start] + block + text[end:]
             if include not in text: raise RuntimeError('No serving TLS block found: ' + config)
