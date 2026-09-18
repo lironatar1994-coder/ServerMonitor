@@ -380,3 +380,22 @@ test('ranks Libi products and collections from canonical candidate page views', 
     assert.equal(inferCategory('aria-oval-studs'), 'earrings');
     assert.equal(humanizeSlug('new-diamond-pendant'), 'New Diamond Pendant');
 });
+
+
+test('path segment ownership isolates Koral routes, LA webs and Maavar', () => {
+    const matches = (name, host, path) => {
+        const app = db.prepare('SELECT * FROM apps WHERE name = ?').get(name);
+        return isTargetAppLine('', name, app.log_filter, app.log_host, app.log_exclude, { host, path });
+    };
+    assert.equal(matches('Koral Events', 'lawebs.co.il', '/Koralevents'), true);
+    assert.equal(matches('Koral Events', 'lawebs.co.il', '/Koralevents/booking'), true);
+    assert.equal(matches('Koral Events', 'lawebs.co.il', '/Koralevents2'), false);
+    assert.equal(matches('Koral Events 2', 'lawebs.co.il', '/Koralevents2/booking'), true);
+    assert.equal(matches('Koral Events', 'example.com', '/Koralevents'), false);
+    assert.equal(matches('LA webs', 'lawebs.co.il', '/seder'), false);
+    assert.equal(matches('LA webs', 'lawebs.co.il', '/Koralevents2'), false);
+    assert.equal(matches('LA webs', 'lawebs.co.il', '/'), true);
+    assert.equal(matches('Vee Main App', 'vee-app.co.il', '/maavar/documents'), false);
+    assert.equal(matches('Seder', 'lawebs.co.il', '/seder-other'), false);
+    assert.equal(db.prepare('SELECT analytics_enabled FROM apps WHERE name = ?').get('Maavar').analytics_enabled, 0);
+});

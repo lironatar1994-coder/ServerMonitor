@@ -62,7 +62,7 @@ const AppDetails = () => {
               </>
             }
           >
-            {app.pm2_name && (
+            {(app.pm2_name || app.systemd_unit) && (
               <div className="btn-group">
                 {app.status === 'online'
                   ? <button type="button" className="btn btn--danger" onClick={() => setPendingAction('stop')}><Power aria-hidden="true" /> עצירה</button>
@@ -80,7 +80,7 @@ const AppDetails = () => {
                 <div className="grid grid--1-2">
                   <Panel title="מצב השירות">
                     <dl className="spec-list">
-                      <div><dt>סוג</dt><dd>{app.pm2_name ? 'תהליך PM2' : 'אתר סטטי'}</dd></div>
+                      <div><dt>סוג</dt><dd>{(app.pm2_name || app.systemd_unit) ? 'שירות מנוהל' : 'אתר סטטי'}</dd></div>
                       <div><dt>CPU</dt><dd>{(app.cpu || 0).toFixed(1)}%</dd></div>
                       <div><dt>זיכרון</dt><dd>{((app.memory || 0) / 1024 / 1024).toFixed(1)} MB</dd></div>
                       <div><dt>בדיקת תקינות</dt><dd dir={healthTarget ? 'ltr' : 'rtl'}>{healthTarget || 'ללא'}</dd></div>

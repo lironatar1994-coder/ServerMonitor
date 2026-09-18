@@ -35,6 +35,8 @@
 - Service configuration supports full health-check URLs plus separate visitor-analytics and client-report toggles; operational services must not link into visitor analytics.
 - Preserve RTL Hebrew presentation, `he-IL` formatting, and `Asia/Jerusalem` timestamps.
 
+- PM2 and systemd applications share managed-service labels and start/stop/restart controls. Show the actual runtime identifier in infrastructure; static sites have no runtime actions.
+
 ## Work Guidance
 
 - Compose screens from `AnalyticsParts` primitives instead of adding per-page layout classes; extend the kit when a genuinely new pattern appears.

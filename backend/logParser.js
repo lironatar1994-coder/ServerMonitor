@@ -154,10 +154,10 @@ function isTargetAppLine(line, appName, logFilter, logHost, logExclude, parsedEn
     }
 
     const excludedPaths = splitConfig(logExclude);
-    if (excludedPaths.some((filter) => entry.path.includes(filter))) return false;
+    if (excludedPaths.some((filter) => (entry.path === filter.replace(/\/$/, '') || entry.path.startsWith(filter.replace(/\/$/, '') + '/')))) return false;
 
     if (logFilter) {
-        return splitConfig(logFilter).some((filter) => entry.path.includes(filter));
+        return splitConfig(logFilter).some((filter) => (entry.path === filter.replace(/\/$/, '') || entry.path.startsWith(filter.replace(/\/$/, '') + '/')));
     }
     if (appName === 'PDF Generator') return entry.path.includes('/text-to-pdf');
     if (appName === 'Vee Main App' && !logExclude) {

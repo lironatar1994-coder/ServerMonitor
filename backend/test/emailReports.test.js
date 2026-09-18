@@ -114,3 +114,24 @@ test('excludes analytics-only preview apps from client comparison email', () => 
 
     assert.equal(buildReportData(period).some((item) => item.id === previewId), false);
 });
+
+
+test('expanded daily and weekly coverage separates traffic from operational inventory', () => {
+    const { buildOperationsData } = require('../emailReports');
+    for (const type of ['daily', 'weekly']) {
+        const period = buildPeriod(type, new Date('2026-09-18T09:00:00Z'));
+        const rows = buildReportData(period);
+        for (const name of ['LA webs', 'Pinhas Ratzon', 'PDF Studio', 'Koral Events', 'Koral Events 2']) {
+            assert.ok(rows.some((row) => row.name === name), name);
+        }
+        assert.equal(rows.some((row) => row.name === 'Maavar'), false);
+        const operations = buildOperationsData();
+        for (const name of ['Maavar', 'Maavar Worker', 'Seder WhatsApp', 'Pinhas Ratzon Form', 'Libi Diamonds Preview']) {
+            assert.ok(operations.some((row) => row.name === name), name);
+        }
+        const rendered = renderEmail(type, period, rows, [...operations, { name: 'Worker <unsafe>', status: 'offline' }]);
+        assert.match(rendered.html, /Worker &lt;unsafe&gt;/);
+        assert.match(rendered.html, /Maavar Worker/);
+        assert.match(rendered.text, /מצב כל האפליקציות/);
+    }
+});

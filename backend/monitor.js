@@ -2,6 +2,7 @@ const fs = require('fs');
 const db = require('./database');
 const http = require('http');
 const https = require('https');
+const { getSystemdSnapshot } = require('./systemd');
 const { parseNginxLogMetrics } = require('./logParser');
 
 console.log('Background Monitor Started...');
@@ -124,6 +125,7 @@ function sendWhatsAppAlert(appName, newStatus, isFailureReminder) {
 async function runMonitorCycle() {
     try {
         const apps = db.prepare('SELECT * FROM apps').all();
+        const units = getSystemdSnapshot(apps, true);
         
         for (const app of apps) {
             let status = 'online';
@@ -139,10 +141,16 @@ async function runMonitorCycle() {
                 appMemory = pm2Info.memory;
             }
 
+            if (app.systemd_unit) {
+                const unit = units.find((item) => item.systemd_unit === app.systemd_unit);
+                status = unit?.status || 'unknown';
+                appMemory = unit?.memory || 0;
+            }
+
             const healthUrl = app.health_url || (app.health_port
                 ? `http://127.0.0.1:${app.health_port}${app.health_path || '/'}`
                 : null);
-            if (healthUrl && (!app.pm2_name || status === 'online')) {
+            if (healthUrl && (!(app.pm2_name || app.systemd_unit) || status === 'online')) {
                 const healthStatus = await checkHttpHealthUrl(healthUrl);
                 if (healthStatus !== 'online') {
                     status = healthStatus;

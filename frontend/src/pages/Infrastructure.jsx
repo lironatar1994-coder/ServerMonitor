@@ -134,7 +134,7 @@ const Infrastructure = () => {
 
         <Panel
           title="מי משתמש במשאבים"
-          hint="RAM ו-Swap נספרים לכל עץ התהליכים, כולל תהליכי־משנה ש-PM2 אינו מציג בשורת השירות. האחסון נסרק בעדיפות נמוכה ונשמר במטמון לחצי שעה."
+          hint="RAM ו-Swap נספרים לכל עץ התהליכים, כולל תהליכי־משנה של השירות. האחסון נסרק בעדיפות נמוכה ונשמר במטמון לחצי שעה."
           action={<Tabs tabs={RESOURCE_TABS} value={resourceView} onChange={setResourceView} label="סוג פירוט משאבים" />}
           bleed
         >
@@ -155,7 +155,7 @@ const Infrastructure = () => {
                     <i className={app.status === 'online' ? 'is-online' : 'is-offline'} aria-hidden="true" />
                     <span className="service-status-list__name">
                       <b>{app.name}</b>
-                      <small dir="ltr">{app.pm2_name || 'static / log'}</small>
+                      <small dir="ltr">{app.pm2_name || app.systemd_unit || 'static / log'}</small>
                     </span>
                     <span className={`chip ${app.status === 'online' ? 'is-online' : 'is-offline'}`}>
                       {app.status === 'online' ? 'פעיל' : app.status === 'offline' ? 'לא פעיל' : 'לא ידוע'}

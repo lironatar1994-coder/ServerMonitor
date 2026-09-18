@@ -62,6 +62,12 @@
 - Keep mail credentials and `REPORT_EMAIL_TO` in `backend/.env`; never commit recipient configuration or provider secrets.
 - Keep the Manager Site analytics service key out of Git. Production reads the shared value from `/root/.manager-site-analytics-key`; do not log it or return it to browsers.
 
+- `systemd.js` owns bounded, cached systemd unit snapshots. Managed services use the same status, resource, action, and log APIs for PM2 and systemd; preserve systemd users, isolation, environment files, and memory limits.
+- Canonical traffic reports include LA webs, Pinhas Ratzon, PDF Studio, and both separately deployed Koral Events routes. Daily/weekly emails also include a last-check operational inventory of all registered apps, without implying historical uptime or visitor counts for non-analytics services.
+- Maavar and its worker remain operational-only: Nginx deliberately disables their access logging. ToDoFast is installed but inactive; keep it visible with alerts disabled, without starting it.
+- Koral Events uses `koralevents2.service` on port 3111 at `/Koralevents`; Koral Events 2 uses `koralevents.service` on port 3110 at `/Koralevents2`. Path filters match full path segments, never substring prefixes.
+- Include the new production roots in bounded storage attribution; do not scan arbitrary filesystem roots.
+
 ## Work Guidance
 
 - Prefer narrow changes in route handlers or monitor helpers before changing API shapes.

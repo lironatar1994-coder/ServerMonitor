@@ -1,11 +1,20 @@
 const fs = require('fs');
 const path = require('path');
+const { getSystemdSnapshot } = require('./systemd');
 const { execFile, execFileSync } = require('child_process');
 
 const STORAGE_CACHE_MS = 30 * 60 * 1000;
 let storageCache = { fetchedAt: 0, snapshot: null, pending: null };
 
 const PROJECTS = [
+    { id: 'lawebs', name: 'LA webs', path: '/opt/lawebs-portfolio', dependencies: [] },
+    { id: 'pinhas', name: 'Pinhas Ratzon', path: '/root/PinhasRatzon', dependencies: ['/root/PinhasRatzon/form-service/node_modules'] },
+    { id: 'pinhas-static', name: 'Pinhas Ratzon published', path: '/var/www/PinhasRatzon-domain', dependencies: [] },
+    { id: 'koral', name: 'Koral Events', path: '/opt/koralevents2', dependencies: ['/opt/koralevents2/current/node_modules'] },
+    { id: 'koral2', name: 'Koral Events 2', path: '/opt/koralevents', dependencies: ['/opt/koralevents/current/node_modules'] },
+    { id: 'maavar', name: 'Maavar', path: '/opt/maavar', dependencies: ['/opt/maavar/current/node_modules'] },
+    { id: 'libi-preview', name: 'Libi Diamonds Preview', path: '/root/LibiDiamonds2', dependencies: ['/root/LibiDiamonds2/node_modules'] },
+    { id: 'todofast', name: 'ToDoFast (inactive)', path: '/opt/todofast', dependencies: ['/opt/todofast/venv'] },
     { id: 'vee', name: 'Vee', path: '/root/Vee', dependencies: ['/root/Vee/backend/node_modules', '/root/Vee/frontend/node_modules'] },
     { id: 'on-your-way', name: 'On Your Way', path: '/root/OnYourWay', dependencies: ['/root/OnYourWay/backend/node_modules', '/root/OnYourWay/frontend/node_modules', '/root/OnYourWay/admin/node_modules'] },
     { id: 'libi-live', name: 'Libi Diamonds', path: '/root/LibiDiamonds-live', dependencies: ['/root/LibiDiamonds-live/node_modules'] },
@@ -76,7 +85,7 @@ function buildApplicationUsage(pm2Processes, apps, processes, totalMemory) {
     return pm2Processes
         .filter((process) => Number(process.pid) > 0)
         .map((process) => {
-            const app = appByPm2.get(process.name);
+            const app = process.systemd_unit ? apps.find((item) => item.systemd_unit === process.systemd_unit) : appByPm2.get(process.name);
             const tree = collectProcessTree(process.pid, processes);
             const root = tree.find((item) => item.pid === Number(process.pid));
             const memoryBytes = tree.reduce((sum, item) => sum + item.rss_bytes, 0);
@@ -87,8 +96,10 @@ function buildApplicationUsage(pm2Processes, apps, processes, totalMemory) {
             return {
                 app_id: app?.id || null,
                 name: app?.name || process.name,
-                pm2_name: process.name,
-                status: process.pm2_env?.status || 'unknown',
+                pm2_name: process.systemd_unit ? null : process.name,
+                systemd_unit: process.systemd_unit || null,
+                runtime_manager: process.systemd_unit ? 'systemd' : 'pm2',
+                status: process.status || process.pm2_env?.status || 'unknown',
                 pid: Number(process.pid),
                 process_count: tree.length,
                 cpu_percent: cpuPercent,
@@ -228,7 +239,7 @@ async function getStorageSnapshot(diskTotal) {
 async function getResourceUsage({ pm2Processes, apps, totalMemory, diskTotal }) {
     try {
         const processes = readProcessTable();
-        const applications = buildApplicationUsage(pm2Processes, apps, processes, totalMemory);
+        const applications = buildApplicationUsage([...pm2Processes, ...getSystemdSnapshot(apps)], apps, processes, totalMemory);
         const ownerByPid = new Map();
         applications.forEach((application) => {
             collectProcessTree(application.pid, processes).forEach((process) => ownerByPid.set(process.pid, application.name));

@@ -7,6 +7,7 @@ const path = require('path');
 const { getRecentVisitors, getUniqueVisitors, isTargetAppLine } = require('../logParser');
 const { getResourceUsage } = require('../resourceUsage');
 
+const { UNIT_PATTERN, getSystemdSnapshot } = require('../systemd');
 const router = express.Router();
 const WHATSAPP_STATUS_PATH = process.env.WHATSAPP_STATUS_PATH || '/root/Vee/backend/whatsapp_status.json';
 let pm2SnapshotCache = { fetchedAt: 0, processes: [] };
@@ -180,6 +181,11 @@ function getMemoryStats() {
 }
 
 function enrichAppStatus(app) {
+    if (app?.systemd_unit) {
+        const unit = getSystemdSnapshot(db.prepare('SELECT systemd_unit FROM apps WHERE systemd_unit IS NOT NULL').all()).find((item) => item.systemd_unit === app.systemd_unit);
+        const failedHealth = Boolean(app.health_url || app.health_port) && ['error', 'offline'].includes(app.status);
+        return { ...app, status: unit?.status === 'online' && failedHealth ? app.status : unit?.status || 'unknown', cpu: 0, memory: unit?.memory || 0 };
+    }
     if (!app?.pm2_name) {
         return { ...app, status: app.status || 'online', cpu: 0, memory: 0 };
     }
@@ -269,7 +275,7 @@ router.get('/server-stats', async (req, res) => {
     const cpuSnapshot = getCpuSnapshot();
     const ram = getMemoryStats();
     const disk = getDiskStats();
-    const apps = db.prepare('SELECT id, name, pm2_name FROM apps WHERE pm2_name IS NOT NULL').all();
+    const apps = db.prepare('SELECT id, name, pm2_name, systemd_unit FROM apps WHERE pm2_name IS NOT NULL OR systemd_unit IS NOT NULL').all();
     
     res.json({
         ram,
@@ -391,7 +397,16 @@ router.post('/:id/action', (req, res) => {
     
     const app = db.prepare('SELECT * FROM apps WHERE id = ?').get(id);
     if (!app) return res.status(404).json({ error: 'App not found' });
-    if (!app.pm2_name) return res.status(400).json({ error: 'This app is not configured with PM2' });
+    if (app.systemd_unit) {
+        if (!UNIT_PATTERN.test(app.systemd_unit)) return res.status(400).json({ error: 'Invalid service unit' });
+        const { execFile } = require('child_process');
+        return execFile('/usr/bin/systemctl', [action, app.systemd_unit], { timeout: 30000 }, (error) => {
+            if (error) return res.status(500).json({ error: 'Service action failed' });
+            getSystemdSnapshot([app], true);
+            res.json({ message: `App ${app.name} (${action}) executed successfully` });
+        });
+    }
+    if (!app.pm2_name) return res.status(400).json({ error: 'This app has no managed runtime' });
     
     // Run PM2 action safely via CLI to prevent socket concurrency crashes (using absolute path and PM2_HOME env)
     const { execFile } = require('child_process');
@@ -413,6 +428,13 @@ router.get('/:id/logs', (req, res) => {
     
     let logLines = [];
     
+    if (app.systemd_unit && UNIT_PATTERN.test(app.systemd_unit)) {
+        const { execFile } = require('child_process');
+        return execFile('/usr/bin/journalctl', ['--unit', app.systemd_unit, '--lines=50', '--no-pager', '--output=short'], { timeout: 3000, maxBuffer: 256 * 1024 }, (error, output) => {
+            if (error) return res.status(500).json({ error: 'Could not read service logs' });
+            res.json({ logs: output.split('\n').filter(Boolean) });
+        });
+    }
     if (app.name === 'SSH Security') {
         const logPath = '/var/log/fail2ban.log';
         if (fs.existsSync(logPath)) {

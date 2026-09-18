@@ -349,18 +349,32 @@ try {
     // Column already exists
 }
 
+if (!db.pragma('table_info(apps)').some((column) => column.name === 'systemd_unit')) {
+    db.exec('ALTER TABLE apps ADD COLUMN systemd_unit TEXT');
+}
+
 const sharedNginxLog = '/var/log/nginx/monitor_host_access.log';
 const veeExcludedPaths = [
     '/text-to-pdf', '/pdf-studio', '/serve-monitor', '/pixel-dungeon', '/OnYourWay', '/onyourway',
     '/Manager_Site', '/manager_site', '/Miryam_Zelig', '/miryam_zelig', '/miryamzelig2',
-    '/DfusReuven', '/dfusreuven', '/sos', '/LibiDiamonds2'
+    '/DfusReuven', '/dfusreuven', '/sos', '/LibiDiamonds2', '/libidiamonds2', '/maavar'
 ].join('|');
 
 const productionApps = [
+    { name: 'LA webs', url: 'https://lawebs.co.il/', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_exclude: '/seder|/Koralevents|/koralevents|/Koralevents2|/PinhasRatzon|/pinhasratzon', health_url: 'https://lawebs.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
+    { name: 'Pinhas Ratzon', url: 'https://pinhasratzon.co.il/', log_path: sharedNginxLog, log_host: 'pinhasratzon.co.il|www.pinhasratzon.co.il', health_url: 'https://pinhasratzon.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
+    { name: 'Pinhas Ratzon Form', pm2_name: 'pinhas-ratzon-form', health_url: 'http://127.0.0.1:3108/health', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'Koral Events', url: 'https://lawebs.co.il/Koralevents', systemd_unit: 'koralevents2.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/Koralevents|/koralevents', health_url: 'http://127.0.0.1:3111/Koralevents', analytics_enabled: 1, reporting_enabled: 1 },
+    { name: 'Koral Events 2', url: 'https://lawebs.co.il/Koralevents2', systemd_unit: 'koralevents.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/Koralevents2', health_url: 'http://127.0.0.1:3110/Koralevents2', analytics_enabled: 1, reporting_enabled: 1 },
+    { name: 'Maavar', url: 'https://vee-app.co.il/maavar', systemd_unit: 'maavar.service', health_url: 'http://127.0.0.1:3127/maavar', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'Maavar Worker', systemd_unit: 'maavar-worker.service', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'Seder WhatsApp', pm2_name: 'seder-whatsapp', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'Libi Diamonds Preview', url: 'https://vee-app.co.il/LibiDiamonds2', pm2_name: 'libi-diamonds-2', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/LibiDiamonds2|/libidiamonds2', health_url: 'http://127.0.0.1:3103/LibiDiamonds2', analytics_enabled: 1, reporting_enabled: 0 },
+    { name: 'ToDoFast (inactive)', systemd_unit: 'todofast.service', analytics_enabled: 0, reporting_enabled: 0, alerts_enabled: 0 },
     { name: 'Vee Main App', url: 'https://vee-app.co.il/', pm2_name: 'vee-app', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_exclude: veeExcludedPaths, health_url: 'http://127.0.0.1:3001/api/health', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'WhatsApp Worker', pm2_name: 'vee-whatsapp-worker', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'SSH Security', analytics_enabled: 0, reporting_enabled: 0 },
-    { name: 'PDF Studio', url: 'https://vee-app.co.il/pdf-studio/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/pdf-studio', health_url: 'https://vee-app.co.il/pdf-studio/', analytics_enabled: 1, reporting_enabled: 0 },
+    { name: 'PDF Studio', url: 'https://vee-app.co.il/pdf-studio/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/pdf-studio', health_url: 'https://vee-app.co.il/pdf-studio/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'SOS Landing', url: 'https://sosbaderech.co.il/', pm2_name: 'sos-landing-standalone', log_path: sharedNginxLog, log_host: 'sosbaderech.co.il|www.sosbaderech.co.il', health_url: 'http://127.0.0.1:3200/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Cleanup Summary', log_path: '/var/log/server_cleanup_summary.log', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Miryam Zelig', url: 'https://miryamzelig.co.il/', log_path: sharedNginxLog, log_host: 'miryamzelig.co.il|www.miryamzelig.co.il', health_url: 'https://miryamzelig.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
@@ -396,13 +410,13 @@ function purgeRetiredProductionApps() {
 }
 
 function syncProductionApps() {
-    const fields = ['url', 'pm2_name', 'log_path', 'health_port', 'health_path', 'log_filter', 'log_host', 'log_exclude', 'health_url', 'analytics_enabled', 'reporting_enabled', 'alerts_enabled'];
+    const fields = ['url', 'systemd_unit', 'pm2_name', 'log_path', 'health_port', 'health_path', 'log_filter', 'log_host', 'log_exclude', 'health_url', 'analytics_enabled', 'reporting_enabled', 'alerts_enabled'];
     const findApp = db.prepare('SELECT * FROM apps WHERE name = ? ORDER BY id ASC LIMIT 1');
     const insertApp = db.prepare(`INSERT INTO apps
-        (name, url, pm2_name, log_path, health_port, health_path, log_filter, log_host, log_exclude, health_url, analytics_enabled, reporting_enabled, alerts_enabled)
-        VALUES (@name, @url, @pm2_name, @log_path, @health_port, @health_path, @log_filter, @log_host, @log_exclude, @health_url, @analytics_enabled, @reporting_enabled, @alerts_enabled)`);
+        (name, url, systemd_unit, pm2_name, log_path, health_port, health_path, log_filter, log_host, log_exclude, health_url, analytics_enabled, reporting_enabled, alerts_enabled)
+        VALUES (@name, @url, @systemd_unit, @pm2_name, @log_path, @health_port, @health_path, @log_filter, @log_host, @log_exclude, @health_url, @analytics_enabled, @reporting_enabled, @alerts_enabled)`);
     const updateApp = db.prepare(`UPDATE apps SET
-        url = @url, pm2_name = @pm2_name, log_path = @log_path, health_port = @health_port,
+        url = @url, systemd_unit = @systemd_unit, pm2_name = @pm2_name, log_path = @log_path, health_port = @health_port,
         health_path = @health_path, log_filter = @log_filter, log_host = @log_host,
         log_exclude = @log_exclude, health_url = @health_url,
         analytics_enabled = @analytics_enabled, reporting_enabled = @reporting_enabled,

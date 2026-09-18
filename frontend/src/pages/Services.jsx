@@ -34,7 +34,7 @@ const Services = () => {
       if (filter === 'online' && app.status !== 'online') return false;
       if (filter === 'issues' && app.status === 'online') return false;
       if (!term) return true;
-      return [app.name, app.url, app.pm2_name, app.log_path].some((field) => (field || '').toLowerCase().includes(term));
+      return [app.name, app.url, app.pm2_name, app.systemd_unit, app.log_path].some((field) => (field || '').toLowerCase().includes(term));
     });
   }, [apps, filter, search]);
 
@@ -70,10 +70,10 @@ const Services = () => {
                     <i className={app.status === 'online' ? 'is-online' : 'is-offline'} aria-hidden="true" />
                     <span className="service-list__name">
                       <b>{app.name}</b>
-                      <small dir="ltr">{app.url || app.pm2_name || app.log_path || '—'}</small>
+                      <small dir="ltr">{app.url || app.pm2_name || app.systemd_unit || app.log_path || '—'}</small>
                     </span>
                     <span className="service-list__meta">
-                      <b>{app.pm2_name ? 'תהליך PM2' : app.log_path ? 'אתר סטטי' : 'ניטור בסיסי'}</b>
+                      <b>{(app.pm2_name || app.systemd_unit) ? 'שירות מנוהל' : app.log_path ? 'אתר סטטי' : 'ניטור בסיסי'}</b>
                       <small>
                         {app.pm2_name
                           ? `${(app.cpu || 0).toFixed(1)}% CPU · ${((app.memory || 0) / 1024 / 1024).toFixed(0)} MB`
