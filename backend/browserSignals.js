@@ -348,6 +348,7 @@ function recordBrowserSignal({ body, ip, userAgent, siteUrl }) {
 }
 
 module.exports = {
+    getAutomationHint,
     getSignalKey,
     findSignalApp,
     isAuthorizedSignal,

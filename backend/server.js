@@ -29,6 +29,7 @@ app.use('/serve-monitor/api/auth', authRoutes);
 app.use('/serve-monitor/api/apps', apiRoutes);
 app.use('/serve-monitor/api/browser-signals', browserSignalRoutes);
 app.use('/serve-monitor/api/visitor-analytics', visitorAnalyticsRoutes);
+app.use('/serve-monitor/api/client-growth', require('./routes/clientGrowth'));
 
 // Serve frontend
 const distPath = path.join(__dirname, '../frontend/dist');
@@ -46,4 +47,5 @@ app.listen(PORT, () => {
     console.log(`Server Monitor API running on port ${PORT}`);
     startVisitorIngestion();
     startEmailReports();
+    require('./growthSources').startGrowthSources();
 });

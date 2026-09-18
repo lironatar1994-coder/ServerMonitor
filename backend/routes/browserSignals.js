@@ -7,6 +7,7 @@ const {
 } = require('../browserSignals');
 
 const SIGNAL_RECORDERS = {
+    growth: require('../growthSignals').recordGrowthSignal,
     engagement: recordEngagementSignal,
     product: recordProductEvent
 };

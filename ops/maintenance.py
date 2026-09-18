@@ -44,6 +44,11 @@ TRACKER_URLS = ['https://www.libidiamonds.co.il/', 'https://pinhasratzon.co.il/'
                 'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents',
                 'https://lawebs.co.il/Koralevents2', 'https://vee-app.co.il/DfusReuven',
                 'https://vee-app.co.il/LibiDiamonds2']
+GROWTH_URLS = ['https://www.libidiamonds.co.il/', 'https://pinhasratzon.co.il/',
+               'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents', 'https://lawebs.co.il/Koralevents2',
+               'https://lawebs.co.il/seder', 'https://vee-app.co.il/', 'https://vee-app.co.il/OnYourWay',
+               'https://vee-app.co.il/pdf-studio/', 'https://www.dfusreuven.co.il/',
+               'https://miryamzelig.co.il/', 'https://sosbaderech.co.il/']
 
 def run(args, timeout=60):
     p = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
@@ -332,11 +337,13 @@ def health():
         except Exception:
             errors.append(f'HTTP check failed: {url}')
     errors.extend(visitor_health())
-    for url in TRACKER_URLS:
+    for url in set(TRACKER_URLS + GROWTH_URLS):
         try:
             html = run(['curl', '--silent', '--show-error', '--location', '--fail', '--compressed', '--max-time', '10', url], timeout=15)
-            if 'src="/.well-known/server-monitor-visitor.js"' not in html:
+            if url in TRACKER_URLS and 'src="/.well-known/server-monitor-visitor.js"' not in html:
                 errors.append(f'Browser tracker missing: {url}')
+            if url in GROWTH_URLS and 'src="/.well-known/server-monitor-growth.js"' not in html:
+                errors.append(f'Growth tracker missing: {url}')
         except Exception:
             errors.append(f'Browser tracker check failed: {url}')
     for cert in Path('/etc/letsencrypt/live').glob('*/cert.pem'):

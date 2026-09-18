@@ -7,6 +7,8 @@
 
 ## Ownership
 
+- `growthSchema.js` owns idempotent growth tables and canonical client defaults. `clientGrowth.js` and `routes/clientGrowth.js` own JWT-only internal goals, workflow, evidence, campaigns, comparisons and draft reports. `growthSignals.js` validates anonymous action beacons; `growthSources.js` polls five allow-listed source stores read-only once per minute.
+
 - `server.js` owns middleware, API mounting, frontend static serving, and process startup.
 - `database.js` owns schema creation, migrations, default users, and seed monitor records.
 - `monitor.js` owns background health, PM2, log, metric, and alert collection.
@@ -20,6 +22,12 @@
 - `monitor.db` is runtime state and must not be treated as a source schema definition.
 
 ## Local Contracts
+
+- Growth routes must never accept the Manager Site service key or expose customer-facing access. Scope every record mutation to the canonical app and record ID; validate metric/status/path/number fields and keep an activity trail.
+- Growth source rows retain only opaque/source IDs, timestamps and statuses. Exclude known deployment fixtures, deduplicate `(app, origin, external_key)`, preserve manual treatment on sync, and expose failed/stale adapters without clearing prior data. Native source status is distinct from internal workflow.
+- Growth events have a 90-day retention, site-scoped session hashes, no form values/query strings, explicit automation filtering, a bounded per-site/IP rate limit, and browser types cannot create confirmed leads. Source-confirmed leads cannot be attributed to browser sessions without a real join.
+- Goals define their own 7/30/90-day period. Before/after task comparisons use equal full-day windows up to seven days and label low samples and confounders. Do not infer causality or call click counts leads. Campaign budgets are lifetime amounts; never divide them by leads from a partial selected period.
+- Internal workflow records persist until explicitly archived/changed; the 90-day anonymous-event purge does not delete client work history. Draft summaries omit references, owners and hypotheses; share is user-initiated only.
 
 - Keep public API paths compatible with the deployed `/serve-monitor/api/...` prefix unless deployment config changes with it.
 - Keep schema migrations idempotent and safe against existing production databases.

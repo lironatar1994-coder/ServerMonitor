@@ -78,6 +78,9 @@ Default section order:
 
 When the user requests a durable behavior change, record it here or in the relevant child AGENTS.md
 
+- Client growth is internal only under `/clients`: goals, source-confirmed and manual leads, tasks, campaigns, evidence, and activity. No new client-facing access and no Search Console integration. Summaries must be editable drafts opened manually through mailto/WhatsApp or copied; never auto-send them or expose internal notes.
+- Keep click observations, verified source records, and manual business outcomes separate. Source adapters are read-only and must not copy customer contact details or message contents; existing native visitor trackers and CMS assets remain intact.
+
 - Keep website visitor monitoring and server/resource monitoring as separate product workspaces. The default dashboard must prioritize a clear cross-site visitor picture with both quick and deep views; infrastructure data belongs under `שרת ומשאבים`.
 - Use a distinctive Hebrew/RTL editorial interface for visitor analytics and a separate industrial operational treatment for infrastructure. Do not fall back to generic SaaS cards, glass effects, or decorative dashboards.
 - Optimise every screen for scanning and doing, not for reading. Keep copy minimal, put numbers and controls above the fold on desktop and mobile alike, and move explanations into on-demand hints. Do not reintroduce oversized display headlines or marketing paragraphs.
@@ -107,6 +110,7 @@ When the user requests a durable behavior change, record it here or in the relev
 ## Child DOX Index
 
 - `ops/AGENTS.md` - Verified backups, safe cleanup, resource health, and one maintenance scheduler.
+- `PRODUCT.md` - Confirmed internal product scope and client-growth constraints.
 
 - `backend/AGENTS.md` - Express API, persistent visitor analytics, SQLite monitor database, PM2/system monitoring logic, authentication routes, and background checks.
 - `frontend/AGENTS.md` - Vite React visitor, infrastructure, services, settings, authentication, responsive design, static assets, and production build.

@@ -9,6 +9,7 @@ const Infrastructure = lazy(() => import('./pages/Infrastructure'));
 const Services = lazy(() => import('./pages/Services'));
 const AppDetails = lazy(() => import('./pages/AppDetails'));
 const Settings = lazy(() => import('./pages/Settings'));
+const ClientGrowth = lazy(() => import('./pages/ClientGrowth'));
 
 const PageLoader = () => (
   <div className="page-loader" role="status" aria-live="polite">
@@ -47,6 +48,8 @@ function App() {
             <Route path="/services" element={<Services />} />
             <Route path="/services/:id" element={<AppDetails />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/clients" element={<ClientGrowth key="overview" />} />
+            <Route path="/clients/:id" element={<ClientGrowth />} />
             <Route path="/app/:id" element={<LegacyAppRedirect />} />
             <Route path="/system-stats" element={<Navigate to="/infrastructure" replace />} />
           </Route>

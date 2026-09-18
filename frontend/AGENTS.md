@@ -7,6 +7,8 @@
 
 ## Ownership
 
+- `src/pages/ClientGrowth.jsx` and `client-growth.css` own the internal client workspace: prioritization, goals, leads, tasks, campaigns, activity and editable manual-share drafts, composed from AnalyticsParts.
+
 - `src/App.jsx` owns client routing and session-level app shell behavior.
 - `src/components/AppShell.jsx` owns the collapsible desktop rail, mobile header/bottom navigation, and visitor/infrastructure visual-mode boundary.
 - `src/components/AnalyticsParts.jsx` owns the shared UI kit every screen composes from: `PageHead`, `Stat`/`StatRow`, `Panel`, `Tabs`, `RangePicker`, `RankedList`, `Hint`, `Empty`, `DataState`.
@@ -18,6 +20,9 @@
 - `dist/` is generated build output and should only change through frontend builds.
 
 ## Local Contracts
+
+- `/clients` and `/clients/:id` are internal-only. Keep Search Console and customer portals absent. Email/WhatsApp controls open editable drafts; opening is not proof of sending. Summaries remain reviewable before the user shares.
+- Show source-confirmed, manual and observed browser actions separately. Expose collection start and source-sync gaps, independent goal periods, low-sample comparisons, and the absence of confirmed session-to-lead attribution. Source PII is not copied into forms.
 
 - Keep API calls aligned with the deployed `/serve-monitor/api` backend prefix.
 - The dev server proxies `/serve-monitor/api` to `VITE_API_TARGET`, defaulting to `http://localhost:4010`. `npm run dev:live` loads `.env.remote` and targets the production API instead; keep credentials out of both files.

@@ -1,9 +1,10 @@
-import { Activity, Globe2, LogOut, PanelRightClose, PanelRightOpen, ServerCog, Settings, Wrench } from 'lucide-react';
+import { Activity, Globe2, LogOut, PanelRightClose, PanelRightOpen, ServerCog, Settings, Wrench, BriefcaseBusiness } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 const navigation = [
   { to: '/visitors', label: 'מבקרים', icon: Globe2 },
+  { to: '/clients', label: 'לקוחות וצמיחה', icon: BriefcaseBusiness },
   { to: '/infrastructure', label: 'שרת', icon: ServerCog },
   { to: '/services', label: 'שירותים', icon: Wrench },
   { to: '/settings', label: 'הגדרות', icon: Settings }

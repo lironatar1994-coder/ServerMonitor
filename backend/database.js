@@ -447,5 +447,6 @@ function syncProductionApps() {
 
 purgeRetiredProductionApps();
 syncProductionApps();
+require('./growthSchema').initializeGrowth(db);
 
 module.exports = db;

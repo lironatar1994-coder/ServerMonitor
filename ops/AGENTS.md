@@ -4,6 +4,8 @@
 - Own the single host-maintenance implementation and installation contract.
 
 ## Ownership
+
+- `growth-tracker.js` and `install-growth-coverage.py` collect anonymous contact actions and allow-listed campaign tags on twelve canonical public sites. They compose with the existing navigation injection and add no second native navigation signal.
 - `maintenance.py` is installed as `/usr/local/sbin/lawebs-maintenance`.
 - `test_maintenance.py` covers safe cleanup and verified SQLite backups.
 
@@ -11,6 +13,9 @@
 - `install-visitor-coverage.py` and `visitor-tracker.js` add missing navigation signals at the Nginx boundary, preserving application builds and CMS content.
 
 ## Local Contracts
+
+- Growth instrumentation must leave customer builds and CMS content untouched. Exclude private/admin routes, never read field values, and preserve Maavar's privacy. Nginx fixes the site identity and keeps the integration key server-only; POST bridges remain bounded at 16 KB.
+- Apply growth installation after visitor installation because the combined head substitution includes both map variables. The 15-minute health probe verifies both installed markers. Back up Nginx edits and roll back failed validation.
 - Keep the existing `/var/lib/lawebs-maintenance/backups` manifest layout and PC acknowledgement protocol compatible.
 - Never remove current releases, releases used by a running process, shared data, uploads, secrets, or the most recent three release candidates.
 - Pre-backup cleanup may remove only disposable caches; release retention runs only after a verified backup succeeds.
