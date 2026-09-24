@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { X, ExternalLink, Eye, Footprints, MessageCircle, MousePointer2, Timer, ArrowDownToLine, TriangleAlert } from 'lucide-react';
+import { X, ExternalLink, Eye, Activity, MessageCircle, MousePointer2, Timer, ArrowDownToLine, TriangleAlert } from 'lucide-react';
 import { apiFetch, rangeQuery } from '../lib/api';
 import { pageName, PAGE_HINT } from '../lib/analyticsLabels';
 import { formatNumber, formatDateTime } from '../lib/format';
@@ -55,7 +55,7 @@ export default function PageInsights({ app, path, resolveRange, onClose, onSelec
     <Panel title={pageName(path, app.name)} hint={`${PAGE_HINT} הביקורים ולחיצות הקשר נמדדו בדפדפן. לחיצה אינה פנייה שנשלחה; אין הוכחה שהעמוד גרם לה.`} action={<button className="icon-btn" type="button" onClick={onClose} aria-label="סגירת פירוט העמוד"><X /></button>}>
       <DataState loading={state.loading} error={state.error} onRetry={() => { setState(s => ({ ...s, loading: true, error: '' })); setRetry(n => n + 1); }}>
         {data && <>
-          <StatRow><Stat icon={Eye} label="צפיות שרת" value={data.log.views} /><Stat icon={Footprints} label="ביקורים" value={data.visits} /><Stat icon={MousePointer2} label="עם לחיצת קשר" value={data.contact_visits} /></StatRow>
+          <StatRow><Stat icon={Eye} label="צפיות שרת" value={data.log.views} /><Stat icon={Activity} label="ביקורים" value={data.visits} /><Stat icon={MousePointer2} label="עם לחיצת קשר" value={data.contact_visits} /></StatRow>
           <h3>מה עשו אחר כך?</h3>
           {data.actions.length ? <ul className="insight-list">{data.actions.map((row, i) => <li key={i}><span>{row.event_type === 'outbound_click' ? 'מעבר לאתר' : row.label === 'whatsapp' ? 'לחיצת WhatsApp' : row.label === 'phone' ? 'לחיצת טלפון' : 'לחיצת קשר'} · {pageName(row.path, app.name)}</span><b>{formatNumber(row.visits)} ביקורים</b></li>)}</ul> : <Empty text="לא נמדדו לחיצות בהמשך" />}
           <h3>עמודים הבאים</h3>

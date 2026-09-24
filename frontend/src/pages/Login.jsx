@@ -34,7 +34,7 @@ const Login = () => {
   return (
     <main className="login">
       <form className="login__card" onSubmit={handleSubmit}>
-        <span className="login__brand"><i aria-hidden="true"><Activity /></i><b>Vee</b> Monitor</span>
+        <span className="login__brand"><i aria-hidden="true"><Activity /></i><b>Server Monitor</b></span>
         <h1>כניסה</h1>
         {error && <div className="banner banner--error" role="alert">{error}</div>}
         <label>שם משתמש

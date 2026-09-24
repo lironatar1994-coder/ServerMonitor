@@ -24,7 +24,7 @@
 
 ## Local Contracts
 
-- Keep `מבקרים משוערים` explicit; compact labels `ביקורים` and `צפיות` mean measured visits and recorded page opens, with the full meaning in accessible labels and shared hints. Use Users, Footprints and Eye consistently; comparison rows repeat icons and values, not label paragraphs. Keep low samples visible with a named warning icon and missing measurement with `לא נמדד`.
+- Keep `מבקרים משוערים` explicit; compact labels `ביקורים` and `צפיות` mean measured visits and recorded page opens, with full meaning in accessible labels and shared hints. Mobile comparison tables retain aligned numeric columns with one dark header; omit repeated metric icons. Keep low samples visible with a named warning icon and missing measurement with `לא נמדד`.
 - Shared `Change` renders neutral signed absolute changes with accessible full explanations. Zero baselines show `אין קודמים`; unavailable comparisons stay an em dash. Client objectives/coverage remain in detail views rather than repeating in overview rows. Page limitations live in a disclosure, with low samples still flagged outside it.
 - The full page row is one keyboard-operable button with a friendly name, count and chevron; do not repeat continuation prompts. Store the selected exact page in `page` and the view in the URL. Back, refresh and shared links preserve context; closing returns focus to the originating row. Drill-downs show observed next pages, later contact actions and low-sample guidance; do not equate no recorded continuation with an exit or a click with a lead.
 - API requests time out after 20 seconds with recovery text, validate JSON responses, and preserve cancellation. Lazy-load failures offer reload; the loader offers recovery if a chunk stalls. Never disguise a failed request as no traffic.
@@ -62,6 +62,7 @@
 - Use existing component structure and CSS files before introducing new UI libraries.
 - Prefer lucide-react icons already installed when adding icon controls.
 - Follow `../DESIGN.md`: cool off-white and white application surfaces, charcoal infrastructure, Noto Sans Hebrew throughout, teal selection/links, green health, amber attention and red failure/destruction. The paper/ink and serif direction is superseded.
+- Anchor every workspace with charcoal navigation, a plain Server Monitor wordmark and a strong primary summary band. Prefer bold numbers and column alignment over decorative icons, pale cards or oversized titles. Selected content tabs use underlines; main navigation and period controls retain solid selection.
 - Favour density over prose: one short screen title, no marketing copy, and explanatory caveats behind a `Hint` icon rather than repeated paragraphs.
 - Group related breakdowns behind `Tabs` in a single `Panel` instead of stacking one panel per dimension.
 - Keep desktop tables paired with purpose-built mobile cards and maintain 44px touch targets (see the `pointer: coarse` block in `index.css`), visible focus states, and reduced-motion support.

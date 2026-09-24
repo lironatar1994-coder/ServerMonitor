@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-24T13:01:21.316048+00:00",
+  "generatedAt": "2026-09-24T13:33:56.962803+00:00",
   "title": "Design System: Server Monitor",
   "extensions": {
     "colorMeta": {
@@ -118,31 +118,11 @@
       },
       "muted": {
         "role": "neutral",
-        "displayName": "Muted",
-        "tonalRamp": [
-          "oklch(15.00% 0.02528 226.59)",
-          "oklch(26.43% 0.02528 226.59)",
-          "oklch(37.86% 0.02528 226.59)",
-          "oklch(49.29% 0.02528 226.59)",
-          "oklch(60.71% 0.02528 226.59)",
-          "oklch(72.14% 0.02528 226.59)",
-          "oklch(83.57% 0.02528 226.59)",
-          "oklch(95.00% 0.02528 226.59)"
-        ]
+        "displayName": "Muted"
       },
       "line": {
         "role": "neutral",
-        "displayName": "Line",
-        "tonalRamp": [
-          "oklch(15.00% 0.00957 222.06)",
-          "oklch(26.43% 0.00957 222.06)",
-          "oklch(37.86% 0.00957 222.06)",
-          "oklch(49.29% 0.00957 222.06)",
-          "oklch(60.71% 0.00957 222.06)",
-          "oklch(72.14% 0.00957 222.06)",
-          "oklch(83.57% 0.00957 222.06)",
-          "oklch(95.00% 0.00957 222.06)"
-        ]
+        "displayName": "Line"
       },
       "healthy": {
         "role": "semantic",
@@ -430,7 +410,7 @@
       "refersTo": "button-primary",
       "description": "Explicit action with a 44px target and visible keyboard focus.",
       "html": "<button dir=\"rtl\" class=\"ds-button-primary\">שמירה</button>",
-      "css": ".ds-button-primary{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;min-height:44px;min-width:44px;padding:.5rem .8rem;border:1px solid var(--line,#D9E1E4);border-radius:var(--radius,6px);background:var(--accent,#006775);color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .14s ease,border-color .14s ease;}.ds-button-primary:hover{background:#004E59;border-color:var(--ink,#172126);}.ds-button-primary:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}.ds-button-primary:disabled{opacity:.5;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none;}}"
+      "css": ".ds-button-primary{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;min-height:44px;min-width:44px;padding:.5rem .8rem;border:1px solid var(--line,#BAC8CE);border-radius:var(--radius,3px);background:var(--accent,#006775);color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .14s ease,border-color .14s ease;}.ds-button-primary:hover{background:#004E59;border-color:var(--ink,#172126);}.ds-button-primary:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}.ds-button-primary:disabled{opacity:.5;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none;}}"
     },
     {
       "name": "Secondary Button",
@@ -438,7 +418,7 @@
       "refersTo": "button-secondary",
       "description": "Explicit action with a 44px target and visible keyboard focus.",
       "html": "<button dir=\"rtl\" class=\"ds-button-secondary\">ביטול</button>",
-      "css": ".ds-button-secondary{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;min-height:44px;min-width:44px;padding:.5rem .8rem;border:1px solid var(--line,#D9E1E4);border-radius:var(--radius,6px);background:var(--paper-light,#fff);color:var(--ink,#172126);font-size:.82rem;font-weight:700;cursor:pointer;transition:background .14s ease,border-color .14s ease;}.ds-button-secondary:hover{background:var(--paper-light,#fff);border-color:var(--ink,#172126);}.ds-button-secondary:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}.ds-button-secondary:disabled{opacity:.5;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-secondary{transition:none;}}"
+      "css": ".ds-button-secondary{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;min-height:44px;min-width:44px;padding:.5rem .8rem;border:1px solid var(--line,#BAC8CE);border-radius:var(--radius,3px);background:var(--paper-light,#fff);color:var(--ink,#172126);font-size:.82rem;font-weight:700;cursor:pointer;transition:background .14s ease,border-color .14s ease;}.ds-button-secondary:hover{background:var(--paper-light,#fff);border-color:var(--ink,#172126);}.ds-button-secondary:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}.ds-button-secondary:disabled{opacity:.5;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-secondary{transition:none;}}"
     },
     {
       "name": "Destructive Button",
@@ -446,7 +426,7 @@
       "refersTo": "button-danger",
       "description": "Explicit action with a 44px target and visible keyboard focus.",
       "html": "<button dir=\"rtl\" class=\"ds-button-danger\">מחיקה</button>",
-      "css": ".ds-button-danger{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;min-height:44px;min-width:44px;padding:.5rem .8rem;border:1px solid var(--line,#D9E1E4);border-radius:var(--radius,6px);background:var(--vermilion,#B42332);color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .14s ease,border-color .14s ease;}.ds-button-danger:hover{background:var(--vermilion,#B42332);border-color:var(--ink,#172126);}.ds-button-danger:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}.ds-button-danger:disabled{opacity:.5;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-danger{transition:none;}}"
+      "css": ".ds-button-danger{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;min-height:44px;min-width:44px;padding:.5rem .8rem;border:1px solid var(--line,#BAC8CE);border-radius:var(--radius,3px);background:var(--vermilion,#B42332);color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .14s ease,border-color .14s ease;}.ds-button-danger:hover{background:var(--vermilion,#B42332);border-color:var(--ink,#172126);}.ds-button-danger:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}.ds-button-danger:disabled{opacity:.5;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-danger{transition:none;}}"
     },
     {
       "name": "Labeled Field",
@@ -454,7 +434,7 @@
       "refersTo": "input",
       "description": "Visible Hebrew label with a white input surface.",
       "html": "<label class=\"ds-field\" dir=\"rtl\">שם האתר<input placeholder=\"שם האתר\" /></label>",
-      "css": ".ds-field{display:grid;gap:.4rem;font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;color:var(--ink,#172126);font-size:.85rem;}.ds-field input{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;min-height:44px;padding:.5rem .65rem;border:1px solid var(--line,#D9E1E4);border-radius:var(--radius,6px);background:white;color:var(--ink,#172126);font-size:1rem;}.ds-field input::placeholder{color:var(--ink-muted,#53656D);opacity:1;}.ds-field input:focus{border-color:var(--ink,#172126);}.ds-field input:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}"
+      "css": ".ds-field{display:grid;gap:.4rem;font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;color:var(--ink,#172126);font-size:.85rem;}.ds-field input{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;min-height:44px;padding:.5rem .65rem;border:1px solid var(--line,#BAC8CE);border-radius:var(--radius,3px);background:white;color:var(--ink,#172126);font-size:1rem;}.ds-field input::placeholder{color:var(--ink-muted,#43565F);opacity:1;}.ds-field input:focus{border-color:var(--ink,#172126);}.ds-field input:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}"
     },
     {
       "name": "Workspace Navigation",
@@ -462,7 +442,7 @@
       "refersTo": "nav-selected",
       "description": "Compact workspace destinations with a pale teal current state.",
       "html": "<nav class=\"ds-nav\" dir=\"rtl\" aria-label=\"סביבות עבודה\"><a href=\"#visitors\" aria-current=\"page\">אתרים</a><a href=\"#clients\">לקוחות</a></nav>",
-      "css": ".ds-nav{display:grid;gap:.15rem;font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;}.ds-nav a{display:flex;align-items:center;min-height:44px;padding:.5rem .55rem;border-radius:var(--radius,6px);color:var(--ink-muted,#53656D);font-size:.84rem;font-weight:600;text-decoration:none;}.ds-nav a:hover{background:var(--paper-deep,#E7EEF0);color:var(--ink,#172126);}.ds-nav a[aria-current]{background:#E6F1F3;color:var(--accent,#006775);}.ds-nav a:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}"
+      "css": ".ds-nav{display:grid;gap:.15rem;font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;}.ds-nav a{display:flex;align-items:center;min-height:44px;padding:.5rem .55rem;border-radius:var(--radius,3px);color:var(--ink-muted,#43565F);font-size:.84rem;font-weight:600;text-decoration:none;}.ds-nav a:hover{background:var(--paper-deep,#E7EEF0);color:var(--ink,#172126);}.ds-nav a[aria-current]{background:#E6F1F3;color:var(--accent,#006775);}.ds-nav a:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}.ds-nav{padding:.75rem;background:#172126;}.ds-nav a{color:#C9D7DC;}.ds-nav a[aria-current]{background:#006775;color:#FFFFFF;}"
     },
     {
       "name": "Health Chip",
@@ -470,7 +450,7 @@
       "refersTo": "chip-healthy",
       "description": "Written health state; not a traffic trend.",
       "html": "<span class=\"ds-chip\" dir=\"rtl\">תקין</span>",
-      "css": ".ds-chip{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;padding:.2rem .5rem;border-radius:999px;background:#E6F4EC;color:var(--healthy,#19704B);font-size:.75rem;font-weight:800;white-space:nowrap;}"
+      "css": ".ds-chip{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;padding:.2rem .5rem;border-radius:3px;background:#E6F4EC;color:var(--healthy,#19704B);font-size:.75rem;font-weight:800;white-space:nowrap;}"
     },
     {
       "name": "Flat Section",
@@ -478,22 +458,22 @@
       "refersTo": "panel",
       "description": "One divider and a compact title instead of an enclosing card.",
       "html": "<section class=\"ds-panel\" dir=\"rtl\"><h2>פעילות לאורך זמן</h2><div>השוואה לתקופה הקודמת</div></section>",
-      "css": ".ds-panel{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;background:var(--paper-light,#fff);color:var(--ink,#172126);border-top:1px solid var(--line,#D9E1E4);border-radius:0;}.ds-panel h2{margin:0;padding:.65rem 1rem;font-size:1rem;line-height:1.5;border-bottom:1px solid var(--line,#D9E1E4);}.ds-panel div{padding:1rem;font-size:.8rem;color:var(--ink-muted,#53656D);}"
+      "css": ".ds-panel{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;background:var(--paper-light,#fff);color:var(--ink,#172126);border-top:1px solid var(--line,#BAC8CE);border-radius:0;}.ds-panel h2{margin:0;padding:.65rem 1rem;font-size:1rem;line-height:1.5;border-bottom:1px solid var(--line,#BAC8CE);}.ds-panel div{padding:1rem;font-size:.8rem;color:var(--ink-muted,#43565F);}"
     },
     {
       "name": "Site Comparison Row",
       "kind": "custom",
-      "description": "Named status and metric icons, one shared legend, neutral signed change; no repeated health sentences.",
-      "html": "<a class=\"ds-row\" href=\"#site\" dir=\"rtl\"><span><b>LA webs</b></span><span aria-label=\"5 ביקורים שנמדדו\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" aria-hidden=\"true\"><path d=\"M5 17a3 3 0 0 0 6 0V6a3 3 0 0 0-6 0v11ZM14 7a3 3 0 0 1 6 0v11a3 3 0 0 1-6 0V7Z\"/></svg><strong>5</strong></span><span aria-label=\"3 יותר, מדגם קטן\"><bdi>+3</bdi><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" aria-hidden=\"true\"><path d=\"m12 3 10 18H2L12 3Zm0 5v6m0 3v1\"/></svg></span></a>",
-      "css": ".ds-row{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;display:grid;grid-template-columns:minmax(8rem,1.6fr) 1fr 1fr;gap:1rem;align-items:center;min-height:60px;padding:.8rem 1rem;border-bottom:1px solid var(--line,#D9E1E4);background:var(--paper-light,#fff);color:var(--ink,#172126);text-decoration:none;}.ds-row b{color:var(--accent,#006775);font-size:1rem;}.ds-row strong{font-size:1.2rem;}.ds-row small{display:block;color:var(--ink-muted,#53656D);font-size:.75rem;}.ds-row:hover{background:#EDF5F6;}.ds-row:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}@media(max-width:760px){.ds-row{grid-template-columns:1fr 1fr;}.ds-row>span:first-child{grid-column:1/-1;}}.ds-row>span{display:flex;align-items:center;gap:.4rem;}"
+      "description": "Aligned numeric table columns and a named health state, without repeated metric icons.",
+      "html": "<a class=\"ds-row\" href=\"#site\" dir=\"rtl\"><span><b>LA webs</b></span><span aria-label=\"5 ביקורים שנמדדו\"><strong>5</strong></span><span aria-label=\"3 יותר\"><bdi>+3</bdi></span></a>",
+      "css": ".ds-row{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;display:grid;grid-template-columns:minmax(8rem,1.6fr) 1fr 1fr;gap:1rem;align-items:center;min-height:60px;padding:.8rem 1rem;border-bottom:1px solid var(--line,#BAC8CE);background:var(--paper-light,#fff);color:var(--ink,#172126);text-decoration:none;}.ds-row b{color:var(--accent,#006775);font-size:1rem;}.ds-row strong{font-size:1.2rem;}.ds-row small{display:block;color:var(--ink-muted,#43565F);font-size:.75rem;}.ds-row:hover{background:#EDF5F6;}.ds-row:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}@media(max-width:760px){.ds-row{grid-template-columns:1fr 1fr;}.ds-row>span:first-child{grid-column:1/-1;}}.ds-row>span{display:flex;align-items:center;gap:.4rem;}.ds-row b{color:#172126;}"
     }
   ],
   "narrative": {
-    "northStar": "בדיקה יומית קצרה",
-    "overview": "The interface should answer what changed, what needs attention, and which site to open. It is a quiet, compact Hebrew workspace: numbers, comparisons and actions precede explanations. This direction comes from the user's precise brief and the built interface; no separate approved visual comp exists.\n\nUse one light theme for websites, client follow-up, services, settings and authentication. Infrastructure uses a charcoal workspace with the same components and hierarchy. The cool palette and single sans family replace the former beige paper and serif direction.",
+    "northStar": "חדר בקרה חד וברור",
+    "overview": "A precise Hebrew daily-check workspace with strong contrast, restrained functional icons and aligned numeric tables. Dark navigation and a deep-teal summary band establish hierarchy; the main content remains light and infrastructure stays charcoal.",
     "keyCharacteristics": [
       "Hebrew RTL with readable mixed-direction names, dates and paths.",
-      "Icon-led compact rows, one metric legend and short labels; explanations open on demand.",
+      "Charcoal navigation, one solid teal summary band, aligned table columns and strong section rules.",
       "Teal actions and selection; explicit, restrained status colors.",
       "Explanations available on demand, with uncertainty retained in visible labels."
     ],

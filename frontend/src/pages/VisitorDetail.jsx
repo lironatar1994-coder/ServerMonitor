@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChartNoAxesCombined, ChevronLeft, ChevronRight, ExternalLink, Eye, Footprints, Globe, MapPin, MonitorSmartphone, PanelsTopLeft, Search, Users, X } from 'lucide-react';
+import { ChartNoAxesCombined, ChevronLeft, ChevronRight, ExternalLink, Eye, Activity, Globe, MapPin, MonitorSmartphone, PanelsTopLeft, Search, Users, X } from 'lucide-react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch, rangeQuery } from '../lib/api';
 import { useRange } from '../lib/useRange';
@@ -179,7 +179,7 @@ const VisitorDetail = () => {
         {data?.app?.status && data.app.status !== 'online' && <div className="attention-list"><Link to={`/services/${id}`}>האתר דורש בדיקת זמינות <ChevronLeft /></Link></div>}
         <StatRow>
           <Stat icon={Users} label="מבקרים משוערים" value={summary.browser_signal_visitors} previous={data?.comparison?.previous?.browser_signal_visitors} tone="forest" />
-          <Stat icon={Footprints} label="ביקורים" value={summary.browser_signal_sessions} previous={data?.comparison?.previous?.browser_signal_sessions} />
+          <Stat icon={Activity} label="ביקורים" value={summary.browser_signal_sessions} previous={data?.comparison?.previous?.browser_signal_sessions} />
           <Stat icon={Eye} label="צפיות" value={summary.browser_signal_page_views} previous={data?.comparison?.previous?.browser_signal_page_views} />
         </StatRow>
         <div className="workspace-tabs"><Tabs label="תצוגת אתר" tabs={[{ id: 'overview', label: 'סקירה', icon: ChartNoAxesCombined }, { id: 'pages', label: 'עמודים', icon: PanelsTopLeft }, { id: 'audience', label: 'קהל', icon: Globe }]} value={view} onChange={value => { const next = new URLSearchParams(query); next.set('view', value); next.delete('page'); setQuery(next); }} /></div>

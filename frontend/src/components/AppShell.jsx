@@ -34,7 +34,6 @@ const AppShell = () => {
     navigate('/login', { replace: true });
   };
 
-  const current = navigation.find(({ to }) => location.pathname.startsWith(to));
 
   return (
     <div className={`shell ${infrastructureMode ? 'shell--infrastructure' : ''} ${collapsed ? 'shell--collapsed' : ''}`}>
@@ -43,7 +42,7 @@ const AppShell = () => {
       <aside className="side-rail" aria-label="ניווט ראשי">
         <div className="rail-top">
           <span className="brand-stamp" aria-hidden="true"><Activity /></span>
-          <span className="brand-name"><b>Vee</b><small>Monitor</small></span>
+          <span className="brand-name"><b>Server Monitor</b></span>
           <button
             type="button"
             className="rail-toggle"
@@ -72,7 +71,7 @@ const AppShell = () => {
 
       <header className="mobile-header">
         <span className="brand-stamp" aria-hidden="true"><Activity /></span>
-        <b>{current?.label || 'Vee Monitor'}</b>
+        <b>Server Monitor</b>
         <button type="button" className="mobile-logout" onClick={handleLogout} aria-label="התנתקות">
           <LogOut aria-hidden="true" />
         </button>
