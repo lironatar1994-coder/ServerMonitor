@@ -75,7 +75,9 @@ cd "$BACKEND_DIR"
 npm ci -s
 # Rebuild sqlite3 for Linux environment just in case
 npm rebuild better-sqlite3
-npx playwright install --with-deps chromium
+if ! node -e "process.exit(require('fs').existsSync(require('playwright').chromium.executablePath()) ? 0 : 1)"; then
+  NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive npx playwright install --with-deps chromium
+fi
 cd ..
 
 bash "$APP_ROOT/ops/install-maintenance.sh"

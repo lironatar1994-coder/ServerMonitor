@@ -150,7 +150,7 @@ const VisitorDetail = () => {
         <StatRow>
           <Stat label="מבקרים משוערים" value={summary.browser_signal_visitors} delta={data?.comparison?.browser_signal_visitors_percent} tone="forest" hint={BROWSER_SIGNAL_HINT} />
           <Stat label="ביקורים שנמדדו" value={summary.browser_signal_sessions} foot="ביקורים חוזרים נכללים" />
-          <Stat label="עמודים שנפתחו" value={summary.browser_signal_page_views} delta={data?.comparison?.browser_signal_page_views_percent} hint={BROWSER_SIGNAL_HINT} />
+          <Stat label="עמודים שנפתחו" value={summary.browser_signal_page_views} delta={data?.comparison?.browser_signal_page_views_percent} foot="כולל צפיות חוזרות" hint={BROWSER_SIGNAL_HINT} />
         </StatRow>
         <details className="measurement-details"><summary>נתוני שרת וסינון אוטומטי</summary>
         <StatRow>
@@ -174,7 +174,7 @@ const VisitorDetail = () => {
                     <XAxis dataKey="label" axisLine={false} tickLine={false} minTickGap={24} tick={{ fill: '#6f695f', fontSize: 11 }} />
                     <YAxis axisLine={false} tickLine={false} width={40} tick={{ fill: '#6f695f', fontSize: 11 }} allowDecimals={false} />
                     <Tooltip contentStyle={{ background: '#171713', border: 0, borderRadius: 4, color: '#f2ebdd', fontSize: 12 }} />
-                    <Area type="monotone" dataKey="page_views" name="צפיות בעמודים" stroke="#1f5a47" strokeWidth={2.5} fill="#1f5a4720" />
+                    <Area isAnimationActive={false} type="monotone" dataKey="page_views" name="צפיות בעמודים" stroke="#1f5a47" strokeWidth={2.5} fill="#1f5a4720" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : <Empty text="אין תנועה בטווח שנבחר" />}

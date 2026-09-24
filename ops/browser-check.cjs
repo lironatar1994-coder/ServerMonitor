@@ -12,7 +12,7 @@ const output = process.env.BROWSER_CHECK_RESULT || '/var/lib/lawebs-maintenance/
 const result = { checked: Date.now(), errors: [], checks: [], timings: {} };
 const check = async (name, fn) => {
   try { await fn(); result.checks.push(name); console.log('PASS', name); }
-  catch (error) { result.errors.push(`${name}: ${error.message.slice(0, 350)}`); console.log('FAIL', name); }
+  catch (error) { result.errors.push(`${name}: ${error.message.slice(0, 350)}`); console.log('FAIL', name, error.message.slice(0, 350)); }
 };
 let browser;
 (async () => {
@@ -52,7 +52,7 @@ let browser;
   }
   await check('page-drill-down-and-plain-labels', async () => {
     await page.goto(`${monitor}/visitors/${app.id}`);
-    await page.getByText('מבקרים משוערים', { exact: true }).waitFor();
+    await page.locator('.stat__label').filter({ hasText: 'מבקרים משוערים' }).waitFor();
     await page.locator('.ranked-row__button').first().click();
     await page.getByRole('heading', { name: 'מה עשו אחר כך?', exact: true }).waitFor();
     assert.equal(await page.locator('.page-insights .error-state').count(), 0);
@@ -61,7 +61,7 @@ let browser;
   });
   await check('legacy-monitor-url', async () => {
     await page.goto(`https://vee-app.co.il/serve-monitor/visitors/${app.id}`);
-    await page.getByText('מבקרים משוערים', { exact: true }).waitFor();
+    await page.locator('.stat__label').filter({ hasText: 'מבקרים משוערים' }).waitFor();
     await page.locator('.skeleton-stack').waitFor({ state: 'hidden' });
     assert.equal(await page.locator('.error-state').count(), 0);
   });

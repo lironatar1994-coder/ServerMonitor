@@ -112,9 +112,9 @@ const VisitorOverview = () => {
                     <XAxis dataKey="label" axisLine={false} tickLine={false} minTickGap={24} tick={{ fill: '#6f695f', fontSize: 11 }} />
                     <YAxis axisLine={false} tickLine={false} width={40} tick={{ fill: '#6f695f', fontSize: 11 }} allowDecimals={false} />
                     <Tooltip contentStyle={{ background: '#171713', border: 0, borderRadius: 4, color: '#f2ebdd', fontSize: 12 }} />
-                    <Area type="monotone" dataKey="browser_signal_visitors" name="מבקרים משוערים" stroke="#1f5a47" strokeWidth={2.5} fill="url(#visitorInk)" />
-                    <Area type="monotone" dataKey="unique_candidates" name="כתובות רשת שונות" stroke="#d5543f" strokeWidth={2} fill="transparent" />
-                    <Area type="monotone" dataKey="page_views" name="צפיות לפי השרת" stroke="#9a6b16" strokeWidth={1.5} strokeDasharray="4 4" fill="transparent" />
+                    <Area isAnimationActive={false} type="monotone" dataKey="browser_signal_visitors" name="מבקרים משוערים" stroke="#1f5a47" strokeWidth={2.5} fill="url(#visitorInk)" />
+                    <Area isAnimationActive={false} type="monotone" dataKey="unique_candidates" name="כתובות רשת שונות" stroke="#d5543f" strokeWidth={2} fill="transparent" />
+                    <Area isAnimationActive={false} type="monotone" dataKey="page_views" name="צפיות לפי השרת" stroke="#9a6b16" strokeWidth={1.5} strokeDasharray="4 4" fill="transparent" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : <Empty text="אין תנועה בטווח שנבחר" />}
