@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { safeReturnPath } from './lib/reportNavigation';
 import AppShell from './components/AppShell';
 import LoadBoundary from './components/LoadBoundary';
@@ -12,6 +12,11 @@ const Services = lazy(() => import('./pages/Services'));
 const AppDetails = lazy(() => import('./pages/AppDetails'));
 const Settings = lazy(() => import('./pages/Settings'));
 const ClientGrowth = lazy(() => import('./pages/ClientGrowth'));
+
+const VisitorSite = () => {
+  const { id } = useParams();
+  return <VisitorDetail key={id} />;
+};
 
 const PageLoader = () => {
   const [slow, setSlow] = useState(false);
@@ -54,7 +59,7 @@ function App() {
           <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
             <Route index element={<Navigate to="/visitors" replace />} />
             <Route path="/visitors" element={<VisitorOverview />} />
-            <Route path="/visitors/:id" element={<VisitorDetail />} />
+            <Route path="/visitors/:id" element={<VisitorSite />} />
             <Route path="/infrastructure" element={<Infrastructure />} />
             <Route path="/services" element={<Services />} />
             <Route path="/services/:id" element={<AppDetails />} />

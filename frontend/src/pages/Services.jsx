@@ -35,7 +35,7 @@ const Services = () => {
       if (filter === 'issues' && app.status === 'online') return false;
       if (!term) return true;
       return [app.name, app.url, app.pm2_name, app.systemd_unit, app.log_path].some((field) => (field || '').toLowerCase().includes(term));
-    });
+    }).sort((a, b) => Number(a.status === 'online') - Number(b.status === 'online') || a.name.localeCompare(b.name, 'he'));
   }, [apps, filter, search]);
 
   const online = apps.filter((app) => app.status === 'online').length;

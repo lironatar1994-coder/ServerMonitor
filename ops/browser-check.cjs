@@ -37,8 +37,8 @@ let browser;
   page.on('response', r => { if (r.status() >= 400 && ['script', 'stylesheet', 'image', 'font'].includes(r.request().resourceType())) failures.push(`Resource HTTP ${r.status()}: ${new URL(r.url()).pathname}`); });
   await check('login-screen', async () => { await page.goto(`${monitor}/login`); await page.getByRole('button', { name: 'כניסה', exact: true }).waitFor(); });
   await context.addInitScript(({ token, monitor }) => { if (location.origin === new URL(monitor).origin || (location.origin === 'https://vee-app.co.il' && location.pathname.startsWith('/serve-monitor'))) localStorage.setItem('token', token); }, { token, monitor });
-  const routes = ['/visitors', `/visitors/${app.id}`, '/infrastructure', '/services', '/settings', `/clients/${app.id}`];
-  for (const width of [1365, 390]) {
+  const routes = ['/visitors', `/visitors/${app.id}`, '/infrastructure', '/services', `/services/${app.id}`, '/settings', '/clients', `/clients/${app.id}`];
+  for (const width of [1365, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     for (const route of routes) await check(`monitor-${width}${route}`, async () => {
       await page.goto(monitor + route);
@@ -51,13 +51,23 @@ let browser;
     });
   }
   await check('page-drill-down-and-plain-labels', async () => {
+    await page.setViewportSize({ width: 390, height: 900 });
     await page.goto(`${monitor}/visitors/${app.id}`);
     await page.locator('.stat__label').filter({ hasText: 'מבקרים משוערים' }).waitFor();
     await page.locator('.ranked-row__button').first().click();
     await page.getByRole('heading', { name: 'מה עשו אחר כך?', exact: true }).waitFor();
+    assert.ok(new URL(page.url()).searchParams.get('page'), 'Selected page missing from URL');
+    assert.equal(Math.round((await page.locator('.page-insights').boundingBox()).y), 0, 'Mobile panel is not full-screen');
     assert.equal(await page.locator('.page-insights .error-state').count(), 0);
     if (process.env.BROWSER_CHECK_CAPTURE === '1') await page.screenshot({ path: path.join(path.dirname(output), 'page-insights-mobile.png') });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.keyboard.press('Escape');
+    await page.locator('.page-insights').waitFor({ state: 'hidden' });
+    assert.ok(await page.evaluate(() => document.activeElement.matches('.ranked-row__button')), 'Page row did not regain focus');
+    await page.locator('.ranked-row__button').first().click();
+    await page.locator('.page-insights').waitFor();
+    await page.goBack();
+    await page.locator('.page-insights').waitFor({ state: 'hidden' });
   });
   await check('legacy-monitor-url', async () => {
     await page.goto(`https://vee-app.co.il/serve-monitor/visitors/${app.id}`);

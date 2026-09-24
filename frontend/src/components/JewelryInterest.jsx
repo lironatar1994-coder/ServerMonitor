@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ExternalLink, Gem } from 'lucide-react';
 import { Empty, Panel, Tabs } from './AnalyticsParts';
+import { changeLabel } from '../lib/dailyCheck';
 import { formatNumber } from '../lib/format';
 
 const INTEREST_HINT = 'צפיות מוצלחות בעמודי קטלוג ומוצר מכתובות שלא זוהו כבוט. כל מועמד נספר פעם אחת לכל מוצר.';
@@ -9,13 +10,6 @@ const TABS = [
   { id: 'products', label: 'מוצרים' },
   { id: 'collections', label: 'קטגוריות' }
 ];
-
-const trendLabel = (value) => {
-  if (value === null || value === undefined) return 'חדש';
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric) || Math.abs(numeric) < 0.5) return '—';
-  return `${numeric > 0 ? '↑' : '↓'} ${Math.round(Math.abs(numeric))}%`;
-};
 
 const JewelryInterest = ({ interest, siteUrl }) => {
   const [tab, setTab] = useState('products');
@@ -56,7 +50,7 @@ const JewelryInterest = ({ interest, siteUrl }) => {
                   </span>
                   <span className="shop-list__figures">
                     <strong>{formatNumber(item.page_views)}</strong>
-                    <small>{isProduct ? `${formatNumber(item.unique_candidates)} מועמדים` : trendLabel(item.change_percent)}</small>
+                    <small>{isProduct ? `${formatNumber(item.unique_candidates)} מועמדים` : changeLabel(item.page_views, item.previous_page_views)}</small>
                   </span>
                   <ExternalLink aria-hidden="true" />
                 </a>

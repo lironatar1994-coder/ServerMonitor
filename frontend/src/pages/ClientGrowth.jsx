@@ -12,7 +12,7 @@ const leadStatuses = { new: 'חדש', working: 'בטיפול', contacted: 'נו�
 const placements = { header: 'תפריט', hero: 'פתיח', floating: 'כפתור צף', contact: 'אזור קשר', footer: 'תחתית', content: 'תוכן' };
 const actions = { contact_click: 'לחיצת קשר', project_open: 'פתיחת פרויקט', outbound_click: 'מעבר לאתר פעיל' };
 const taskStatuses = { planned: 'מתוכנן', working: 'בביצוע', waiting_client: 'ממתין ללקוח', published: 'פורסם · במדידה', done: 'הושלם', cancelled: 'בוטל' };
-const tabs = [{ id: 'overview', label: 'תמונת מצב' }, { id: 'leads', label: 'פניות' }, { id: 'tasks', label: 'שיפורים ותוכן' }, { id: 'goals', label: 'מטרות' }, { id: 'campaigns', label: 'קמפיינים' }, { id: 'activity', label: 'יומן עבודה' }, { id: 'share', label: 'סיכום לשיתוף' }];
+const tabs = [{ id: 'overview', label: 'לטיפול היום' }, { id: 'leads', label: 'פניות' }, { id: 'tasks', label: 'משימות' }, { id: 'goals', label: 'מטרות' }, { id: 'campaigns', label: 'קמפיינים' }, { id: 'activity', label: 'יומן עבודה' }, { id: 'share', label: 'סיכום לשיתוף' }];
 const origins = { manual: 'דיווח ידני', quotes: 'מערכת הצעות מחיר', contact: 'מערכת הטפסים', registrations: 'מערכת הרשמות', leads: 'מערכת הפניות' };
 const num = formatNumber;
 const options = obj => Object.entries(obj).map(([value, label]) => ({ value, label }));
@@ -73,12 +73,14 @@ function ShareDraft({ id, days, notify }) {
 }
 export default function ClientGrowth() {
   const { id } = useParams();
+  const [now, setNow] = useState(() => Date.now());
   const [days, setDays] = useState(30), [tab, setTab] = useState('overview');
   const [data, setData] = useState(null), [loading, setLoading] = useState(true), [error, setError] = useState('');
   const [edit, setEdit] = useState(null), [busy, setBusy] = useState(false), [feedback, setFeedback] = useState(null);
   const [search, setSearch] = useState(''), [filter, setFilter] = useState('all');
   const notify = (message, isError = false) => setFeedback({ message, isError });
   const load = useCallback(async (quiet = false) => {
+    setNow(Date.now());
     if (!quiet) setLoading(true);
     try { setData(await apiFetch(`/client-growth${id ? `/${id}` : ''}?days=${days}`)); setError(''); }
     catch (e) { setError(e.message); } finally { setLoading(false); }
@@ -101,17 +103,23 @@ export default function ClientGrowth() {
     } catch (e) { notify(e.message, true); } finally { setBusy(false); }
   };
   const fromInsight = item => { setTab('tasks'); startEdit('tasks', { title: item.action, hypothesis: `${item.title}\n${item.evidence}\nהמלצה לבדיקה, אינה מסקנה על סיבת השינוי.`, evidence_key: item.key, priority: item.priority, path: item.path }); };
-  const sites = (data?.sites || []).filter(s => `${s.name} ${s.owner} ${s.objective}`.toLowerCase().includes(search.toLowerCase()) && (filter !== 'attention' || s.insights.length));
+  const sites = (data?.sites || []).filter(s => `${s.name} ${s.owner} ${s.objective}`.toLowerCase().includes(search.toLowerCase()) && (filter !== 'attention' || s.insights.length)).sort((a, b) => Number(b.insights.some(i => ['unanswered', 'overdue-tasks'].includes(i.key))) - Number(a.insights.some(i => ['unanswered', 'overdue-tasks'].includes(i.key))) || b.open_leads - a.open_leads || b.open_tasks - a.open_tasks);
   const m = data?.metrics || {};
+  const openLeads = (data?.leads || []).filter(l => ['new', 'working', 'contacted', 'qualified'].includes(l.status));
+  const activeTasks = (data?.tasks || []).filter(t => !['done', 'cancelled'].includes(t.status));
+  const isOverdue = row => row.due_at && Date.parse(row.due_at) < now;
+  const queue = [...openLeads.map(row => ({ ...row, kind: 'leads', title: row.reference })), ...activeTasks.map(row => ({ ...row, kind: 'tasks' }))]
+    .sort((a, b) => Number(Boolean(isOverdue(b))) - Number(Boolean(isOverdue(a))) || Number(b.kind === 'leads') - Number(a.kind === 'leads') || Date.parse(a.due_at || '9999-01-01') - Date.parse(b.due_at || '9999-01-01'));
+
   return <div className="page page--visitors growth-workspace">
-    <PageHead title={id ? data?.app?.name || 'לקוח' : 'לקוחות וצמיחה'} meta={id ? <Link to="/clients">כל הלקוחות</Link> : 'סביבת עבודה פנימית'}>
+    <PageHead title={id ? data?.app?.name || 'לקוח' : 'לקוחות'} meta={id ? <Link className="crumb" to="/clients">כל הלקוחות</Link> : 'סביבת עבודה פנימית'}>
       <Tabs label="טווח מדידה" tabs={[{ id: 7, label: '7 ימים' }, { id: 30, label: '30 יום' }, { id: 90, label: '90 יום' }]} value={days} onChange={setDays} />
       <button className="icon-btn" onClick={() => load()} aria-label="רענון"><RefreshCw /></button>
     </PageHead>
     {feedback && <div className={`banner banner--${feedback.isError ? 'error' : 'success'}`} role={feedback.isError ? 'alert' : 'status'}>{feedback.message}</div>}
     <DataState loading={loading} error={error} onRetry={() => load()}>{data && <>
       {!id ? <>
-        <StatRow><Stat label="אתרים" value={data.sites.length} /><Stat label="דורשים תשומת לב" value={data.sites.filter(s => s.insights.length).length} /><Stat label="פניות פתוחות" value={data.sites.reduce((n, s) => n + s.open_leads, 0)} /><Stat label="משימות פתוחות" value={data.sites.reduce((n, s) => n + s.open_tasks, 0)} /></StatRow>
+        <StatRow><Stat label="מעקבים ומשימות באיחור" value={data.sites.filter(s => s.insights.some(i => ['unanswered', 'overdue-tasks'].includes(i.key))).length} foot="לקוחות שדורשים טיפול" /><Stat label="דורשים תשומת לב" value={data.sites.filter(s => s.insights.length).length} /><Stat label="פניות פתוחות" value={data.sites.reduce((n, s) => n + s.open_leads, 0)} /><Stat label="משימות פתוחות" value={data.sites.reduce((n, s) => n + s.open_tasks, 0)} /></StatRow>
         <Panel title="סדר העבודה" hint="הסדר מתעדף פניות שממתינות, בעיות איסוף ומשימות באיחור. ההשוואה היא של כל אתר לעצמו.">
           <div className="growth-toolbar"><label className="growth-search"><span className="sr-only">חיפוש לקוח</span><input placeholder="חיפוש לקוח או אחראי" value={search} onChange={e => setSearch(e.target.value)} /></label><Tabs tabs={[{ id: 'all', label: 'כל הלקוחות' }, { id: 'attention', label: 'דורשים טיפול' }]} value={filter} onChange={setFilter} /></div>
           <div className="growth-list">{sites.map(site => <Link className="growth-client" key={site.id} to={`/clients/${site.id}`}>
@@ -121,9 +129,16 @@ export default function ClientGrowth() {
           </Link>)}</div>{!sites.length && <Empty text="אין לקוחות שמתאימים לסינון" />}
         </Panel>
       </> : <>
-        <div className="growth-toolbar"><Tabs tabs={tabs} value={tab} onChange={value => { setTab(value); setEdit(null); setFilter('all'); }} label="סביבת לקוח" /><Link className="btn" to={`/visitors/${id}`}>נתוני מבקרים<ArrowUpRight /></Link></div>
+        <div className="growth-toolbar"><Tabs tabs={tabs.slice(0, 3)} value={tab} onChange={value => { setTab(value); setEdit(null); setFilter('all'); }} label="סביבת לקוח" /><label className="client-secondary"><span className="sr-only">תצוגות נוספות ללקוח</span><select value={tabs.slice(3).some(t => t.id === tab) ? tab : ''} onChange={e => { if (e.target.value) { setTab(e.target.value); setEdit(null); } }}><option value="">תצוגות נוספות</option>{tabs.slice(3).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></label><Link className="btn" to={`/visitors/${id}`}>נתוני מבקרים<ArrowUpRight /></Link></div>
         {edit && <Editor key={`${edit.kind}:${edit.value.id || 'new'}`} edit={edit} onSave={save} onClose={() => setEdit(null)} busy={busy} />}
         {tab === 'overview' && <>
+          <StatRow><Stat label="מעקבים באיחור" value={openLeads.filter(isOverdue).length} /><Stat label="פניות פתוחות" value={openLeads.length} /><Stat label="משימות פתוחות" value={activeTasks.length} /></StatRow>
+          <Panel title="לטיפול היום" hint="פניות ומשימות מכל התקופות. לחיצות בדפדפן אינן פניות.">
+            {queue.slice(0, 8).map(row => <div className="growth-item" key={`${row.kind}:${row.id}`}><div><strong>{row.title}</strong><small>{row.kind === 'leads' ? origins[row.origin] || 'מקור מחובר' : 'משימה'} · {row.due_at ? formatDateTime(row.due_at) : 'ללא מועד'}</small></div><span className={isOverdue(row) ? 'is-attention' : 'muted'}>{isOverdue(row) ? 'באיחור' : row.kind === 'leads' ? leadStatuses[row.status] : taskStatuses[row.status]}</span><button className="btn" onClick={() => { setTab(row.kind); startEdit(row.kind, row); }}>עדכון</button></div>)}
+            {!queue.length && <Empty text="אין פניות או משימות פתוחות" />}
+            {queue.length > 8 && <button className="text-action" onClick={() => setTab('tasks')}>כל המשימות והמעקבים בלשוניות</button>}
+          </Panel>
+          <details className="measurement-details"><summary>מדידות, פעולות ותובנות</summary>
           {data.app.name === 'LA webs' && <Panel title="מדידה ובדיקות פנימיות" hint="ההחרגה חלה על הדפדפן שבו נפתח הקישור, לביקורים עתידיים בלבד. ביקורים קודמים אינם מסווגים מחדש.">
             <div className="growth-actions"><a className="btn" href="https://lawebs.co.il/?monitor_internal=1" target="_blank" rel="noopener noreferrer">פתיחת האתר ללא ספירה</a><a className="btn" href="https://lawebs.co.il/?monitor_internal=0" target="_blank" rel="noopener noreferrer">החזרת הספירה בדפדפן</a></div>
           </Panel>}
@@ -136,6 +151,7 @@ export default function ClientGrowth() {
           </Panel> : <Panel title="תהליך יצירת קשר" hint="השלבים הם ביקורים עם כל סוג פעולה, לא משפך מסודר ולא שיעור המרה לפנייה מאומתת."><div className="growth-stages">{[['form_start', 'התחלת טופס'], ['form_submit', 'ניסיון שליחה'], ['form_error', 'שגיאת אימות'], ['form_success_observed', 'הצלחה שדווחה בדפדפן']].map(([k, label]) => <div key={k}><strong>{num(m[k])}</strong><span>{label}</span></div>)}</div></Panel>}
           <div className="grid grid--1-1"><Panel title="עמודים ופעולות">{data.pages.length ? data.pages.map(p => <div className="growth-item" key={p.path}><b dir="ltr">{p.path}</b><span>{num(p.sessions)} ביקורים · {num(p.contacts)} עם קשר</span></div>) : <Empty text="הנתונים יופיעו אחרי המדידות הראשונות" />}</Panel>
             <Panel title="מקורות וקמפיינים">{data.sources.length ? data.sources.map((s, i) => <div className="growth-item" key={i}><div><b>{s.source || 'ישיר / לא ידוע'}</b><small>{[s.medium, s.campaign].filter(Boolean).join(' · ')}</small></div><span>{num(s.sessions)} ביקורים · {num(s.contacts)} עם קשר</span></div>) : <Empty text="טרם נמדדו מקורות הגעה" />}</Panel></div>
+          </details>
         </>}
         {tab === 'goals' && <>
           <Panel title="מטרת האתר" action={<button className="btn" onClick={() => startEdit('profile', data.profile)}><Pencil />עריכה</button>}><p>{data.profile.objective}</p><p className="muted">אחראי: {data.profile.owner || 'טרם הוגדר'} · זמן מענה רצוי: {data.profile.response_hours} שעות</p></Panel>
@@ -146,11 +162,11 @@ export default function ClientGrowth() {
         {tab === 'leads' && <Panel title="מעקב פניות" hint="רשימת העבודה כוללת גם פניות מחוץ לטווח המדידה. פרטי הקשר נמצאים באתר המקור. מצב הטיפול כאן פנימי ואינו מעדכן את מערכת המקור." action={<button className="btn" onClick={() => startEdit('leads')}><Plus />דיווח ידני</button>}>
           <div className="growth-stages">{(data.outcomes || []).map(row => <div key={row.status}><strong>{num(row.total)}</strong><span>{leadStatuses[row.status]} · מהתקופה</span></div>)}</div>
           <div className="growth-coverage"><span>פניות מהתקופה שסומנו כהצלחה: {num(m.won)}</span><span>סכום מדווח עבורן: {num(m.revenue)} ₪</span><Hint text="סכומים שהוזנו ידנית; אין אימות תשלום או חישוב הכנסה אוטומטי." /></div><div className="growth-toolbar"><label>סינון מצב<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">כל הפניות</option>{options(leadStatuses).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label><span className="muted">{data.lead_total} פניות · מוצגות עד 500 אחרונות</span></div>
-          {data.leads.filter(l => filter === 'all' || l.status === filter).map(l => <div className="growth-item" key={l.id}><div><strong>{l.reference}</strong><small>{origins[l.origin] || 'מקור מחובר'} · {formatDateTime(l.occurred_at)}</small><small>{l.owner || 'ללא אחראי'}{l.due_at ? ` · מעקב: ${formatDateTime(l.due_at)}` : ''}{l.source_status === 'notification_failed' ? ' · הודעת המייל במקור נכשלה' : ''}</small></div><span className="growth-status">{leadStatuses[l.status]}</span><button className="btn" onClick={() => startEdit('leads', l)}>עדכון טיפול</button></div>)}
+          {data.leads.filter(l => filter === 'all' || l.status === filter).sort((a,b) => Number(Boolean(isOverdue(b))) - Number(Boolean(isOverdue(a)))).map(l => <div className="growth-item" key={l.id}><div><strong>{l.reference}</strong><small>{origins[l.origin] || 'מקור מחובר'} · {formatDateTime(l.occurred_at)}</small><small>{l.owner || 'ללא אחראי'}{l.due_at ? ` · מעקב: ${formatDateTime(l.due_at)}` : ''}{l.source_status === 'notification_failed' ? ' · הודעת המייל במקור נכשלה' : ''}</small></div><span className="growth-status">{leadStatuses[l.status]}</span><button className="btn" onClick={() => startEdit('leads', l)}>עדכון טיפול</button></div>)}
           {!data.leads.filter(l => filter === 'all' || l.status === filter).length && <Empty text="אין פניות להצגה. אפשר להוסיף דיווח ידני ללא פרטי קשר." />}
         </Panel>}
         {tab === 'tasks' && <Panel title="שיפורים ותוכן" action={<button className="btn" onClick={() => startEdit('tasks')}><Plus />משימה</button>}>
-          {data.tasks.map(t => <article className="growth-task" key={t.id}><div className="growth-item"><div><strong>{t.title}</strong><small>{t.owner || 'ללא אחראי'} · {t.due_at ? formatDateTime(t.due_at) : 'ללא מועד'} · {t.priority === 'high' ? 'עדיפות גבוהה' : 'עדיפות רגילה'}</small></div><span className="growth-status">{taskStatuses[t.status]}</span><button className="btn" onClick={() => startEdit('tasks', t)}>עדכון</button></div>
+          {[...data.tasks].sort((a,b) => Number(['done','cancelled'].includes(a.status)) - Number(['done','cancelled'].includes(b.status)) || Date.parse(a.due_at || '9999-01-01') - Date.parse(b.due_at || '9999-01-01')).map(t => <article className="growth-task" key={t.id}><div className="growth-item"><div><strong>{t.title}</strong><small>{t.owner || 'ללא אחראי'} · {t.due_at ? formatDateTime(t.due_at) : 'ללא מועד'} · {t.priority === 'high' ? 'עדיפות גבוהה' : 'עדיפות רגילה'}</small></div><span className="growth-status">{taskStatuses[t.status]}</span><button className="btn" onClick={() => startEdit('tasks', t)}>עדכון</button></div>
             {t.hypothesis && <p className="growth-note">{t.hypothesis}</p>}
             {t.impact && <div className="growth-impact">{t.impact.ready ? <><strong>{metrics[t.metric]}: {num(t.impact.before)} לפני ← {num(t.impact.after)} אחרי</strong><span>{t.impact.days} ימים בכל צד · ביקורים: {num(t.impact.sessions_before)} לפני / {num(t.impact.sessions_after)} אחרי{t.impact.confidence === 'low_sample' ? ' · מדגם קטן' : ''}</span><Hint text={t.impact.caveat} /></> : t.impact.reason}</div>}
           </article>)}{!data.tasks.length && <Empty text="הוסיפו משימת תוכן או שיפור. סימון כפורסם מתחיל השוואת לפני ואחרי." />}

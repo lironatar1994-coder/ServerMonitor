@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CalendarDays, Check, ChevronLeft, Info, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
-import { formatNumber } from '../lib/format';
+import { formatDateTime, formatNumber } from '../lib/format';
+import { changeLabel } from '../lib/dailyCheck';
 
 const RANGE_OPTIONS = [
   { days: 1, label: '24 שעות' },
@@ -35,15 +36,16 @@ export const StatRow = ({ children, label = 'מדדים מרכזיים' }) => (
   <section className="stat-row" aria-label={label}>{children}</section>
 );
 
-export const Stat = ({ label, value, delta, tone = 'ink', hint, foot }) => {
+export const Stat = ({ label, value, delta, previous, tone = 'ink', hint, foot }) => {
   const numericDelta = Number(delta);
-  const showDelta = delta !== undefined && delta !== null && Number.isFinite(numericDelta);
-  const display = typeof value === 'string' ? value : formatNumber(value);
+  const showDelta = previous === undefined && delta !== undefined && delta !== null && Number.isFinite(numericDelta);
+  const display = value == null ? '—' : typeof value === 'string' ? value : formatNumber(value);
   return (
     <article className={`stat stat--${tone}`}>
       <span className="stat__label">{label}{hint && <Hint text={hint} />}</span>
       <strong className="stat__value">{display}</strong>
       <span className="stat__foot">
+        {previous !== undefined && <small>{changeLabel(value, previous)}</small>}
         {showDelta && (
           <span className={`stat__delta ${numericDelta >= 0 ? 'is-up' : 'is-down'}`}>
             {numericDelta >= 0 ? <TrendingUp aria-hidden="true" /> : <TrendingDown aria-hidden="true" />}
@@ -139,7 +141,7 @@ const CustomRange = ({ onApply, active, onClear }) => {
   );
 };
 
-export const RangePicker = ({ days, onChange, loading, onRefresh, onCustom, customActive = false }) => (
+export const RangePicker = ({ days, onChange, loading, onRefresh, onCustom, customActive = false, updatedAt, range }) => (
   <div className="range-picker">
     <div className="range-picker__segments" role="group" aria-label="טווח זמן">
       {RANGE_OPTIONS.map((option) => (
@@ -156,10 +158,12 @@ export const RangePicker = ({ days, onChange, loading, onRefresh, onCustom, cust
     </div>
     {onCustom && <CustomRange onApply={onCustom} active={customActive} onClear={() => onChange(days || 7)} />}
     {onRefresh && (
-      <button type="button" className="range-picker__refresh" onClick={onRefresh} aria-label="רענון נתונים">
+      <button type="button" className="range-picker__refresh" onClick={onRefresh} disabled={loading} aria-label="רענון נתונים">
         <RefreshCw className={loading ? 'is-spinning' : ''} aria-hidden="true" />
       </button>
     )}
+    {updatedAt && <time className="range-updated" dateTime={updatedAt}>עודכן {formatDateTime(updatedAt)}</time>}
+    {customActive && range && <span className="range-dates">{formatDateTime(range.from)} – {formatDateTime(range.to)}</span>}
   </div>
 );
 
@@ -171,8 +175,7 @@ export const RankedList = ({ items = [], empty = 'אין נתונים בטווח
     <ol className="ranked-list">
       {rows.map((item, index) => (
         <li className="ranked-row" key={`${item.label}-${index}`} style={{ '--bar': `${(Number(item.requests) / peak) * 100}%`, '--bar-color': `var(--${color})` }}>
-          {onSelect ? <button className="ranked-row__button" type="button" onClick={() => onSelect(item.label)} aria-expanded={selected === item.label}><b>{labelFor(item.label) || 'לא ידוע'}</b><small dir="ltr">{item.label}</small><span>מה קרה בהמשך? <ChevronLeft aria-hidden="true" /></span></button> : <b title={item.label}>{labelFor(item.label) || 'לא ידוע'}</b>}
-          <strong>{formatNumber(item.requests)}</strong>
+          {onSelect ? <button className="ranked-row__button" data-page-path={item.label} type="button" onClick={(event) => onSelect(item.label, event.currentTarget)} aria-expanded={selected === item.label}><span className="ranked-row__name"><b>{labelFor(item.label) || 'לא ידוע'}</b><small dir="ltr">{item.label}</small></span><strong>{formatNumber(item.requests)}</strong><ChevronLeft aria-hidden="true" /></button> : <><b title={item.label}>{labelFor(item.label) || 'לא ידוע'}</b><strong>{formatNumber(item.requests)}</strong></>}
         </li>
       ))}
     </ol>

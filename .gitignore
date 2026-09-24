@@ -15,3 +15,6 @@ adminspass.txt
 
 __pycache__/
 *.pyc
+
+# Local review screenshots and report previews may contain internal metrics.
+.impeccable/review/

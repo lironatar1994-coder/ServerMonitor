@@ -10,18 +10,48 @@ export default function PageInsights({ app, path, resolveRange, onClose, onSelec
   const [state, setState] = useState({ loading: true, data: null, error: '' });
   const [retry, setRetry] = useState(0);
   const section = useRef(null);
+  const close = useRef(onClose);
+  useEffect(() => { close.current = onClose; }, [onClose]);
+  useEffect(() => {
+    const mobile = window.matchMedia('(max-width: 760px)');
+    const oldOverflow = document.body.style.overflow;
+    const siblings = [];
+    let ancestor = section.current;
+    while (ancestor && ancestor !== document.body) {
+      for (const sibling of ancestor.parentElement?.children || []) if (sibling !== ancestor && sibling instanceof HTMLElement) siblings.push([sibling, sibling.inert]);
+      ancestor = ancestor.parentElement;
+    }
+    const sync = () => {
+      document.body.style.overflow = mobile.matches ? 'hidden' : oldOverflow;
+      section.current?.setAttribute('aria-modal', String(mobile.matches));
+      siblings.forEach(([node, inert]) => { node.inert = mobile.matches || inert; });
+    };
+    sync(); mobile.addEventListener('change', sync);
+    const key = event => {
+      if (event.key === 'Escape') { event.preventDefault(); close.current(); }
+      if (event.key !== 'Tab' || !mobile.matches) return;
+      const controls = [...section.current.querySelectorAll('button:not(:disabled),a[href],[tabindex="0"]')].filter(el => el.getClientRects().length);
+      const first = controls[0], last = controls.at(-1);
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === section.current)) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', key);
+    return () => { document.body.style.overflow = oldOverflow; siblings.forEach(([node, inert]) => { node.inert = inert; }); mobile.removeEventListener('change', sync); document.removeEventListener('keydown', key); };
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     apiFetch(`/visitor-analytics/apps/${app.id}/page?${rangeQuery(resolveRange())}&path=${encodeURIComponent(path)}`, { signal: controller.signal })
       .then(data => { if (!controller.signal.aborted) setState({ loading: false, data, error: '' }); })
       .catch(error => { if (!controller.signal.aborted) setState({ loading: false, data: null, error: error.message }); });
     section.current?.focus({ preventScroll: true });
-    section.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+    if (!window.matchMedia('(max-width: 760px)').matches) section.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' });
     return () => controller.abort();
   }, [app.id, path, resolveRange, retry]);
   const data = state.data;
-  const destination = new URL(path, app.url);
-  return <section ref={section} tabIndex={-1} aria-label="מה קרה אחרי הצפייה בעמוד" className="page-insights">
+  const destination = new URL(app.url);
+  destination.pathname = path.startsWith('/') ? path : '/';
+  destination.search = ''; destination.hash = '';
+  return <section ref={section} tabIndex={-1} role="dialog" aria-label="מה קרה אחרי הצפייה בעמוד" className="page-insights">
     <Panel title={pageName(path, app.name)} action={<button className="icon-btn" type="button" onClick={onClose} aria-label="סגירת פירוט העמוד"><X /></button>}>
       <DataState loading={state.loading} error={state.error} onRetry={() => { setState(s => ({ ...s, loading: true, error: '' })); setRetry(n => n + 1); }}>
         {data && <>

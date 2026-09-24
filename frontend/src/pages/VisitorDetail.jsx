@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink, MapPin, MonitorSmartphone, Search, X } from 'lucide-react';
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch, rangeQuery } from '../lib/api';
 import { useRange } from '../lib/useRange';
 import { DataState, Empty, Panel, PageHead, RangePicker, RankedList, Stat, StatRow, Tabs } from '../components/AnalyticsParts';
@@ -9,30 +8,31 @@ import JewelryInterest from '../components/JewelryInterest';
 import ProductAnalytics from '../components/ProductAnalytics';
 import TrackingStatus from '../components/TrackingStatus';
 import PageInsights from '../components/PageInsights';
+import TrafficChart from '../components/TrafficChart';
+import SiteSwitcher from '../components/SiteSwitcher';
+import { previousRange, rangeSearch } from '../lib/dailyCheck';
 import { pageName } from '../lib/analyticsLabels';
 import { formatDateTime, formatNumber } from '../lib/format';
 
 import { VISITOR_HINT as BROWSER_SIGNAL_HINT, CONNECTION_HINT as CANDIDATE_HINT, PAGE_HINT as PAGE_VIEW_HINT } from '../lib/analyticsLabels';
 
 const BREAKDOWN_TABS = [
-  { id: 'pages', label: 'עמודים' },
   { id: 'locations', label: 'מיקומים' },
   { id: 'referrers', label: 'מקורות' },
-  { id: 'devices', label: 'מכשירים' },
-  { id: 'statuses', label: 'תגובות שרת' }
+  { id: 'devices', label: 'מכשירים' }
 ];
 
 const BREAKDOWN_META = {
   pages: { color: 'forest', empty: 'אין צפיות בעמודים' },
   locations: { color: 'ochre', empty: 'אין נתוני מיקום' },
-  referrers: { color: 'vermilion', empty: 'רוב הכניסות ישירות' },
+  referrers: { color: 'forest', empty: 'רוב הכניסות ישירות' },
   devices: { color: 'forest', empty: 'אין נתוני מכשיר' },
   statuses: { color: 'ochre', empty: 'אין נתוני תגובה' }
 };
 
 const VisitorDetail = () => {
   const { id } = useParams();
-  const { days, custom, setDays, setCustom, resolveRange } = useRange(7);
+  const { days, custom, setDays, setCustom, resolveRange } = useRange(1);
   const [data, setData] = useState(null);
   const [visitors, setVisitors] = useState({ visitors: [], total: 0, page: 1, limit: 25 });
   const [engagement, setEngagement] = useState(null);
@@ -43,27 +43,59 @@ const VisitorDetail = () => {
   const [error, setError] = useState('');
   const [tableError, setTableError] = useState('');
   const [engagementError, setEngagementError] = useState('');
-  const [breakdown, setBreakdown] = useState('pages');
+  const [breakdown, setBreakdown] = useState('locations');
   const [selectedIp, setSelectedIp] = useState(null);
   const [timeline, setTimeline] = useState([]);
-  const [selectedPath, setSelectedPath] = useState(null);
+  const [query, setQuery] = useSearchParams();
+  const selectedPath = query.get('page');
+  const view = selectedPath ? 'pages' : query.get('view') || 'overview';
+  const origin = useRef(null);
+  const originPath = useRef(selectedPath);
+  const wasOpen = useRef(false);
+  const [previous, setPrevious] = useState(null);
+  const [comparisonError, setComparisonError] = useState('');
+  const sequence = useRef(0);
+  const setSelectedPath = (path, trigger) => {
+    if (trigger) { origin.current = trigger; originPath.current = path; }
+    const next = new URLSearchParams(query);
+    if (path) {
+      const range = data?.range || resolveRange();
+      next.set('from', range.from); next.set('to', range.to);
+      next.set('page', path); next.set('view', 'pages');
+    }
+    else { next.delete('page'); next.set('view', 'pages'); }
+    setQuery(next, { replace: !trigger });
+  };
+  useEffect(() => {
+    if (!selectedPath && wasOpen.current) {
+      const row = origin.current?.isConnected ? origin.current : document.querySelector(`[data-page-path="${CSS.escape(originPath.current || wasOpen.current)}"]`);
+      (row || document.querySelector('.workspace-tabs button'))?.focus({ preventScroll: true });
+    }
+    wasOpen.current = selectedPath;
+  }, [selectedPath]);
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
+    const seq = ++sequence.current;
     try {
-      const query = rangeQuery(resolveRange());
-      const [analytics, productEngagement] = await Promise.all([
+      const range = resolveRange();
+      const query = rangeQuery(range);
+      const [analytics, productEngagement, prior] = await Promise.all([
         apiFetch(`/visitor-analytics/apps/${id}?${query}`),
-        apiFetch(`/visitor-analytics/apps/${id}/engagement?${query}`).catch(error => ({ error: error.message }))
+        apiFetch(`/visitor-analytics/apps/${id}/engagement?${query}`).catch(error => ({ error: error.message })),
+        apiFetch(`/visitor-analytics/apps/${id}?${rangeQuery(previousRange(range))}`).catch(error => ({ error: error.message }))
       ]);
+      if (seq !== sequence.current) return;
+      setPrevious(prior.error ? null : prior);
+      setComparisonError(prior.error || '');
       setData(analytics);
       setEngagement(productEngagement.error ? null : productEngagement);
       setEngagementError(productEngagement.error || '');
       setError('');
     } catch (fetchError) {
-      setError(fetchError.message);
+      if (seq === sequence.current) setError(fetchError.message);
     } finally {
-      setLoading(false);
+      if (seq === sequence.current) setLoading(false);
     }
   }, [id, resolveRange]);
 
@@ -79,7 +111,9 @@ const VisitorDetail = () => {
 
   useEffect(() => {
     const timeout = window.setTimeout(fetchAnalytics, 0);
-    return () => window.clearTimeout(timeout);
+    return () => { window.clearTimeout(timeout); /* Invalidate requests from the previous route/range. */
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      sequence.current++; };
   }, [fetchAnalytics]);
 
   useEffect(() => {
@@ -106,24 +140,16 @@ const VisitorDetail = () => {
   }, [selectedIp]);
 
   const summary = data?.summary || {};
-  const chartData = (data?.series || []).map((item) => ({
-    ...item,
-    label: new Intl.DateTimeFormat('he-IL', days === 1
-      ? { hour: '2-digit', timeZone: 'Asia/Jerusalem' }
-      : { day: '2-digit', month: '2-digit', timeZone: 'Asia/Jerusalem' }).format(new Date(item.bucket))
-  }));
   const pageCount = Math.max(1, Math.ceil((visitors.total || 0) / (visitors.limit || 25)));
-  const hourly = Array.from({ length: 24 }, (_, hour) => data?.hourly?.find((item) => Number(item.hour) === hour) || { hour, page_views: 0 });
-  const peakHour = Math.max(...hourly.map((item) => Number(item.page_views) || 0), 1);
   const breakdownMeta = BREAKDOWN_META[breakdown];
 
   return (
     <div className="page page--visitor-detail">
       <PageHead
-        title={data?.app?.name || 'מבקרים'}
+        title={data?.app?.name || 'אתר'}
         meta={
           <>
-            <Link className="crumb" to="/visitors"><ChevronRight aria-hidden="true" /> כל האתרים</Link>
+            <Link className="crumb" to={`/visitors${rangeSearch(data?.range || resolveRange())}`}><ChevronRight aria-hidden="true" /> כל האתרים</Link>
             {data?.app && (
               <span className={`chip ${data.app.status === 'online' ? 'is-online' : 'is-offline'}`}>
                 {data.app.status === 'online' ? 'פעיל' : 'דורש בדיקה'}
@@ -135,7 +161,10 @@ const VisitorDetail = () => {
           </>
         }
       >
+        <SiteSwitcher currentId={id} range={data?.range || resolveRange()} />
         <RangePicker
+          updatedAt={data?.generated_at}
+          range={custom}
           days={days}
           customActive={Boolean(custom)}
           onChange={(value) => { setDays(value); setPage(1); }}
@@ -146,60 +175,28 @@ const VisitorDetail = () => {
       </PageHead>
 
       <DataState loading={loading && !data} error={error} onRetry={fetchAnalytics}>
-        {data?.app?.name === 'LA webs' && <TrackingStatus health={data?.tracking_health} />}
+        <TrackingStatus health={data?.tracking_health} />
+        {data?.app?.status && data.app.status !== 'online' && <div className="attention-list"><Link to={`/services/${id}`}>האתר דורש בדיקת זמינות <ChevronLeft /></Link></div>}
         <StatRow>
-          <Stat label="מבקרים משוערים" value={summary.browser_signal_visitors} delta={data?.comparison?.browser_signal_visitors_percent} tone="forest" hint={BROWSER_SIGNAL_HINT} />
-          <Stat label="ביקורים שנמדדו" value={summary.browser_signal_sessions} foot="ביקורים חוזרים נכללים" />
-          <Stat label="עמודים שנפתחו" value={summary.browser_signal_page_views} delta={data?.comparison?.browser_signal_page_views_percent} foot="כולל צפיות חוזרות" hint={BROWSER_SIGNAL_HINT} />
+          <Stat label="מבקרים משוערים" value={summary.browser_signal_visitors} previous={data?.comparison?.previous?.browser_signal_visitors} tone="forest" hint={BROWSER_SIGNAL_HINT} />
+          <Stat label="ביקורים שנמדדו" value={summary.browser_signal_sessions} previous={data?.comparison?.previous?.browser_signal_sessions} foot="ביקורים חוזרים נכללים" />
+          <Stat label="עמודים שנפתחו" value={summary.browser_signal_page_views} previous={data?.comparison?.previous?.browser_signal_page_views} foot="כולל צפיות חוזרות" hint={BROWSER_SIGNAL_HINT} />
         </StatRow>
-        <details className="measurement-details"><summary>נתוני שרת וסינון אוטומטי</summary>
-        <StatRow>
-          <Stat label="כתובות רשת שונות" value={summary.unique_candidates} delta={data?.comparison?.unique_candidates_percent} hint={CANDIDATE_HINT} />
-          <Stat label="צפיות לפי השרת" value={summary.page_views} delta={data?.comparison?.page_views_percent} hint={PAGE_VIEW_HINT} />
-          <Stat label="בקשות אוטומטיות שסוננו" value={summary.bot_requests} tone="ochre" foot={`${formatNumber(summary.known_bot_requests)} מזוהות · ${formatNumber(summary.likely_bot_requests)} משוערות`} />
-        </StatRow>
-        </details>
-
-        <JewelryInterest interest={data?.jewelry_interest} siteUrl={data?.app?.url} />
-
-
-
-        <div className="grid grid--2-1">
-          <Panel title="תנועה לאורך זמן">
-            <div className="chart">
-              {chartData.length ? (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <AreaChart data={chartData} margin={{ top: 8, right: 4, left: -22, bottom: 0 }}>
-                    <CartesianGrid stroke="#d7d0c4" vertical={false} strokeDasharray="2 6" />
-                    <XAxis dataKey="label" axisLine={false} tickLine={false} minTickGap={24} tick={{ fill: '#6f695f', fontSize: 11 }} />
-                    <YAxis axisLine={false} tickLine={false} width={40} tick={{ fill: '#6f695f', fontSize: 11 }} allowDecimals={false} />
-                    <Tooltip contentStyle={{ background: '#171713', border: 0, borderRadius: 4, color: '#f2ebdd', fontSize: 12 }} />
-                    <Area isAnimationActive={false} type="monotone" dataKey="page_views" name="צפיות בעמודים" stroke="#1f5a47" strokeWidth={2.5} fill="#1f5a4720" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : <Empty text="אין תנועה בטווח שנבחר" />}
-            </div>
+        <div className="workspace-tabs"><Tabs label="תצוגת אתר" tabs={[{ id: 'overview', label: 'סקירה' }, { id: 'pages', label: 'עמודים ופעולות' }, { id: 'audience', label: 'מקורות וקהל' }]} value={view} onChange={value => { const next = new URLSearchParams(query); next.set('view', value); next.delete('page'); setQuery(next); }} /></div>
+        {view === 'overview' && <>
+          {!summary.browser_signal_page_views && <p className="status-line is-attention">אין מדידת דפדפן בטווח הזה; ייתכנו ביקורים שלא נמדדו.</p>}
+          <TrafficChart data={data} previous={previous} comparisonError={comparisonError} />
+          <Panel title="עמודים מובילים" hint={PAGE_VIEW_HINT}><RankedList items={data?.pages} max={5} onSelect={setSelectedPath} labelFor={value => pageName(value, data?.app?.name)} /></Panel>
+        </>}
+        {view === 'audience' && <Panel title="מקורות וקהל" hint="פילוח לפי פתיחות עמודים שנרשמו בשרת; מיקום משוער לפי כתובת רשת." action={<Tabs tabs={BREAKDOWN_TABS} value={breakdown} onChange={setBreakdown} />}><RankedList items={data?.[breakdown]} color={breakdownMeta.color} empty={breakdownMeta.empty} /></Panel>}
+        {view === 'pages' && <>
+        <div className={`page-explorer ${selectedPath ? 'has-selection' : ''}`}>
+          <Panel title="עמודים שנצפו" hint={PAGE_VIEW_HINT}>
+            <RankedList items={data?.pages} onSelect={setSelectedPath} selected={selectedPath} labelFor={value => pageName(value, data?.app?.name)} />
           </Panel>
-
-          <Panel title="שעות היממה" hint="שעון ישראל · צפיות בעמודים">
-            <div className="hourly" aria-label="התפלגות צפיות לפי שעה">
-              {hourly.map((item) => (
-                <div key={item.hour} title={`${String(item.hour).padStart(2, '0')}:00 · ${formatNumber(item.page_views)} צפיות`}>
-                  <i style={{ height: `${Math.max(3, (Number(item.page_views) / peakHour) * 100)}%` }} />
-                  <span>{item.hour % 6 === 0 ? String(item.hour).padStart(2, '0') : ''}</span>
-                </div>
-              ))}
-            </div>
-          </Panel>
+          {selectedPath && data?.app && <PageInsights key={`${id}:${selectedPath}:${days}:${custom?.from}`} app={data.app} path={selectedPath} resolveRange={resolveRange} onClose={() => setSelectedPath(null)} onSelect={setSelectedPath} />}
         </div>
-
-        <Panel title="פילוח" action={<Tabs tabs={BREAKDOWN_TABS} value={breakdown} onChange={setBreakdown} />}>
-          <RankedList items={data?.[breakdown]} color={breakdownMeta.color} empty={breakdownMeta.empty}
-            onSelect={breakdown === 'pages' ? setSelectedPath : undefined} selected={selectedPath}
-            labelFor={value => breakdown === 'pages' ? pageName(value, data?.app?.name) : value} />
-        </Panel>
-        {selectedPath && data?.app && <PageInsights key={`${id}:${selectedPath}:${days}:${custom?.from}`} app={data.app} path={selectedPath} resolveRange={resolveRange} onClose={() => setSelectedPath(null)} onSelect={setSelectedPath} />}
-
+        <JewelryInterest interest={data?.jewelry_interest} siteUrl={data?.app?.url} />
         <details className="measurement-details"><summary>איך השתמשו בעמודים?</summary>
         {engagementError && <div className="banner banner--error" role="alert">מדידת השימוש לא נטענה. {engagementError}<button className="btn" onClick={fetchAnalytics}>ניסיון נוסף</button></div>}
         {(data?.app?.name === 'PDF Studio' || data?.app?.name === 'LA webs' || data?.app?.name === 'Miryam Zelig' || data?.app?.name === 'Seder' || Boolean(engagement?.engagement_samples) || Boolean(engagement?.product?.summary?.sessions)) && (
@@ -207,7 +204,14 @@ const VisitorDetail = () => {
         )}
         </details>
 
-        <details className="measurement-details"><summary>פירוט חיבורים וכתובות רשת</summary>
+        </>}
+        <details className="measurement-details"><summary>אבחון מדידה ונתוני שרת</summary>
+        <StatRow>
+          <Stat label="כתובות רשת שונות" value={summary.unique_candidates} previous={data?.comparison?.previous?.unique_candidates} hint={CANDIDATE_HINT} />
+          <Stat label="פתיחות עמודים לפי השרת" value={summary.page_views} previous={data?.comparison?.previous?.page_views} hint={PAGE_VIEW_HINT} />
+          <Stat label="בקשות אוטומטיות שסוננו" value={summary.bot_requests} />
+        </StatRow>
+        <Panel title="תגובות שרת"><RankedList items={data?.statuses} /></Panel>
         <Panel
           title="פעילות לפי חיבור"
           hint="לחיצה על שורה פותחת את ציר הפעילות המלא"

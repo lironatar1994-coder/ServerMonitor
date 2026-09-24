@@ -117,21 +117,24 @@ const Infrastructure = () => {
     <div className="page page--infrastructure">
       <PageHead
         title="שרת ומשאבים"
-        meta={<span className="pulse"><i aria-hidden="true" />חי · {formatTime(updatedAt)}</span>}
+        meta={<span>עודכן {formatTime(updatedAt)}</span>}
       >
         <button type="button" className="btn" onClick={fetchData}>רענון</button>
       </PageHead>
 
       <DataState loading={loading && !stats} error={error} onRetry={fetchData}>
         <StatRow label="משאבי שרת">
-          <Stat label="זיכרון" value={`${ram.toFixed(0)}%`} tone={toneFor(ram)} foot={`${formatBytes(stats?.ram?.available)} זמינים`} />
-          <Stat label="Swap" value={`${swap.toFixed(0)}%`} tone={swap >= 75 ? 'ochre' : 'forest'} hint="Swap יכול להכיל דפים ישנים גם כשהשרת אינו תחת עומס פעיל" foot={`${formatBytes(swapUsed)} / ${formatBytes(swapTotal)}`} />
+          <Stat label="זיכרון זמין" value={formatBytes(stats?.ram?.available)} tone={toneFor(ram)} foot={`${ram.toFixed(0)}% בשימוש`} />
           <Stat label="מעבד" value={load.toFixed(2)} tone={toneFor(loadPercent)} foot={`עומס דקה · ${formatNumber(cores)} ליבות`} />
-          <Stat label="אחסון" value={`${disk.toFixed(0)}%`} tone={toneFor(disk)} foot={stats?.disk ? `${formatBytes(stats.disk.available)} פנויים` : 'לא זמין'} />
-          <Stat label="שירותים פעילים" value={`${apps.length - offline.length}/${apps.length}`} tone={offline.length ? 'vermilion' : 'forest'} foot={offline.length ? `${offline.length} דורשים בדיקה` : 'הכול תקין'} />
-          <Stat label="זמן פעילות" value={`${uptimeDays}י ${uptimeHours}ש`} foot="מאז האתחול" />
+          <Stat label="מקום פנוי בדיסק" value={stats?.disk ? formatBytes(stats.disk.available) : "—"} tone={toneFor(disk)} foot={`${disk.toFixed(0)}% בשימוש`} />
+          <Stat label="שירותים לבדיקה" value={offline.length} tone={offline.length ? 'vermilion' : 'forest'} foot={offline.length ? `${offline.length} דורשים בדיקה` : 'הכול תקין'} />
         </StatRow>
 
+        {offline.length > 0 && <Panel title="שירותים שדורשים בדיקה"><div className="attention-list">{offline.map(app => <Link key={app.id} to={`/services/${app.id}`}>{app.name} · {app.status === 'offline' ? 'לא פעיל' : 'מצב לא ידוע'}<ChevronLeft /></Link>)}</div></Panel>}
+        <details className="measurement-details"><summary>Swap וזמן פעילות</summary><StatRow>
+          <Stat label="Swap" value={`${swap.toFixed(0)}%`} tone={swap >= 75 ? 'ochre' : 'forest'} hint="Swap יכול להכיל דפים ישנים גם כשהשרת אינו תחת עומס פעיל" foot={`${formatBytes(swapUsed)} / ${formatBytes(swapTotal)}`} />
+          <Stat label="זמן פעילות" value={`${uptimeDays}י ${uptimeHours}ש`} foot="מאז האתחול" />
+        </StatRow></details>
         <Panel
           title="מי משתמש במשאבים"
           hint="RAM ו-Swap נספרים לכל עץ התהליכים, כולל תהליכי־משנה של השירות. האחסון נסרק בעדיפות נמוכה ונשמר במטמון לחצי שעה."
@@ -149,7 +152,7 @@ const Infrastructure = () => {
         <Panel title="שירותים" bleed>
           {apps.length ? (
             <ul className="service-status-list">
-              {apps.map((app) => (
+              {[...apps].sort((a,b) => Number(a.status === 'online') - Number(b.status === 'online')).map((app) => (
                 <li key={app.id}>
                   <Link to={`/services/${app.id}`}>
                     <i className={app.status === 'online' ? 'is-online' : 'is-offline'} aria-hidden="true" />

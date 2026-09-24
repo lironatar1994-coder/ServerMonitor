@@ -1,186 +1,92 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, Globe2 } from 'lucide-react';
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiFetch, rangeQuery } from '../lib/api';
 import { useRange } from '../lib/useRange';
 import { DataState, Empty, Panel, PageHead, RangePicker, RankedList, Stat, StatRow, Tabs } from '../components/AnalyticsParts';
-import { formatAgo, formatNumber, formatTime } from '../lib/format';
+import { formatNumber } from '../lib/format';
 import TrackingStatus from '../components/TrackingStatus';
+import TrafficChart from '../components/TrafficChart';
+import { changeLabel, previousRange, rangeSearch } from '../lib/dailyCheck';
+import { VISITOR_HINT, CONNECTION_HINT } from '../lib/analyticsLabels';
 
-import { VISITOR_HINT as BROWSER_SIGNAL_HINT, CONNECTION_HINT as CANDIDATE_HINT, PAGE_HINT as PAGE_VIEW_HINT } from '../lib/analyticsLabels';
-
-const BREAKDOWN_TABS = [
-  { id: 'pages', label: 'עמודים' },
-  { id: 'locations', label: 'מיקומים' },
-  { id: 'devices', label: 'מכשירים' },
-  { id: 'referrers', label: 'מקורות' }
-];
-
-const BREAKDOWN_META = {
-  pages: { color: 'forest', empty: 'עדיין אין צפיות בעמודים' },
-  locations: { color: 'ochre', empty: 'נתוני מיקום עדיין אינם זמינים' },
-  devices: { color: 'vermilion', empty: 'אין נתוני מכשיר' },
-  referrers: { color: 'forest', empty: 'רוב הכניסות ישירות' }
-};
-
-const FEED_STEP = 8;
-
+const SORT_KEY = 'vee-monitor.site-sort';
 const VisitorOverview = () => {
   const { days, custom, setDays, setCustom, resolveRange } = useRange(1);
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [data, setData] = useState(null), [previous, setPrevious] = useState(null);
+  const [loading, setLoading] = useState(true), [error, setError] = useState('');
+  const [comparisonError, setComparisonError] = useState(''), [healthError, setHealthError] = useState('');
+  const [apps, setApps] = useState([]), [search, setSearch] = useState('');
+  const [sort, setSort] = useState(() => { try { return localStorage.getItem(SORT_KEY) || 'activity'; } catch { return 'activity'; } });
   const [breakdown, setBreakdown] = useState('pages');
-  const [feedLimit, setFeedLimit] = useState(FEED_STEP);
-
+  const request = useRef(0);
   const fetchAnalytics = useCallback(async (quiet = false) => {
+    const seq = ++request.current;
     if (!quiet) setLoading(true);
-    try {
-      setData(await apiFetch(`/visitor-analytics/overview?${rangeQuery(resolveRange())}`));
-      setError('');
-    } catch (fetchError) {
-      setError(fetchError.message);
-    } finally {
-      setLoading(false);
-    }
+    const range = resolveRange();
+    const results = await Promise.allSettled([
+      apiFetch(`/visitor-analytics/overview?${rangeQuery(range)}`),
+      apiFetch(`/visitor-analytics/overview?${rangeQuery(previousRange(range))}`),
+      apiFetch('/apps')
+    ]);
+    if (seq !== request.current) return;
+    if (results[0].status === 'fulfilled') { setData(results[0].value); setError(''); }
+    else setError(results[0].reason.message);
+    setPrevious(results[1].status === 'fulfilled' ? results[1].value : null);
+    setComparisonError(results[1].status === 'rejected' ? results[1].reason.message : '');
+    setApps(results[2].status === 'fulfilled' ? results[2].value : []);
+    setHealthError(results[2].status === 'rejected' ? 'בדיקות זמינות האתרים לא נטענו' : '');
+    setLoading(false);
   }, [resolveRange]);
-
   useEffect(() => {
-    const initial = window.setTimeout(() => fetchAnalytics(), 0);
-    const interval = window.setInterval(() => fetchAnalytics(true), 30000);
-    return () => { window.clearTimeout(initial); window.clearInterval(interval); };
+    const initial = setTimeout(fetchAnalytics, 0), interval = setInterval(() => fetchAnalytics(true), 30000);
+    return () => { clearTimeout(initial); clearInterval(interval); /* Invalidate requests from the previous route/range. */
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      request.current++; };
   }, [fetchAnalytics]);
-
-  const chartData = useMemo(() => (data?.series || []).map((item) => ({
-    ...item,
-    label: new Intl.DateTimeFormat('he-IL', days === 1
-      ? { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' }
-      : { day: '2-digit', month: '2-digit', timeZone: 'Asia/Jerusalem' }).format(new Date(item.bucket))
-  })), [data, days]);
-
-  const summary = data?.summary || {};
-  const botShare = summary.total_requests ? (summary.bot_requests / summary.total_requests) * 100 : 0;
-  const recent = data?.recent || [];
-  const breakdownMeta = BREAKDOWN_META[breakdown];
-
-  return (
-    <div className="page page--visitors">
-      <PageHead
-        title="מבקרים"
-        meta={<span className="pulse"><i aria-hidden="true" />חי · {formatTime(data?.generated_at)}</span>}
-      >
-        <RangePicker
-          days={days}
-          customActive={Boolean(custom)}
-          onChange={setDays}
-          onCustom={setCustom}
-          loading={loading}
-          onRefresh={() => fetchAnalytics()}
-        />
-      </PageHead>
-
-      <DataState loading={loading && !data} error={error} onRetry={() => fetchAnalytics()}>
-        <TrackingStatus health={data?.tracking_health} />
-        <StatRow>
-          <Stat label="מבקרים משוערים" value={summary.browser_signal_visitors} delta={data?.comparison?.browser_signal_visitors_percent} tone="forest" hint={BROWSER_SIGNAL_HINT} />
-          <Stat label="כתובות רשת שונות" value={summary.unique_candidates} delta={data?.comparison?.unique_candidates_percent} hint={CANDIDATE_HINT} />
-          <Stat label="חיבורים פעילים" value={summary.active_candidates} tone="vermilion" foot="5 דקות אחרונות" />
-          <Stat label="צפיות לפי השרת" value={summary.page_views} delta={data?.comparison?.page_views_percent} hint={PAGE_VIEW_HINT} />
-          <Stat label="תנועה אוטומטית" value={`${botShare.toFixed(0)}%`} tone="ochre" foot={`${formatNumber(summary.bot_requests)} סוננו`} />
-        </StatRow>
-
-        <div className="grid grid--2-1">
-          <Panel title="תנועה לאורך זמן" action={
-            <div className="legend">
-              <span className="legend__item legend__item--forest">מבקרים משוערים</span>
-              <span className="legend__item legend__item--vermilion">כתובות רשת שונות</span>
-              <span className="legend__item legend__item--ochre">צפיות לפי השרת</span>
-            </div>
-          }>
-            <div className="chart chart--tall">
-              {chartData.length ? (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <AreaChart data={chartData} margin={{ top: 8, right: 4, left: -22, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="visitorInk" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#1f5a47" stopOpacity="0.28" />
-                        <stop offset="100%" stopColor="#1f5a47" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="#d7d0c2" strokeDasharray="2 6" vertical={false} />
-                    <XAxis dataKey="label" axisLine={false} tickLine={false} minTickGap={24} tick={{ fill: '#6f695f', fontSize: 11 }} />
-                    <YAxis axisLine={false} tickLine={false} width={40} tick={{ fill: '#6f695f', fontSize: 11 }} allowDecimals={false} />
-                    <Tooltip contentStyle={{ background: '#171713', border: 0, borderRadius: 4, color: '#f2ebdd', fontSize: 12 }} />
-                    <Area isAnimationActive={false} type="monotone" dataKey="browser_signal_visitors" name="מבקרים משוערים" stroke="#1f5a47" strokeWidth={2.5} fill="url(#visitorInk)" />
-                    <Area isAnimationActive={false} type="monotone" dataKey="unique_candidates" name="כתובות רשת שונות" stroke="#d5543f" strokeWidth={2} fill="transparent" />
-                    <Area isAnimationActive={false} type="monotone" dataKey="page_views" name="צפיות לפי השרת" stroke="#9a6b16" strokeWidth={1.5} strokeDasharray="4 4" fill="transparent" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : <Empty text="אין תנועה בטווח שנבחר" />}
-            </div>
-          </Panel>
-
-          <Panel title="אתרים" bleed>
-            {data?.sites?.length ? (
-              <ol className="site-ranking">
-                {data.sites.map((site) => (
-                  <li key={site.app_id}>
-                    <Link to={`/visitors/${site.app_id}`}>
-                      <span className="site-ranking__name">
-                        <b>{site.name}</b>
-                        <small>{formatNumber(site.browser_signal_visitors)} מבקרים משוערים · {formatNumber(site.page_views)} צפיות לפי השרת</small>
-                      </span>
-                      <span className="site-ranking__metric">
-                        <strong>{formatNumber(site.unique_candidates)}</strong>
-                        <small>כתובות רשת שונות</small>
-                      </span>
-                      <ChevronLeft aria-hidden="true" />
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-            ) : <Empty text="אין אתרים עם תנועה" />}
-          </Panel>
-        </div>
-
-        <Panel title="פילוח" action={<Tabs tabs={BREAKDOWN_TABS} value={breakdown} onChange={setBreakdown} />}>
-          <RankedList items={data?.[breakdown]} color={breakdownMeta.color} empty={breakdownMeta.empty} />
-        </Panel>
-
-        <Panel
-          title="פעילות אחרונה"
-          hint={CANDIDATE_HINT}
-          action={recent.length > FEED_STEP && (
-            <button type="button" className="text-action" onClick={() => setFeedLimit(feedLimit >= recent.length ? FEED_STEP : recent.length)}>
-              {feedLimit >= recent.length ? 'הצג פחות' : `הצג הכול (${recent.length})`}
-            </button>
-          )}
-          bleed
-        >
-          {recent.length ? (
-            <ul className="feed">
-              {recent.slice(0, feedLimit).map((event, index) => (
-                <li key={`${event.ip}-${event.occurred_at}-${index}`}>
-                  <Link to={`/visitors/${event.app_id}`}>
-                    <span className="feed__who">
-                      <b dir="ltr">{event.ip}</b>
-                      <small>{[event.city || event.region, event.device_type].filter(Boolean).join(' · ') || 'מיקום לא ידוע'}</small>
-                    </span>
-                    <span className="feed__what">
-                      <b>{event.app_name}</b>
-                      <small dir="ltr">{event.path}</small>
-                    </span>
-                    <time dateTime={event.occurred_at}>{formatAgo(event.occurred_at)}</time>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : <Empty icon={Globe2} text="כניסות חדשות יופיעו כאן" />}
-        </Panel>
-      </DataState>
-    </div>
-  );
+  const sites = useMemo(() => {
+    const before = new Map((previous?.sites || []).map(s => [s.app_id, s]));
+    return (data?.sites || []).filter(s => `${s.name} ${s.url}`.toLowerCase().includes(search.toLowerCase().trim()))
+      .map(s => ({ ...s, previous: before.get(s.app_id)?.browser_signal_sessions, health: apps.find(a => a.id === s.app_id) }))
+      .sort((a, b) => sort === 'name' ? a.name.localeCompare(b.name, 'he') : sort === 'change'
+        ? Number(a.previous == null) - Number(b.previous == null) || (a.previous != null && b.previous != null ? Math.abs(b.browser_signal_sessions - b.previous) - Math.abs(a.browser_signal_sessions - a.previous) : 0)
+        : b.browser_signal_sessions - a.browser_signal_sessions || b.browser_signal_page_views - a.browser_signal_page_views);
+  }, [data, previous, apps, search, sort]);
+  const failures = apps.filter(app => app.analytics_enabled && app.status !== 'online');
+  const summary = data?.summary || {}, before = data?.comparison?.previous || {};
+  const destination = id => `/visitors/${id}${rangeSearch(data?.range || resolveRange())}`;
+  return <div className="page page--visitors">
+    <PageHead title="אתרים"><RangePicker days={days} customActive={Boolean(custom)} range={custom} onChange={setDays} onCustom={setCustom} loading={loading} onRefresh={() => fetchAnalytics()} updatedAt={data?.generated_at} /></PageHead>
+    <DataState loading={loading && !data} error={error} onRetry={() => fetchAnalytics()}>
+      {failures.length > 0 && <div className="attention-list" role="alert"><b>דורש בדיקה</b>{failures.map(app => <Link key={app.id} to={`/services/${app.id}`}>{app.name} · {app.status === 'offline' ? 'לא זמין' : 'מצב לא ידוע'}<ChevronLeft /></Link>)}</div>}
+      {healthError && <p className="status-line is-attention" role="status">{healthError}</p>}
+      <TrackingStatus health={data?.tracking_health} />
+      <StatRow>
+        <Stat label="מבקרים משוערים" value={summary.browser_signal_visitors} previous={before.browser_signal_visitors} hint={VISITOR_HINT} />
+        <Stat label="ביקורים שנמדדו" value={summary.browser_signal_sessions} previous={before.browser_signal_sessions} />
+        <Stat label="עמודים שנפתחו" value={summary.browser_signal_page_views} previous={before.browser_signal_page_views} />
+      </StatRow>
+      <Panel title="השוואת אתרים" className="comparison-panel" action={<>
+        <label className="search"><Search aria-hidden="true" /><input aria-label="חיפוש אתר" placeholder="חיפוש אתר" value={search} onChange={e => setSearch(e.target.value)} /></label>
+        <label className="sort-control">מיון<select aria-label="מיון אתרים" value={sort} onChange={e => { setSort(e.target.value); try { localStorage.setItem(SORT_KEY, e.target.value); } catch { /* storage optional */ } }}><option value="activity">פעילות</option><option value="change">שינוי</option><option value="name">שם</option></select></label>
+      </>} bleed>
+        {comparisonError && <p className="status-line is-attention">ההשוואה לתקופה הקודמת לא נטענה</p>}
+        <div className="comparison-labels" aria-hidden="true"><span>אתר</span><span>מבקרים משוערים</span><span>ביקורים שנמדדו</span><span>עמודים שנפתחו</span><span>שינוי בביקורים</span></div>
+        <ol className="comparison-list">{sites.map(site => <li key={site.app_id}><Link to={destination(site.app_id)}>
+          <span className="comparison-identity"><b dir="auto">{site.name}</b><small>{site.health?.status === 'online' ? 'זמין בבדיקה האחרונה' : site.health ? 'דורש בדיקה' : 'מצב זמינות לא ידוע'}</small></span>
+          <span className="comparison-value"><small>מבקרים משוערים</small><strong>{formatNumber(site.browser_signal_visitors)}</strong></span>
+          <span className="comparison-value"><small>ביקורים שנמדדו</small><strong>{formatNumber(site.browser_signal_sessions)}</strong></span>
+          <span className="comparison-value"><small>עמודים שנפתחו</small><strong>{formatNumber(site.browser_signal_page_views)}</strong></span>
+          <span className="comparison-change">{changeLabel(site.browser_signal_sessions, site.previous)}<small>{!site.browser_signal_page_views ? 'אין מדידת דפדפן בטווח' : site.browser_signal_sessions < 30 ? 'מדגם קטן' : 'מול תקופה שווה'}</small></span><ChevronLeft aria-hidden="true" />
+        </Link></li>)}</ol>
+        {!sites.length && <Empty text={search ? 'אין אתרים שתואמים לחיפוש' : 'אין אתרים מוגדרים למדידה'} />}
+      </Panel>
+      <TrafficChart data={data} previous={previous} comparisonError={comparisonError} />
+      <details className="measurement-details"><summary>נתוני שרת ואבחון מדידה</summary>
+        <StatRow><Stat label="כתובות רשת שונות" value={summary.unique_candidates} hint={CONNECTION_HINT} /><Stat label="פתיחות עמודים לפי השרת" value={summary.page_views} /><Stat label="בקשות אוטומטיות שסוננו" value={summary.bot_requests} /></StatRow>
+        <Panel title="פילוח לפי נתוני השרת" action={<Tabs tabs={[{ id: 'pages', label: 'עמודים' }, { id: 'locations', label: 'מיקומים' }, { id: 'devices', label: 'מכשירים' }, { id: 'referrers', label: 'מקורות' }]} value={breakdown} onChange={setBreakdown} />}><RankedList items={data?.[breakdown]} empty="אין מדידות לפילוח בטווח הזה" /></Panel>
+      </details>
+    </DataState>
+  </div>;
 };
-
 export default VisitorOverview;

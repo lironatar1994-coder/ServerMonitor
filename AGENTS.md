@@ -88,7 +88,8 @@ When the user requests a durable behavior change, record it here or in the relev
 - Keep click observations, verified source records, and manual business outcomes separate. Source adapters are read-only and must not copy customer contact details or message contents; existing native visitor trackers and CMS assets remain intact.
 
 - Keep website visitor monitoring and server/resource monitoring as separate product workspaces. The default dashboard must prioritize a clear cross-site visitor picture with both quick and deep views; infrastructure data belongs under `שרת ומשאבים`.
-- Use a distinctive Hebrew/RTL editorial interface for visitor analytics and a separate industrial operational treatment for infrastructure. Do not fall back to generic SaaS cards, glass effects, or decorative dashboards.
+- Design for a quick daily check: what changed, what needs attention, which site to open. Use the cool off-white/white/charcoal/deep-teal system in `DESIGN.md`, Noto Sans Hebrew and tabular numbers throughout; this replaces the paper/ink and serif preference. Keep infrastructure charcoal using the same primitives. No decorative animation, glass, new visual dependencies, or new tracking/database work for this redesign.
+- Keep `/visitors` labeled `אתרים` as the landing page, default to 24 hours only without a saved or linked period, and preserve exact dates through site switching and authentication. Website, client follow-up, and server operations remain separate workspaces.
 - Optimise every screen for scanning and doing, not for reading. Keep copy minimal, put numbers and controls above the fold on desktop and mobile alike, and move explanations into on-demand hints. Do not reintroduce oversized display headlines or marketing paragraphs.
 - Production city/region enrichment reads `GEOIP_DB_PATH`, defaulting to `/usr/share/GeoIP/GeoLite2-City.mmdb`; deployment must warn but continue when the local database is unavailable.
 - Send one client-website comparison email daily and one weekly, using completed Israel calendar periods and the production recipient configured in `REPORT_EMAIL_TO`.
@@ -117,6 +118,8 @@ When the user requests a durable behavior change, record it here or in the relev
 
 - `ops/AGENTS.md` - Verified backups, safe cleanup, resource health, and one maintenance scheduler.
 - `PRODUCT.md` - Confirmed internal product scope and client-growth constraints.
+- `DESIGN.md` - Daily-check visual system, responsive hierarchy, component and email presentation contracts.
+- `.impeccable/AGENTS.md` - Design preview extensions and ignored local review evidence.
 
 - `backend/AGENTS.md` - Express API, persistent visitor analytics, SQLite monitor database, PM2/system monitoring logic, authentication routes, and background checks.
 - `frontend/AGENTS.md` - Vite React visitor, infrastructure, services, settings, authentication, responsive design, static assets, and production build.

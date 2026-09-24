@@ -62,16 +62,6 @@ const AppDetails = () => {
               </>
             }
           >
-            {(app.pm2_name || app.systemd_unit) && (
-              <div className="btn-group">
-                {app.status === 'online'
-                  ? <button type="button" className="btn btn--danger" onClick={() => setPendingAction('stop')}><Power aria-hidden="true" /> עצירה</button>
-                  : <button type="button" className="btn btn--primary" onClick={() => setPendingAction('start')}><Play aria-hidden="true" /> הפעלה</button>}
-                <button type="button" className="btn" onClick={() => setPendingAction('restart')}>
-                  <RefreshCw className={actionState ? 'is-spinning' : ''} aria-hidden="true" /> הפעלה מחדש
-                </button>
-              </div>
-            )}
           </PageHead>
 
           {app.pm2_name === 'vee-whatsapp-worker' ? <WhatsAppTemplate app={app} />
@@ -96,6 +86,18 @@ const AppDetails = () => {
                   </Panel>
                 </div>
               )}
+          <details className="measurement-details service-controls"><summary>פעולות ניהול השירות</summary>
+            {(app.pm2_name || app.systemd_unit) && (
+              <div className="btn-group">
+                {app.status === 'online'
+                  ? <button type="button" className="btn btn--danger" onClick={() => setPendingAction('stop')}><Power aria-hidden="true" /> עצירה</button>
+                  : <button type="button" className="btn btn--primary" onClick={() => setPendingAction('start')}><Play aria-hidden="true" /> הפעלה</button>}
+                <button type="button" className="btn" onClick={() => setPendingAction('restart')}>
+                  <RefreshCw className={actionState ? 'is-spinning' : ''} aria-hidden="true" /> הפעלה מחדש
+                </button>
+              </div>
+            )}
+          </details>
         </>}
       </DataState>
 

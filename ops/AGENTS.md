@@ -14,6 +14,8 @@
 - `install-maintenance.sh` owns the systemd timers and removes the legacy cron entry.
 - `install-visitor-coverage.py` and `visitor-tracker.js` add missing navigation signals at the Nginx boundary, preserving application builds and CMS content.
 
+- `accessibility-check.cjs` verifies shared token contrast, 44px targets and responsive overflow. `ui-review.cjs` runs a local browser against the Vite production-API proxy for read-only responsive, navigation, focus and mocked-state checks. `email-preview.cjs` renders completed-period daily/weekly HTML/text without sending. These tools store artifacts only under ignored `.impeccable/review/`; UI review uses an ephemeral five-minute token in process memory.
+
 ## Local Contracts
 
 - Portfolio internal browsing is an explicit `monitor_internal=1` cookie set by `?monitor_internal=1` and cleared by `?monitor_internal=0`. Exclude its root/project navigations from the monitor access log and all portfolio browser collectors; retain ordinary server diagnostics. This is prospective and per browser, not a retrospective IP filter.
@@ -34,6 +36,9 @@
 - Use explicit bounded roots, reject symlink escapes, expose a dry-run plan, and report failures truthfully.
 
 ## Verification
+- `node ops/accessibility-check.cjs` verifies text-token contrast and visible 44px controls at desktop/390px/320px; `UI_REVIEW_CLIENT_ONLY=1` rechecks the client-detail correction.
+- `node ops/ui-review.cjs` checks desktop, 390px and 320px local surfaces, period/sort preservation, page URL/Back/focus and login return. Requires Vite remote mode on port 5180, local Chrome, and production key-only SSH.
+- `node ops/email-preview.cjs` checks daily and weekly email overflow at desktop/390px/320px, emits HTML/text and screenshots, and never invokes sendReport.
 - Run `/usr/local/sbin/lawebs-maintenance browser` on production after deployment; check both monitor hostnames, desktop/mobile routes, page drill-down, all eight project pages, live beacon storage and internal exclusion. Its runtime user must be able to read the existing server authentication configuration and write the protected result file. Inspect service resource limits and completion result.
 - Run `python3 -m unittest discover -s ops -p 'test_*.py'` on Linux.
 - Inspect the cleanup plan before an applied run and verify backup integrity, protected release hashes, services, and actual freed disk space afterward.

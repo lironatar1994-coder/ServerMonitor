@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 const navigation = [
-  { to: '/visitors', label: 'מבקרים', icon: Globe2 },
-  { to: '/clients', label: 'לקוחות וצמיחה', icon: BriefcaseBusiness },
+  { to: '/visitors', label: 'אתרים', icon: Globe2 },
+  { to: '/clients', label: 'לקוחות', icon: BriefcaseBusiness },
   { to: '/infrastructure', label: 'שרת', icon: ServerCog },
   { to: '/services', label: 'שירותים', icon: Wrench },
   { to: '/settings', label: 'הגדרות', icon: Settings }
@@ -64,7 +64,6 @@ const AppShell = () => {
         </nav>
 
         <div className="rail-foot">
-          <span className="live-signal" title="הנתונים מתעדכנים אוטומטית"><i aria-hidden="true" /><span>מחובר</span></span>
           <button type="button" className="rail-link rail-logout" onClick={handleLogout} title="התנתקות">
             <LogOut aria-hidden="true" /><span>התנתקות</span>
           </button>
