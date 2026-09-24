@@ -337,6 +337,25 @@ def health():
         except Exception:
             errors.append(f'HTTP check failed: {url}')
     errors.extend(visitor_health())
+    # Reuse this timer; one bounded browser process per hour, no extra scheduler.
+    browser_result = STATE / 'browser-check.json'
+    try:
+        browser_check = json.loads(browser_result.read_text())
+    except (FileNotFoundError, ValueError):
+        browser_check = {}
+    if time.time() * 1000 - browser_check.get('checked', 0) >= 3600000:
+        try:
+            run(['/usr/bin/node', '/root/ServerMonitor/ops/browser-check.cjs'], timeout=180)
+        except Exception:
+            errors.append('Portfolio/monitor browser or tracking check failed')
+    try:
+        browser_check = json.loads(browser_result.read_text())
+        if browser_check.get('errors'):
+            errors.append('Portfolio/monitor browser or tracking check failed; see browser-check.json')
+        if time.time() * 1000 - browser_check.get('checked', 0) > 7200000:
+            errors.append('Portfolio/monitor browser check is stale')
+    except (FileNotFoundError, ValueError):
+        errors.append('Portfolio/monitor browser check result missing')
     for url in set(TRACKER_URLS + GROWTH_URLS):
         try:
             html = run(['curl', '--silent', '--show-error', '--location', '--fail', '--compressed', '--max-time', '10', url], timeout=15)

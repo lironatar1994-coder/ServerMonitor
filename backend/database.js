@@ -303,6 +303,11 @@ try {
 db.exec(`
     CREATE INDEX IF NOT EXISTS idx_visitor_events_app_page_time
         ON visitor_events (app_id, is_bot, is_page_view, occurred_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_visitor_events_time ON visitor_events (occurred_at);
+    CREATE INDEX IF NOT EXISTS idx_visitor_candidate_ip_time
+        ON visitor_events (ip, occurred_at) WHERE is_bot = 0 AND is_page_view = 1;
+    CREATE INDEX IF NOT EXISTS idx_visitor_candidate_app_ip_time
+        ON visitor_events (app_id, ip, occurred_at) WHERE is_bot = 0 AND is_page_view = 1;
     CREATE INDEX IF NOT EXISTS idx_browser_signals_app_time
         ON browser_signals (app_id, occurred_at DESC);
     CREATE INDEX IF NOT EXISTS idx_browser_signals_app_visitor_time

@@ -78,6 +78,10 @@ Default section order:
 
 When the user requests a durable behavior change, record it here or in the relevant child AGENTS.md
 
+- Visitor screens must use plain Hebrew for nontechnical readers: estimated visitors, measured visits, page views and contact actions. Keep browser/IP methodology in hints and expandable diagnostics; never turn estimates into confirmed people.
+- Page rankings must open a useful drill-down with friendly names, recorded next pages and later contact/outbound actions within the same anonymous visit. Keep low samples explicit and distinguish observed sequences from causes or confirmed inquiries.
+- LA webs must measure project/button attribution and bounded engagement, offer explicit per-browser internal-visit exclusion, and keep contacted/qualified/won business outcomes separate from clicks. Run recurring browser and telemetry checks through the existing health scheduler.
+
 - Client growth is internal only under `/clients`: goals, source-confirmed and manual leads, tasks, campaigns, evidence, and activity. No new client-facing access and no Search Console integration. Summaries must be editable drafts opened manually through mailto/WhatsApp or copied; never auto-send them or expose internal notes.
 - Keep click observations, verified source records, and manual business outcomes separate. Source adapters are read-only and must not copy customer contact details or message contents; existing native visitor trackers and CMS assets remain intact.
 

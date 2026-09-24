@@ -170,7 +170,7 @@ function ToolTable({ tools }) {
         <tbody>
           {tools.map((tool) => (
             <tr key={tool.label}>
-              <th>{labelTool(tool.label)}<small>{formatNumber(tool.sessions)} סשנים</small></th>
+              <th>{labelTool(tool.label)}<small>{formatNumber(tool.sessions)} ביקורים</small></th>
               <td data-label="נפתח">{formatNumber(tool.opens)}</td>
               <td data-label="הושלם">{formatNumber(tool.completions)}</td>
               <td data-label="הורדות">{formatNumber(tool.downloads)}</td>
@@ -211,18 +211,18 @@ export default function ProductAnalytics({ engagement, mode = 'product' }) {
   const [zoneMode, setZoneMode] = useState('clicks');
   const summary = engagement?.product?.summary || {};
   const filtered = (Number(summary.automated_events) || 0) + (Number(engagement?.automated_engagement_samples) || 0);
-  const hint = 'אירועי שימוש אנונימיים בלבד. אין שמות קבצים או תוכן מסמכים. אותות אוטומציה ובוטים מוכרים מסוננים מהמדדים.';
+  const hint = 'אירועי שימוש אנונימיים בלבד. אין שמות קבצים או תוכן מסמכים. פעילות אוטומטית ובוטים מוכרים מסוננים מהמדדים.';
   const isSite = mode === 'site';
-  const siteHint = 'אותות אנונימיים מהדפדפן, לא ספירת אנשים. אוטומציה ובוטים מוכרים מסוננים מהמדדים.';
+  const siteHint = 'מדידה אנונימית של השימוש באתר, לא ספירת אנשים. אוטומציה ובוטים מוכרים מסוננים מהמדדים.';
 
   return (
     <section className="product-analytics" aria-label={isSite ? 'מפת מעורבות באתר' : 'שימוש ב-PDF Studio'}>
       {isSite && (
         <StatRow label="מעורבות באתר">
-          <Stat label="סשנים עם מעורבות" value={engagement?.engagement_sessions} tone="forest" hint={siteHint} />
-          <Stat label="מדידות מסך" value={engagement?.engagement_samples} hint={siteHint} />
+          <Stat label="ביקורים עם מעורבות" value={engagement?.engagement_sessions} tone="forest" hint={siteHint} />
+          <Stat label={engagement?.engagement_unit === 'page_visits' ? 'ביקורים בעמודים' : 'מדידות שימוש'} value={engagement?.engagement_samples} hint={siteHint} />
           <Stat label="עומק ממוצע" value={`${formatNumber(engagement?.average_scroll_depth)}%`} />
-          <Stat label="זמן ממוצע" value={formatNumber(engagement?.average_dwell_seconds)} foot="שניות" />
+          <Stat label={engagement?.engagement_unit === 'page_visits' ? 'זמן פעיל ממוצע בעמוד' : 'זמן ממוצע במדידה'} value={formatNumber(engagement?.average_dwell_seconds)} foot="שניות" />
           <Stat label="אוטומציה שסוננה" value={filtered} tone="ochre" hint={siteHint} />
         </StatRow>
       )}

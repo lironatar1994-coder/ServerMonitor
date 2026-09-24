@@ -16,6 +16,7 @@ const Login = () => {
     try {
       const response = await fetch('/serve-monitor/api/auth/login', {
         method: 'POST',
+        signal: AbortSignal.timeout(20000),
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
@@ -24,7 +25,7 @@ const Login = () => {
       localStorage.setItem('token', data.token);
       window.dispatchEvent(new Event('auth-change'));
       navigate('/visitors', { replace: true });
-    } catch (loginError) { setError(loginError.message); }
+    } catch (loginError) { setError(loginError.name === 'TimeoutError' ? 'השרת לא השיב בזמן. נסו להתחבר שוב.' : loginError.message); }
     finally { setLoading(false); }
   };
 

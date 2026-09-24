@@ -4,6 +4,7 @@ const db = require('../database');
 const { authenticateToken } = require('./auth');
 const { getLibiJewelryInterest } = require('../jewelryAnalytics');
 const { findAppForSiteUrl } = require('../siteIdentity');
+const { trackingHealth } = require('../trackingHealth');
 
 const router = express.Router();
 const managerSiteRouter = express.Router();
@@ -303,6 +304,7 @@ function buildAppAnalytics(app, range) {
         generated_at: new Date().toISOString(),
         range: { from: range.from, to: range.to },
         app,
+        tracking_health: trackingHealth(),
         summary,
         comparison: getComparison(app.id, range, summary),
         series: getSeries(app.id, range),
@@ -436,6 +438,13 @@ function handleManagerSiteEngagement(req, res) {
    Automation-hinted rows are excluded, matching browser-signal reporting. */
 function getEngagement(app, range) {
     const params = [app.id, range.from, range.to];
+    const filteredSamples = `SELECT session_hash,scroll_depth,dwell_ms FROM engagement_signals
+        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0`;
+    const sampleSource = app.name === 'LA webs'
+        ? `(SELECT session_hash,MAX(scroll_depth) AS scroll_depth,SUM(dwell_ms) AS dwell_ms
+            FROM engagement_signals WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0
+            GROUP BY session_hash,path)`
+        : `(${filteredSamples})`;
     const totals = db.prepare(`
         SELECT
             COUNT(*) AS samples,
@@ -446,8 +455,7 @@ function getEngagement(app, range) {
             SUM(CASE WHEN scroll_depth >= 75 THEN 1 ELSE 0 END) AS reached_75,
             SUM(CASE WHEN scroll_depth >= 90 THEN 1 ELSE 0 END) AS reached_end,
             AVG(dwell_ms) AS average_dwell_ms
-        FROM engagement_signals
-        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0
+        FROM ${sampleSource}
     `).get(...params);
 
     const automatedSamples = db.prepare(`
@@ -469,8 +477,7 @@ function getEngagement(app, range) {
                 ELSE '90-100'
             END AS band,
             COUNT(*) AS sessions
-        FROM engagement_signals
-        WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0
+        FROM ${sampleSource}
         GROUP BY band
     `).all(...params);
 
@@ -483,7 +490,12 @@ function getEngagement(app, range) {
         LIMIT 20
     `).all(...params);
 
-    const viewedZones = db.prepare(`
+    const viewedZones = app.name === 'LA webs' ? db.prepare(`
+        SELECT z.zone,SUM(z.views) AS views,COUNT(DISTINCT e.session_hash) AS samples,
+            SUM(z.dwell_ms) * 1.0 / COUNT(DISTINCT e.session_hash) AS average_dwell_ms
+        FROM engagement_zone_views z JOIN engagement_signals e ON e.app_id=z.app_id AND e.event_id=z.event_id
+        WHERE z.app_id=? AND z.occurred_at>=? AND z.occurred_at<? AND z.automation_hint=0
+        GROUP BY z.zone ORDER BY samples DESC LIMIT 20`).all(...params) : db.prepare(`
         SELECT zone, SUM(views) AS views, COUNT(DISTINCT event_id) AS samples,
                AVG(dwell_ms) AS average_dwell_ms
         FROM engagement_zone_views
@@ -570,6 +582,7 @@ function getEngagement(app, range) {
     return {
         app: { id: app.id, name: app.name, url: app.url },
         range,
+        engagement_unit: app.name === 'LA webs' ? 'page_visits' : 'samples',
         engagement_sessions: sessions,
         engagement_samples: samples,
         automated_engagement_samples: Number(automatedSamples) || 0,
@@ -631,6 +644,7 @@ router.get('/overview', (req, res) => {
             comparison: getComparison(null, range, summary),
             series: getSeries(null, range),
             sites: getSiteRanking(range),
+            tracking_health: trackingHealth(),
             locations: getRankedDimension(null, range, 'city'),
             pages: getRankedDimension(null, range, 'path'),
             referrers: getRankedDimension(null, range, 'referrer'),
@@ -659,6 +673,13 @@ router.get('/apps/:id/engagement', (req, res) => {
     } catch (error) {
         respondError(res, error);
     }
+});
+
+router.get('/apps/:id/page', (req, res) => {
+    try {
+        const app = assertApp(req.params.id);
+        res.json(require('../pageInsights').getPageInsights(app, parseRange(req.query), req.query.path));
+    } catch (error) { respondError(res, error); }
 });
 
 router.get('/apps/:id/visitors', (req, res) => {

@@ -6,10 +6,9 @@ import { apiFetch, rangeQuery } from '../lib/api';
 import { useRange } from '../lib/useRange';
 import { DataState, Empty, Panel, PageHead, RangePicker, RankedList, Stat, StatRow, Tabs } from '../components/AnalyticsParts';
 import { formatAgo, formatNumber, formatTime } from '../lib/format';
+import TrackingStatus from '../components/TrackingStatus';
 
-const CANDIDATE_HINT = 'מועמד = כתובת IP שלא זוהתה כבוט. הערכה מהלוגים, לא אימות של אדם.';
-const PAGE_VIEW_HINT = 'ניווטים מוצלחים בלבד — ללא תמונות, קוד, גופנים, API או בקשות שנכשלו.';
-const BROWSER_SIGNAL_HINT = 'אות דפדפן = העמוד הפעיל קוד בדפדפן ושלח מזהה אקראי ואנונימי. זה חזק יותר מלוג IP, אך עדיין לא הוכחה לאדם או ללקוח.';
+import { VISITOR_HINT as BROWSER_SIGNAL_HINT, CONNECTION_HINT as CANDIDATE_HINT, PAGE_HINT as PAGE_VIEW_HINT } from '../lib/analyticsLabels';
 
 const BREAKDOWN_TABS = [
   { id: 'pages', label: 'עמודים' },
@@ -20,7 +19,7 @@ const BREAKDOWN_TABS = [
 
 const BREAKDOWN_META = {
   pages: { color: 'forest', empty: 'עדיין אין צפיות בעמודים' },
-  locations: { color: 'ochre', empty: 'מיקום יופיע לאחר חיבור מסד GeoIP' },
+  locations: { color: 'ochre', empty: 'נתוני מיקום עדיין אינם זמינים' },
   devices: { color: 'vermilion', empty: 'אין נתוני מכשיר' },
   referrers: { color: 'forest', empty: 'רוב הכניסות ישירות' }
 };
@@ -82,20 +81,21 @@ const VisitorOverview = () => {
       </PageHead>
 
       <DataState loading={loading && !data} error={error} onRetry={() => fetchAnalytics()}>
+        <TrackingStatus health={data?.tracking_health} />
         <StatRow>
-          <Stat label="אותות דפדפן" value={summary.browser_signal_visitors} delta={data?.comparison?.browser_signal_visitors_percent} tone="forest" hint={BROWSER_SIGNAL_HINT} />
-          <Stat label="מועמדי IP" value={summary.unique_candidates} delta={data?.comparison?.unique_candidates_percent} hint={CANDIDATE_HINT} />
-          <Stat label="כתובות פעילות" value={summary.active_candidates} tone="vermilion" foot="5 דקות אחרונות" />
-          <Stat label="צפיות לוג משוערות" value={summary.page_views} delta={data?.comparison?.page_views_percent} hint={PAGE_VIEW_HINT} />
-          <Stat label="תנועת בוטים" value={`${botShare.toFixed(0)}%`} tone="ochre" foot={`${formatNumber(summary.bot_requests)} סוננו`} />
+          <Stat label="מבקרים משוערים" value={summary.browser_signal_visitors} delta={data?.comparison?.browser_signal_visitors_percent} tone="forest" hint={BROWSER_SIGNAL_HINT} />
+          <Stat label="כתובות רשת שונות" value={summary.unique_candidates} delta={data?.comparison?.unique_candidates_percent} hint={CANDIDATE_HINT} />
+          <Stat label="חיבורים פעילים" value={summary.active_candidates} tone="vermilion" foot="5 דקות אחרונות" />
+          <Stat label="צפיות לפי השרת" value={summary.page_views} delta={data?.comparison?.page_views_percent} hint={PAGE_VIEW_HINT} />
+          <Stat label="תנועה אוטומטית" value={`${botShare.toFixed(0)}%`} tone="ochre" foot={`${formatNumber(summary.bot_requests)} סוננו`} />
         </StatRow>
 
         <div className="grid grid--2-1">
           <Panel title="תנועה לאורך זמן" action={
             <div className="legend">
-              <span className="legend__item legend__item--forest">אותות דפדפן</span>
-              <span className="legend__item legend__item--vermilion">מועמדי IP</span>
-              <span className="legend__item legend__item--ochre">צפיות לוג</span>
+              <span className="legend__item legend__item--forest">מבקרים משוערים</span>
+              <span className="legend__item legend__item--vermilion">כתובות רשת שונות</span>
+              <span className="legend__item legend__item--ochre">צפיות לפי השרת</span>
             </div>
           }>
             <div className="chart chart--tall">
@@ -112,9 +112,9 @@ const VisitorOverview = () => {
                     <XAxis dataKey="label" axisLine={false} tickLine={false} minTickGap={24} tick={{ fill: '#6f695f', fontSize: 11 }} />
                     <YAxis axisLine={false} tickLine={false} width={40} tick={{ fill: '#6f695f', fontSize: 11 }} allowDecimals={false} />
                     <Tooltip contentStyle={{ background: '#171713', border: 0, borderRadius: 4, color: '#f2ebdd', fontSize: 12 }} />
-                    <Area type="monotone" dataKey="browser_signal_visitors" name="אותות דפדפן" stroke="#1f5a47" strokeWidth={2.5} fill="url(#visitorInk)" />
-                    <Area type="monotone" dataKey="unique_candidates" name="מועמדי IP" stroke="#d5543f" strokeWidth={2} fill="transparent" />
-                    <Area type="monotone" dataKey="page_views" name="צפיות לוג משוערות" stroke="#9a6b16" strokeWidth={1.5} strokeDasharray="4 4" fill="transparent" />
+                    <Area type="monotone" dataKey="browser_signal_visitors" name="מבקרים משוערים" stroke="#1f5a47" strokeWidth={2.5} fill="url(#visitorInk)" />
+                    <Area type="monotone" dataKey="unique_candidates" name="כתובות רשת שונות" stroke="#d5543f" strokeWidth={2} fill="transparent" />
+                    <Area type="monotone" dataKey="page_views" name="צפיות לפי השרת" stroke="#9a6b16" strokeWidth={1.5} strokeDasharray="4 4" fill="transparent" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : <Empty text="אין תנועה בטווח שנבחר" />}
@@ -129,11 +129,11 @@ const VisitorOverview = () => {
                     <Link to={`/visitors/${site.app_id}`}>
                       <span className="site-ranking__name">
                         <b>{site.name}</b>
-                        <small>{formatNumber(site.browser_signal_visitors)} אותות דפדפן · {formatNumber(site.page_views)} צפיות לוג</small>
+                        <small>{formatNumber(site.browser_signal_visitors)} מבקרים משוערים · {formatNumber(site.page_views)} צפיות לפי השרת</small>
                       </span>
                       <span className="site-ranking__metric">
                         <strong>{formatNumber(site.unique_candidates)}</strong>
-                        <small>מועמדי IP</small>
+                        <small>כתובות רשת שונות</small>
                       </span>
                       <ChevronLeft aria-hidden="true" />
                     </Link>

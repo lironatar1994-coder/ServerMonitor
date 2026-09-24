@@ -6,6 +6,19 @@
 @font-face { font-family: 'Fira Code'; src: url('/fonts/fira-code-400.ttf') format('truetype'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'Fira Code'; src: url('/fonts/fira-code-600.ttf') format('truetype'); font-weight: 600; font-display: swap; }
 
+.ranked-row__button { display: grid; gap: .2rem; padding: .35rem 0; border: 0; background: none; text-align: start; min-height: 44px; min-width: 0; }
+.ranked-row__button small { color: var(--ink-muted); overflow-wrap: anywhere; }
+.ranked-row__button span { color: var(--forest); font-size: .875rem; }
+.measurement-details { margin-block: 1rem; }
+.measurement-details > summary { cursor: pointer; padding-block: .75rem; min-height: 44px; }
+.page-insights { min-width: 0; scroll-margin-block-start: 8rem; }
+.page-insights h3 { margin-block: 1.5rem .5rem; }
+.insight-list li { display: flex; justify-content: space-between; gap: 1rem; padding-block: .75rem; border-bottom: 1px solid var(--line); }
+.insight-list li span { min-width: 0; overflow-wrap: anywhere; }
+.insight-list li b { flex-shrink: 0; }
+.insight-note { margin-block: 1rem; }
+.insight-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: 1rem; }
+
 /* ---------------------------------------------------------------- tokens */
 :root {
   --paper: #efe8da;

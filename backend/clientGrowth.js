@@ -2,7 +2,7 @@ const db = require('./database');
 const { campaignTag } = require('./growthSignals');
 const DAY = 86400000;
 const METRICS = ['contact_click', 'form_start', 'form_submit', 'lead_received', 'won', 'tool_completed', 'file_downloaded'];
-const LEAD_STATUSES = ['new', 'working', 'completed', 'won', 'lost', 'irrelevant'];
+const LEAD_STATUSES = ['new', 'working', 'contacted', 'qualified', 'completed', 'won', 'lost', 'irrelevant'];
 const TASK_STATUSES = ['planned', 'working', 'waiting_client', 'published', 'done', 'cancelled'];
 const now = () => new Date().toISOString();
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
@@ -70,7 +70,7 @@ function insights(appId, range, current, previous) {
     const add = (key, title, evidence, action, priority, path = '') => result.push({ key, title, evidence, action, priority, path });
     const profile = db.prepare('SELECT * FROM growth_profiles WHERE app_id=?').get(appId);
     const stale = db.prepare(`SELECT COUNT(*) AS count FROM growth_leads WHERE app_id=? AND archived=0
-        AND (status='new' AND occurred_at<? OR status IN ('new','working') AND due_at IS NOT NULL AND due_at<?)`)
+        AND (status='new' AND occurred_at<? OR status IN ('new','working','contacted','qualified') AND due_at IS NOT NULL AND due_at<?)`)
         .get(appId, new Date(Date.now() - (profile?.response_hours || 24) * 3600000).toISOString(), now()).count;
     if (stale) add('unanswered', 'פניות שממתינות לטיפול', `${stale} פניות עברו את זמן המענה או מועד המעקב`, 'לעבור על הפניות ולעדכן טיפול', 'high');
     const overdue = db.prepare(`SELECT COUNT(*) AS count FROM growth_tasks WHERE app_id=? AND status NOT IN ('done','cancelled') AND due_at<?`).get(appId, now()).count;
@@ -103,7 +103,7 @@ function overview(query) {
         const current = metrics(app.id, range.from, range.to);
         const previous = metrics(app.id, range.previousFrom, range.from);
         return { ...app, metrics: current, previous, coverage: coverage(app.id), insights: insights(app.id, range, current, previous),
-            open_leads: db.prepare("SELECT COUNT(*) AS n FROM growth_leads WHERE app_id=? AND archived=0 AND status IN ('new','working')").get(app.id).n,
+            open_leads: db.prepare("SELECT COUNT(*) AS n FROM growth_leads WHERE app_id=? AND archived=0 AND status IN ('new','working','contacted','qualified')").get(app.id).n,
             open_tasks: db.prepare("SELECT COUNT(*) AS n FROM growth_tasks WHERE app_id=? AND status NOT IN ('done','cancelled')").get(app.id).n };
     });
     sites.sort((a, b) => b.insights.filter(i => i.priority === 'high').length - a.insights.filter(i => i.priority === 'high').length || b.insights.length - a.insights.length || a.name.localeCompare(b.name));
@@ -149,6 +149,12 @@ function detail(id, query) {
             COUNT(DISTINCT CASE WHEN event_type='contact_click' THEN session_hash END) AS contacts FROM growth_events WHERE app_id=? AND occurred_at>=? AND occurred_at<? AND automation_hint=0 GROUP BY path ORDER BY sessions DESC LIMIT 20`).all(app.id, range.from, range.to),
         sources: db.prepare(`SELECT source,medium,campaign,COUNT(DISTINCT CASE WHEN event_type='page_view' THEN session_hash END) AS sessions,
             COUNT(DISTINCT CASE WHEN event_type='contact_click' THEN session_hash END) AS contacts FROM growth_events WHERE app_id=? AND occurred_at>=? AND occurred_at<? AND automation_hint=0 GROUP BY source,medium,campaign ORDER BY sessions DESC LIMIT 20`).all(app.id, range.from, range.to),
+        actions: db.prepare(`SELECT path,label,placement,project,event_type,COUNT(*) AS events,COUNT(DISTINCT session_hash) AS sessions
+            FROM growth_events WHERE app_id=? AND occurred_at>=? AND occurred_at<? AND automation_hint=0
+            AND event_type IN ('contact_click','project_open','outbound_click')
+            GROUP BY path,label,placement,project,event_type ORDER BY events DESC LIMIT 40`).all(app.id, range.from, range.to),
+        outcomes: db.prepare(`SELECT status,COUNT(*) AS total FROM growth_leads WHERE app_id=? AND archived=0
+            AND occurred_at>=? AND occurred_at<? GROUP BY status`).all(app.id, range.from, range.to),
         activity: db.prepare('SELECT * FROM growth_activity WHERE app_id=? ORDER BY id DESC LIMIT 100').all(app.id) };
 }
 const TABLES = { goals: 'growth_goals', leads: 'growth_leads', tasks: 'growth_tasks', campaigns: 'growth_campaigns' };
@@ -203,7 +209,7 @@ function save(id, kind, recordId, body, actor) {
             entity = Number(db.prepare(`INSERT INTO ${table}(${Object.keys(values).join(',')}) VALUES(${Object.keys(values).map(() => '?').join(',')})`).run(...Object.values(values)).lastInsertRowid);
         }
         const labels = { goals: 'מטרה', tasks: 'משימה', leads: 'פנייה', campaigns: 'קמפיין' };
-        const statuses = { new: 'חדש', working: 'בטיפול', completed: 'טופל במקור', won: 'נסגר בהצלחה', lost: 'לא נסגר', irrelevant: 'לא רלוונטי', planned: 'מתוכנן', waiting_client: 'ממתין ללקוח', published: 'פורסם', done: 'הושלם', cancelled: 'בוטל' };
+        const statuses = { new: 'חדש', working: 'בטיפול', contacted: 'נוצר קשר', qualified: 'פנייה מתאימה', completed: 'טופל במקור', won: 'נסגר בהצלחה', lost: 'לא נסגר', irrelevant: 'לא רלוונטי', planned: 'מתוכנן', waiting_client: 'ממתין ללקוח', published: 'פורסם', done: 'הושלם', cancelled: 'בוטל' };
         const change = existing && values.status && existing.status !== values.status ? ` (${statuses[existing.status]} ← ${statuses[values.status]})` : '';
         activity(app.id, actor, kind, entity, `${existing ? 'עודכנה' : 'נוספה'} ${labels[kind]}: ${values.title || values.name || values.reference}${change}`);
         return db.prepare(`SELECT * FROM ${table} WHERE id=?`).get(entity);

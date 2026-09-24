@@ -7,11 +7,12 @@ import { useRange } from '../lib/useRange';
 import { DataState, Empty, Panel, PageHead, RangePicker, RankedList, Stat, StatRow, Tabs } from '../components/AnalyticsParts';
 import JewelryInterest from '../components/JewelryInterest';
 import ProductAnalytics from '../components/ProductAnalytics';
+import TrackingStatus from '../components/TrackingStatus';
+import PageInsights from '../components/PageInsights';
+import { pageName } from '../lib/analyticsLabels';
 import { formatDateTime, formatNumber } from '../lib/format';
 
-const CANDIDATE_HINT = 'מועמד = כתובת IP שלא זוהתה כבוט. הערכה מהלוגים, לא אימות של אדם.';
-const PAGE_VIEW_HINT = 'ניווטים מוצלחים בלבד — ללא תמונות, קוד, גופנים, API או בקשות שנכשלו.';
-const BROWSER_SIGNAL_HINT = 'אות דפדפן = העמוד הפעיל קוד בדפדפן ושלח מזהה אקראי ואנונימי. זה חזק יותר מלוג IP, אך עדיין לא הוכחה לאדם או ללקוח.';
+import { VISITOR_HINT as BROWSER_SIGNAL_HINT, CONNECTION_HINT as CANDIDATE_HINT, PAGE_HINT as PAGE_VIEW_HINT } from '../lib/analyticsLabels';
 
 const BREAKDOWN_TABS = [
   { id: 'pages', label: 'עמודים' },
@@ -40,9 +41,12 @@ const VisitorDetail = () => {
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState('');
+  const [tableError, setTableError] = useState('');
+  const [engagementError, setEngagementError] = useState('');
   const [breakdown, setBreakdown] = useState('pages');
   const [selectedIp, setSelectedIp] = useState(null);
   const [timeline, setTimeline] = useState([]);
+  const [selectedPath, setSelectedPath] = useState(null);
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
@@ -50,10 +54,11 @@ const VisitorDetail = () => {
       const query = rangeQuery(resolveRange());
       const [analytics, productEngagement] = await Promise.all([
         apiFetch(`/visitor-analytics/apps/${id}?${query}`),
-        apiFetch(`/visitor-analytics/apps/${id}/engagement?${query}`).catch(() => null)
+        apiFetch(`/visitor-analytics/apps/${id}/engagement?${query}`).catch(error => ({ error: error.message }))
       ]);
       setData(analytics);
-      setEngagement(productEngagement);
+      setEngagement(productEngagement.error ? null : productEngagement);
+      setEngagementError(productEngagement.error || '');
       setError('');
     } catch (fetchError) {
       setError(fetchError.message);
@@ -67,7 +72,8 @@ const VisitorDetail = () => {
     try {
       const query = `${rangeQuery(resolveRange())}&page=${page}&limit=25&search=${encodeURIComponent(search)}`;
       setVisitors(await apiFetch(`/visitor-analytics/apps/${id}/visitors?${query}`));
-    } catch { /* table errors surface through the empty state */ }
+      setTableError('');
+    } catch (error) { setTableError(error.message); }
     finally { setTableLoading(false); }
   }, [id, page, search, resolveRange]);
 
@@ -140,20 +146,23 @@ const VisitorDetail = () => {
       </PageHead>
 
       <DataState loading={loading && !data} error={error} onRetry={fetchAnalytics}>
+        {data?.app?.name === 'LA webs' && <TrackingStatus health={data?.tracking_health} />}
         <StatRow>
-          <Stat label="אותות דפדפן" value={summary.browser_signal_visitors} delta={data?.comparison?.browser_signal_visitors_percent} tone="forest" hint={BROWSER_SIGNAL_HINT} />
-          <Stat label="סשנים עם אות" value={summary.browser_signal_sessions} foot="מזהים אנונימיים לסשן" />
-          <Stat label="ניווטים עם אות" value={summary.browser_signal_page_views} delta={data?.comparison?.browser_signal_page_views_percent} hint={BROWSER_SIGNAL_HINT} />
-          <Stat label="מועמדי IP" value={summary.unique_candidates} delta={data?.comparison?.unique_candidates_percent} hint={CANDIDATE_HINT} />
-          <Stat label="צפיות לוג משוערות" value={summary.page_views} delta={data?.comparison?.page_views_percent} hint={PAGE_VIEW_HINT} />
-          <Stat label="בוטים שסוננו" value={summary.bot_requests} tone="ochre" foot={`${formatNumber(summary.known_bot_requests)} ודאיים · ${formatNumber(summary.likely_bot_requests)} כנראה`} />
+          <Stat label="מבקרים משוערים" value={summary.browser_signal_visitors} delta={data?.comparison?.browser_signal_visitors_percent} tone="forest" hint={BROWSER_SIGNAL_HINT} />
+          <Stat label="ביקורים שנמדדו" value={summary.browser_signal_sessions} foot="ביקורים חוזרים נכללים" />
+          <Stat label="עמודים שנפתחו" value={summary.browser_signal_page_views} delta={data?.comparison?.browser_signal_page_views_percent} hint={BROWSER_SIGNAL_HINT} />
         </StatRow>
+        <details className="measurement-details"><summary>נתוני שרת וסינון אוטומטי</summary>
+        <StatRow>
+          <Stat label="כתובות רשת שונות" value={summary.unique_candidates} delta={data?.comparison?.unique_candidates_percent} hint={CANDIDATE_HINT} />
+          <Stat label="צפיות לפי השרת" value={summary.page_views} delta={data?.comparison?.page_views_percent} hint={PAGE_VIEW_HINT} />
+          <Stat label="בקשות אוטומטיות שסוננו" value={summary.bot_requests} tone="ochre" foot={`${formatNumber(summary.known_bot_requests)} מזוהות · ${formatNumber(summary.likely_bot_requests)} משוערות`} />
+        </StatRow>
+        </details>
 
         <JewelryInterest interest={data?.jewelry_interest} siteUrl={data?.app?.url} />
 
-        {(data?.app?.name === 'PDF Studio' || data?.app?.name === 'Miryam Zelig' || data?.app?.name === 'Seder' || engagement?.engagement_samples || engagement?.product?.summary?.sessions) && (
-          <ProductAnalytics engagement={engagement || {}} mode={data?.app?.name === 'PDF Studio' ? 'product' : 'site'} />
-        )}
+
 
         <div className="grid grid--2-1">
           <Panel title="תנועה לאורך זמן">
@@ -185,11 +194,22 @@ const VisitorDetail = () => {
         </div>
 
         <Panel title="פילוח" action={<Tabs tabs={BREAKDOWN_TABS} value={breakdown} onChange={setBreakdown} />}>
-          <RankedList items={data?.[breakdown]} color={breakdownMeta.color} empty={breakdownMeta.empty} />
+          <RankedList items={data?.[breakdown]} color={breakdownMeta.color} empty={breakdownMeta.empty}
+            onSelect={breakdown === 'pages' ? setSelectedPath : undefined} selected={selectedPath}
+            labelFor={value => breakdown === 'pages' ? pageName(value, data?.app?.name) : value} />
         </Panel>
+        {selectedPath && data?.app && <PageInsights key={`${id}:${selectedPath}:${days}:${custom?.from}`} app={data.app} path={selectedPath} resolveRange={resolveRange} onClose={() => setSelectedPath(null)} onSelect={setSelectedPath} />}
 
+        <details className="measurement-details"><summary>איך השתמשו בעמודים?</summary>
+        {engagementError && <div className="banner banner--error" role="alert">מדידת השימוש לא נטענה. {engagementError}<button className="btn" onClick={fetchAnalytics}>ניסיון נוסף</button></div>}
+        {(data?.app?.name === 'PDF Studio' || data?.app?.name === 'LA webs' || data?.app?.name === 'Miryam Zelig' || data?.app?.name === 'Seder' || Boolean(engagement?.engagement_samples) || Boolean(engagement?.product?.summary?.sessions)) && (
+          <ProductAnalytics engagement={engagement || {}} mode={data?.app?.name === 'PDF Studio' ? 'product' : 'site'} />
+        )}
+        </details>
+
+        <details className="measurement-details"><summary>פירוט חיבורים וכתובות רשת</summary>
         <Panel
-          title="מבקרים"
+          title="פעילות לפי חיבור"
           hint="לחיצה על שורה פותחת את ציר הפעילות המלא"
           action={
             <div className="search">
@@ -206,6 +226,7 @@ const VisitorDetail = () => {
           bleed
         >
           <div className={`table-wrap ${tableLoading ? 'is-busy' : ''}`}>
+            {tableError && <div className="banner banner--error" role="alert">{tableError}<button className="btn" onClick={fetchVisitors}>ניסיון נוסף</button></div>}
             <table className="data-table">
               <thead>
                 <tr><th>מבקר</th><th>מיקום ומכשיר</th><th>צפיות</th><th>לאחרונה</th><th>עמוד אחרון</th></tr>
@@ -238,17 +259,18 @@ const VisitorDetail = () => {
               ))}
             </ul>
 
-            {!visitors.visitors.length && <Empty text={search ? 'אין תוצאות לחיפוש הזה' : 'אין מועמדי IP בטווח הזה'} />}
+            {!tableError && !visitors.visitors.length && <Empty text={search ? 'אין תוצאות לחיפוש הזה' : 'אין חיבורים שנמדדו בטווח הזה'} />}
           </div>
 
           {pageCount > 1 && (
             <div className="pagination">
               <button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)} aria-label="עמוד קודם"><ChevronRight aria-hidden="true" /></button>
-              <span>{page} / {pageCount} · {formatNumber(visitors.total)} מועמדי IP</span>
+              <span>{page} / {pageCount} · {formatNumber(visitors.total)} כתובות רשת שונות</span>
               <button type="button" disabled={page >= pageCount} onClick={() => setPage(page + 1)} aria-label="עמוד הבא"><ChevronLeft aria-hidden="true" /></button>
             </div>
           )}
         </Panel>
+        </details>
       </DataState>
 
       {selectedIp && (

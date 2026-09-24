@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from './components/AppShell';
+import LoadBoundary from './components/LoadBoundary';
 
 const Login = lazy(() => import('./pages/Login'));
 const VisitorOverview = lazy(() => import('./pages/VisitorOverview'));
@@ -11,12 +12,15 @@ const AppDetails = lazy(() => import('./pages/AppDetails'));
 const Settings = lazy(() => import('./pages/Settings'));
 const ClientGrowth = lazy(() => import('./pages/ClientGrowth'));
 
-const PageLoader = () => (
-  <div className="page-loader" role="status" aria-live="polite">
+const PageLoader = () => {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => { const timer = setTimeout(() => setSlow(true), 20000); return () => clearTimeout(timer); }, []);
+  return <div className="page-loader" role="status" aria-live="polite">
     <span className="loader-mark" aria-hidden="true" />
     <span>טוען את סביבת הניטור…</span>
-  </div>
-);
+    {slow && <button className="btn" type="button" onClick={() => window.location.reload()}>הטעינה מתעכבת · נסו מחדש</button>}
+  </div>;
+};
 
 const ProtectedRoute = ({ children }) => (
   localStorage.getItem('token') ? children : <Navigate to="/login" replace />
@@ -37,7 +41,7 @@ function App() {
 
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <Suspense fallback={<PageLoader />}>
+      <LoadBoundary><Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/login" element={authenticated ? <Navigate to="/visitors" replace /> : <Login />} />
           <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
@@ -55,7 +59,7 @@ function App() {
           </Route>
           <Route path="*" element={<Navigate to={authenticated ? '/visitors' : '/login'} replace />} />
         </Routes>
-      </Suspense>
+      </Suspense></LoadBoundary>
     </BrowserRouter>
   );
 }

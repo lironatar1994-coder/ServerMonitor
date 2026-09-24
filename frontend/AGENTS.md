@@ -7,6 +7,8 @@
 
 ## Ownership
 
+- `PageInsights.jsx` opens an inline page drill-down; `analyticsLabels.js` owns plain-Hebrew measurement hints and portfolio page names. `TrackingStatus.jsx` exposes recurring check failures; `LoadBoundary.jsx` provides recovery for failed page chunks.
+
 - `src/pages/ClientGrowth.jsx` and `client-growth.css` own the internal client workspace: prioritization, goals, leads, tasks, campaigns, activity and editable manual-share drafts, composed from AnalyticsParts.
 
 - `src/App.jsx` owns client routing and session-level app shell behavior.
@@ -20,6 +22,10 @@
 - `dist/` is generated build output and should only change through frontend builds.
 
 ## Local Contracts
+
+- Use `מבקרים משוערים`, `ביקורים שנמדדו` and `עמודים שנפתחו` as primary visitor labels. Explain anonymous browser counting in a hint; network-address/server counts and individual connection rows belong in expandable diagnostics.
+- Page rows are keyboard-operable buttons with friendly names and an explicit continuation action. Drill-downs show observed next pages, later contact actions and low-sample guidance; do not equate no recorded continuation with an exit or a click with a lead.
+- API requests time out after 20 seconds with recovery text, validate JSON responses, and preserve cancellation. Lazy-load failures offer reload; the loader offers recovery if a chunk stalls. Never disguise a failed request as no traffic.
 
 - `/clients` and `/clients/:id` are internal-only. Keep Search Console and customer portals absent. Email/WhatsApp controls open editable drafts; opening is not proof of sending. Summaries remain reviewable before the user shares.
 - Show source-confirmed, manual and observed browser actions separately. Expose collection start and source-sync gaps, independent goal periods, low-sample comparisons, and the absence of confirmed session-to-lead attribution. Source PII is not copied into forms.

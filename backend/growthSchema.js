@@ -60,6 +60,11 @@ function initializeGrowth(db) {
         db.exec('ALTER TABLE growth_goals ADD COLUMN period_days INTEGER NOT NULL DEFAULT 30');
     }
     db.exec('CREATE UNIQUE INDEX IF NOT EXISTS growth_campaign_name ON growth_campaigns(app_id,name)');
+    for (const column of ['placement', 'project']) {
+        if (!db.prepare('PRAGMA table_info(growth_events)').all().some(c => c.name === column)) {
+            db.exec(`ALTER TABLE growth_events ADD COLUMN ${column} TEXT NOT NULL DEFAULT ''`);
+        }
+    }
     const now = new Date().toISOString();
     const descriptions = {
         'Dfus Reuven': 'בקשות להצעת מחיר לפי שירות', 'Pinhas Ratzon': 'פניות רלוונטיות לפי תחום שירות',

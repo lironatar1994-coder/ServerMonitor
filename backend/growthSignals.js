@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const db = require('./database');
 const { getSignalKey, findSignalApp, normalizeIp, validateSignalBody, getAutomationHint } = require('./browserSignals');
-const EVENTS = new Set(['page_view', 'contact_click', 'form_start', 'form_submit', 'form_error', 'form_success_observed']);
+const EVENTS = new Set(['page_view', 'contact_click', 'project_open', 'outbound_click', 'form_start', 'form_submit', 'form_error', 'form_success_observed']);
 const SAFE_TAG = /^[\p{L}\p{N}_. -]{1,80}$/u;
 const rate = new Map();
 let rateWindow = Date.now();
@@ -27,14 +27,16 @@ function recordGrowthSignal({ body, ip, userAgent, siteUrl }) {
         throw Object.assign(new Error('Signal path does not belong to website'), { status: 400 });
     }
     const label = ['whatsapp', 'phone', 'email', 'form', 'link'].includes(body.label) ? body.label : '';
+    const placement = app.name === 'LA webs' && ['header', 'hero', 'floating', 'contact', 'footer', 'content'].includes(body.placement) ? body.placement : '';
+    const project = app.name === 'LA webs' && ['koral', 'miryam', 'pinhas', 'libi', 'reuven', 'sos', 'seder', 'pdf'].includes(body.project) ? body.project : '';
     boundedRate(app.id, address);
     const result = db.prepare(`INSERT OR IGNORE INTO growth_events
-        (app_id,event_id,occurred_at,session_hash,event_type,path,label,source,medium,campaign,device,automation_hint)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).run(app.id, signal.eventId, new Date().toISOString(),
+        (app_id,event_id,occurred_at,session_hash,event_type,path,label,source,medium,campaign,device,automation_hint,placement,project)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(app.id, signal.eventId, new Date().toISOString(),
         crypto.createHmac('sha256', key).update(`${app.id}:growth:${signal.sessionId}`).digest('hex'),
         body.event_type, signal.path, label, campaignTag(body.source), campaignTag(body.medium), campaignTag(body.campaign),
         ['mobile', 'tablet', 'desktop'].includes(body.device) ? body.device : 'unknown',
-        getAutomationHint({ body, ip: address, userAgent, path: signal.path }));
+        getAutomationHint({ body, ip: address, userAgent, path: signal.path }), placement, project);
     return { accepted: true, duplicate: result.changes === 0, app: app.name };
 }
 module.exports = { recordGrowthSignal, campaignTag, EVENTS };

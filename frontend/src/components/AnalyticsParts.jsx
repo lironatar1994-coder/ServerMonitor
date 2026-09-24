@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { CalendarDays, Check, Info, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
+import { CalendarDays, Check, ChevronLeft, Info, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
 import { formatNumber } from '../lib/format';
 
 const RANGE_OPTIONS = [
@@ -163,7 +163,7 @@ export const RangePicker = ({ days, onChange, loading, onRefresh, onCustom, cust
   </div>
 );
 
-export const RankedList = ({ items = [], empty = 'אין נתונים בטווח הזה', color = 'forest', max = 8 }) => {
+export const RankedList = ({ items = [], empty = 'אין נתונים בטווח הזה', color = 'forest', max = 8, onSelect, labelFor = value => value, selected }) => {
   const rows = items.slice(0, max);
   const peak = Math.max(...rows.map((item) => Number(item.requests) || 0), 1);
   if (!rows.length) return <Empty text={empty} />;
@@ -171,7 +171,7 @@ export const RankedList = ({ items = [], empty = 'אין נתונים בטווח
     <ol className="ranked-list">
       {rows.map((item, index) => (
         <li className="ranked-row" key={`${item.label}-${index}`} style={{ '--bar': `${(Number(item.requests) / peak) * 100}%`, '--bar-color': `var(--${color})` }}>
-          <b title={item.label}>{item.label || 'לא ידוע'}</b>
+          {onSelect ? <button className="ranked-row__button" type="button" onClick={() => onSelect(item.label)} aria-expanded={selected === item.label}><b>{labelFor(item.label) || 'לא ידוע'}</b><small dir="ltr">{item.label}</small><span>מה קרה בהמשך? <ChevronLeft aria-hidden="true" /></span></button> : <b title={item.label}>{labelFor(item.label) || 'לא ידוע'}</b>}
           <strong>{formatNumber(item.requests)}</strong>
         </li>
       ))}

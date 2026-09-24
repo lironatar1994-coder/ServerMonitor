@@ -6,6 +6,7 @@ const fs = require('fs');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret_monitor_key_123';
+const createSessionToken = (user, expiresIn = '24h') => jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn });
 
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
@@ -20,7 +21,7 @@ router.post('/login', (req, res) => {
         return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
+    const token = createSessionToken(user);
     
     res.json({
         token,
@@ -87,3 +88,4 @@ router.post('/test-whatsapp', authenticateToken, (req, res) => {
 
 module.exports = router;
 module.exports.authenticateToken = authenticateToken;
+module.exports.createSessionToken = createSessionToken;

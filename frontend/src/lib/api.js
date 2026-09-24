@@ -1,7 +1,15 @@
 export async function apiFetch(path, options = {}) {
+  const { timeoutMs = 20000, ...requestOptions } = options;
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  const timer = setTimeout(abort, timeoutMs);
+  if (options.signal?.aborted) abort();
+  options.signal?.addEventListener('abort', abort, { once: true });
+  try {
   const token = localStorage.getItem('token');
   const response = await fetch(`/serve-monitor/api${path}`, {
-    ...options,
+    ...requestOptions,
+    signal: controller.signal,
     headers: {
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...options.headers,
@@ -16,9 +24,20 @@ export async function apiFetch(path, options = {}) {
     throw new Error('ההתחברות פגה. יש להתחבר מחדש.');
   }
 
-  const data = await response.json().catch(() => ({}));
+  if (!response.headers.get('content-type')?.includes('application/json')) {
+    throw new Error(`השרת לא החזיר נתונים (${response.status}). נסו לרענן שוב.`);
+  }
+  const data = await response.json();
   if (!response.ok) throw new Error(data.error || `הבקשה נכשלה (${response.status})`);
   return data;
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error('השרת לא השיב בזמן. נסו שוב.', { cause: error });
+    if (error instanceof TypeError) throw new Error('לא ניתן להתחבר לשרת. בדקו את החיבור ונסו שוב.', { cause: error });
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    options.signal?.removeEventListener('abort', abort);
+  }
 }
 
 export function getRangePreset(days = 1) {

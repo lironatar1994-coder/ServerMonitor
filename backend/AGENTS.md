@@ -7,6 +7,8 @@
 
 ## Ownership
 
+- `pageInsights.js` owns exact-page anonymous visit cohorts, ordered next-page transitions and subsequent observed actions. `trackingHealth.js` reads the bounded browser-check result for authenticated dashboards.
+
 - `growthSchema.js` owns idempotent growth tables and canonical client defaults. `clientGrowth.js` and `routes/clientGrowth.js` own JWT-only internal goals, workflow, evidence, campaigns, comparisons and draft reports. `growthSignals.js` validates anonymous action beacons; `growthSources.js` polls five allow-listed source stores read-only once per minute.
 
 - `server.js` owns middleware, API mounting, frontend static serving, and process startup.
@@ -22,6 +24,11 @@
 - `monitor.db` is runtime state and must not be treated as a source schema definition.
 
 ## Local Contracts
+
+- Cross-site new/returning lookups use partial candidate IP/time indexes and a global time index; keep the 1/30/90-day overview under the browser-check latency budget. Dashboard HTML is not cacheable and missing asset chunks return 404.
+- Portfolio action metadata accepts only known project slugs and placement names. LA webs engagement batches contain time deltas; aggregate their time per session/page and use maximum scroll reach. Other sites retain their existing measurement semantics.
+- Page insights scope every query by app, selected period and exact page. Derive next steps from ordered non-automated growth page events, never by joining IPs to contacts. Fewer than 30 measured visits is a low sample; contacts remain observations, not leads or causal evidence.
+- Lead states include `contacted` and `qualified`; both remain open for follow-up. An outcome is still manual or source-confirmed independently of browser actions.
 
 - Growth routes must never accept the Manager Site service key or expose customer-facing access. Scope every record mutation to the canonical app and record ID; validate metric/status/path/number fields and keep an activity trail.
 - Growth source rows retain only opaque/source IDs, timestamps and statuses. Exclude known deployment fixtures, deduplicate `(app, origin, external_key)`, preserve manual treatment on sync, and expose failed/stale adapters without clearing prior data. Native source status is distinct from internal workflow.
@@ -85,6 +92,8 @@
 - Keep SQLite WAL and foreign keys enabled. Schema additions and retention behavior must remain safe for existing production databases.
 
 ## Verification
+
+- `test/pageInsights.test.js` verifies ordered visit attribution, site/automation isolation, separate lead outcomes, engagement delta aggregation and the indexed history lookup. `test/apiClient.test.js` verifies client timeouts and invalid-response handling.
 
 - Run backend syntax checks with `node --check <file>` for touched backend JavaScript files.
 - When API behavior changes, run the server or exercise the relevant endpoint when practical.

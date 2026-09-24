@@ -42,12 +42,15 @@ def main():
     try:
         asset = Path('/var/lib/server-monitor'); asset.mkdir(mode=0o755, exist_ok=True)
         write(asset / 'growth-tracker.js', (ROOT / 'ops/growth-tracker.js').read_text(), 0o644)
+        write(asset / 'portfolio-tracker.js', (ROOT / 'ops/portfolio-tracker.js').read_text(), 0o644)
         maps = ['map "$host:$uri" $monitor_growth_tag {', '    default "";',
             '    ~*^(www\\.)?vee-app\\.co\\.il:/(maavar|Manager_Site|serve-monitor|DfusReuven|LibiDiamonds2|Miryam_Zelig|api|admin|login|dashboard)(/|$) "";',
             '    ~*^(www\\.)?lawebs\\.co\\.il:/(PinhasRatzon|admin|login|dashboard)(/|$) "";']
         for config, host, prefix, site in SITES:
             suffix = re.escape(prefix) + '(?:/|$)' if prefix else '/'
             tag = f'<script defer src="/.well-known/server-monitor-growth.js" data-prefix="{prefix}"></script>'
+            if host == 'lawebs.co.il' and not prefix:
+                tag += '<script defer src="/.well-known/server-monitor-portfolio.js"></script>'
             maps.append(f"    ~^(?:www\\.)?{re.escape(host)}:{suffix} '{tag}';")
         maps.append('}')
         write('/etc/nginx/conf.d/server-monitor-growth.conf', '\n'.join(maps)+'\n', 0o644)
@@ -76,6 +79,10 @@ def main():
             content += ['location = /.well-known/server-monitor-growth.js {',
                 '    alias /var/lib/server-monitor/growth-tracker.js;', '    default_type application/javascript;',
                 '    add_header Cache-Control "no-cache";', '}']
+            if config == 'lawebs.co.il.conf':
+                content += ['location = /.well-known/server-monitor-portfolio.js {',
+                    '    alias /var/lib/server-monitor/portfolio-tracker.js;',
+                    '    default_type application/javascript;', '    add_header Cache-Control "no-cache";', '}']
             for _, host, prefix, site in [row for row in SITES if row[0] == config]:
                 content += [f'location = {prefix}/.well-known/vee-growth-signal {{',
                     '    limit_except POST { deny all; }', '    client_max_body_size 16k;',

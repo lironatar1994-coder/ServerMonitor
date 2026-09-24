@@ -33,9 +33,14 @@ app.use('/serve-monitor/api/client-growth', require('./routes/clientGrowth'));
 
 // Serve frontend
 const distPath = path.join(__dirname, '../frontend/dist');
-app.use('/serve-monitor', express.static(distPath));
+app.use('/serve-monitor', express.static(distPath, {
+    setHeaders: (res, file) => { if (file.endsWith('.html')) res.set('Cache-Control', 'no-store'); }
+}));
 
 app.use('/serve-monitor', (req, res) => {
+    // A missing deployment chunk must fail, never return HTML as JavaScript.
+    if (req.path.startsWith('/assets/')) return res.sendStatus(404);
+    res.set('Cache-Control', 'no-store');
     res.sendFile(path.join(distPath, 'index.html'));
 });
 

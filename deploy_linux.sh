@@ -46,8 +46,14 @@ fi
 
 # 3. Host-aware Nginx access log
 echo "[INFO] Installing host-aware access logging..."
+LOG_CONFIG_BACKUP="$BACKUP_DIR/host-log-before-$(date +%Y%m%d-%H%M%S).conf"
+if [ -f "$NGINX_LOG_CONFIG" ]; then cp -p "$NGINX_LOG_CONFIG" "$LOG_CONFIG_BACKUP"; fi
 install -m 0644 nginx-monitor-host-log.conf "$NGINX_LOG_CONFIG"
-nginx -t
+if ! nginx -t; then
+  if [ -f "$LOG_CONFIG_BACKUP" ]; then cp -p "$LOG_CONFIG_BACKUP" "$NGINX_LOG_CONFIG"; fi
+  echo "[ERROR] Host logging validation failed; restored the prior configuration"
+  exit 1
+fi
 systemctl reload nginx
 
 # 4. SSH hardening: preserve key-based root administration and reject passwords.
@@ -69,6 +75,7 @@ cd "$BACKEND_DIR"
 npm ci -s
 # Rebuild sqlite3 for Linux environment just in case
 npm rebuild better-sqlite3
+npx playwright install --with-deps chromium
 cd ..
 
 bash "$APP_ROOT/ops/install-maintenance.sh"
