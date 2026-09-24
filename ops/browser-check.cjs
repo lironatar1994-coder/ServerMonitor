@@ -1,4 +1,4 @@
-/* Hourly bounded production smoke check. All visits identify as automation. */
+/* Bounded production smoke check. All visits identify as automation. */
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');

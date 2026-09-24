@@ -5,6 +5,7 @@ import tempfile
 import unittest
 import datetime as dt
 import json
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('maintenance', Path(__file__).with_name('maintenance.py'))
 m = importlib.util.module_from_spec(spec)
@@ -155,6 +156,39 @@ class VisitorHealth(unittest.TestCase):
             now = dt.datetime(2026, 9, 18, 6, 1, tzinfo=dt.timezone.utc).timestamp()
             self.assertEqual(m.visitor_health(db_path, now), [])
             self.assertIn('stalled', m.visitor_health(db_path, now + 600)[0])
+
+class BrowserHealth(unittest.TestCase):
+    def test_six_hour_schedule_and_forced_deployment_check(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(m, 'STATE', Path(folder)), patch.object(m, 'run') as run:
+            result = m.STATE / 'browser-check.json'
+            now = m.time.time() * 1000
+            m.write_json(result, {'checked': now - 5 * 3600000, 'errors': []})
+            self.assertEqual(m.browser_health(), [])
+            run.assert_not_called()
+            m.browser_health(force=True)
+            run.assert_called_once_with(['systemctl', 'start', 'lawebs-browser-check.service'], timeout=210)
+            run.reset_mock()
+            m.write_json(result, {'checked': now - 6.1 * 3600000, 'errors': []})
+            m.browser_health()
+            run.assert_called_once()
+
+    def test_killed_browser_replaces_old_success_and_does_not_retry_every_tick(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(m, 'STATE', Path(folder)), patch.object(m, 'run', side_effect=RuntimeError('killed')) as run:
+            result = m.STATE / 'browser-check.json'
+            m.write_json(result, {'checked': m.time.time() * 1000 - 8 * 3600000, 'errors': []})
+            self.assertTrue(m.browser_health())
+            self.assertIn('did not complete', json.loads(result.read_text())['errors'][0])
+            self.assertTrue(m.browser_health())
+            run.assert_called_once()
+
+    def test_preserves_browser_failure_details(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(m, 'STATE', Path(folder)):
+            def fail(*args, **kwargs):
+                m.write_json(m.STATE / 'browser-check.json', {'checked': m.time.time() * 1000, 'errors': ['missing tracking receipt']})
+                raise RuntimeError('failed')
+            with patch.object(m, 'run', side_effect=fail):
+                self.assertTrue(m.browser_health(force=True))
+            self.assertEqual(json.loads((m.STATE / 'browser-check.json').read_text())['errors'], ['missing tracking receipt'])
 
 if __name__ == '__main__':
     unittest.main()

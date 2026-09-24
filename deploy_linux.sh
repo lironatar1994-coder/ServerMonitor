@@ -125,4 +125,9 @@ else
 fi
 pm2 save > /dev/null
 
+echo "[INFO] Verifying production through the resource-limited browser service..."
+curl --silent --show-error --fail --retry 10 --retry-connrefused --retry-delay 1 --max-time 5 \
+  --output /dev/null "http://127.0.0.1:$BACKEND_PORT/serve-monitor/"
+/usr/local/sbin/lawebs-maintenance browser
+
 echo "[SUCCESS] DEPLOYMENT COMPLETE"

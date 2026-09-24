@@ -26,6 +26,7 @@
 ## Local Contracts
 
 - Cross-site new/returning lookups use partial candidate IP/time indexes and a global time index; keep the 1/30/90-day overview under the browser-check latency budget. Dashboard HTML is not cacheable and missing asset chunks return 404.
+- Browser-check results become stale after seven hours, allowing the six-hour production cadence plus scheduling grace; failed results remain visible immediately.
 - Portfolio action metadata accepts only known project slugs and placement names. LA webs engagement batches contain time deltas; aggregate their time per session/page and use maximum scroll reach. Other sites retain their existing measurement semantics.
 - Page insights scope every query by app, selected period and exact page. Derive next steps from ordered non-automated growth page events, never by joining IPs to contacts. Fewer than 30 measured visits is a low sample; contacts remain observations, not leads or causal evidence.
 - Lead states include `contacted` and `qualified`; both remain open for follow-up. An outcome is still manual or source-confirmed independently of browser actions.

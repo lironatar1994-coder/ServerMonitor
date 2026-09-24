@@ -304,6 +304,37 @@ def visitor_health(db_path=Path('/root/ServerMonitor/backend/monitor.db'), now=N
         errors.append(f'Visitor ingestion check failed: {exc}')
     return errors
 
+def browser_health(force=False):
+    result_path = STATE / 'browser-check.json'
+    try:
+        result = json.loads(result_path.read_text())
+    except (FileNotFoundError, ValueError):
+        result = {}
+    started = time.time() * 1000
+    if force or started - result.get('checked', 0) >= 6 * 3600000:
+        try:
+            # systemd serializes starts and bounds the entire Chromium process tree.
+            run(['systemctl', 'start', 'lawebs-browser-check.service'], timeout=210)
+        except Exception:
+            try:
+                result = json.loads(result_path.read_text())
+            except (FileNotFoundError, ValueError):
+                result = {}
+            if result.get('checked', 0) < started or not result.get('errors'):
+                write_json(result_path, {'checked': time.time() * 1000, 'errors': [
+                    'Browser check did not complete; inspect lawebs-browser-check.service'], 'checks': []})
+    try:
+        result = json.loads(result_path.read_text())
+    except (FileNotFoundError, ValueError):
+        return ['Portfolio/monitor browser check result missing']
+    errors = []
+    if result.get('errors'):
+        errors.append('Portfolio/monitor browser or tracking check failed; see browser-check.json')
+    if time.time() * 1000 - result.get('checked', 0) > 7 * 3600000:
+        errors.append('Portfolio/monitor browser check is stale')
+    return errors
+
+
 def health():
     errors, warnings = [], []
     disk = shutil.disk_usage('/')
@@ -337,25 +368,7 @@ def health():
         except Exception:
             errors.append(f'HTTP check failed: {url}')
     errors.extend(visitor_health())
-    # Reuse this timer; one bounded browser process per hour, no extra scheduler.
-    browser_result = STATE / 'browser-check.json'
-    try:
-        browser_check = json.loads(browser_result.read_text())
-    except (FileNotFoundError, ValueError):
-        browser_check = {}
-    if time.time() * 1000 - browser_check.get('checked', 0) >= 3600000:
-        try:
-            run(['/usr/bin/node', '/root/ServerMonitor/ops/browser-check.cjs'], timeout=180)
-        except Exception:
-            errors.append('Portfolio/monitor browser or tracking check failed')
-    try:
-        browser_check = json.loads(browser_result.read_text())
-        if browser_check.get('errors'):
-            errors.append('Portfolio/monitor browser or tracking check failed; see browser-check.json')
-        if time.time() * 1000 - browser_check.get('checked', 0) > 7200000:
-            errors.append('Portfolio/monitor browser check is stale')
-    except (FileNotFoundError, ValueError):
-        errors.append('Portfolio/monitor browser check result missing')
+    errors.extend(browser_health())
     for url in set(TRACKER_URLS + GROWTH_URLS):
         try:
             html = run(['curl', '--silent', '--show-error', '--location', '--fail', '--compressed', '--max-time', '10', url], timeout=15)
@@ -400,7 +413,7 @@ def health():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=['daily', 'health', 'plan'])
+    parser.add_argument('mode', choices=['daily', 'health', 'plan', 'browser'])
     args = parser.parse_args()
     os.umask(0o077)
     STATE.mkdir(mode=0o700, exist_ok=True)
@@ -410,6 +423,10 @@ def main():
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise RuntimeError('Another run already holds the lock')
+        if args.mode == 'browser':
+            errors = browser_health(force=True)
+            print(json.dumps({'errors': errors}), flush=True)
+            return int(bool(errors))
         if args.mode == 'plan':
             print(json.dumps(cleanup(False), indent=2))
             return 0

@@ -42,6 +42,29 @@ Nice=15
 UMask=0077
 Environment=PM2_HOME=/root/.pm2
 UNIT
+cat > /etc/systemd/system/lawebs-browser-check.service <<'UNIT'
+[Unit]
+Description=Bounded portfolio and monitor browser verification
+After=network-online.target
+[Service]
+Type=oneshot
+WorkingDirectory=/root/ServerMonitor
+ExecStart=/usr/bin/node /root/ServerMonitor/ops/browser-check.cjs
+TimeoutStartSec=180
+TimeoutStopSec=10
+KillMode=control-group
+MemoryAccounting=true
+MemoryHigh=512M
+MemoryMax=640M
+MemorySwapMax=128M
+CPUAccounting=true
+CPUQuota=75%
+CPUWeight=10
+Nice=15
+IOSchedulingClass=idle
+OOMScoreAdjust=500
+UMask=0077
+UNIT
 cat > /etc/systemd/system/lawebs-health.timer <<'UNIT'
 [Unit]
 Description=Production health every 15 minutes
