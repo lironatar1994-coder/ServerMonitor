@@ -53,6 +53,7 @@ const VisitorOverview = () => {
         : b.browser_signal_sessions - a.browser_signal_sessions || b.browser_signal_page_views - a.browser_signal_page_views);
   }, [data, previous, apps, search, sort]);
   const failures = apps.filter(app => app.analytics_enabled && app.status !== 'online');
+  const peakSessions = Math.max(1, ...(data?.sites || []).map(site => Number(site.browser_signal_sessions) || 0));
   const summary = data?.summary || {}, before = data?.comparison?.previous || {};
   const destination = id => `/visitors/${id}${rangeSearch(data?.range || resolveRange())}`;
   return <div className="page page--visitors">
@@ -66,7 +67,7 @@ const VisitorOverview = () => {
         <Stat icon={Activity} label="ביקורים" value={summary.browser_signal_sessions} previous={before.browser_signal_sessions} />
         <Stat icon={Eye} label="צפיות" value={summary.browser_signal_page_views} previous={before.browser_signal_page_views} />
       </StatRow>
-      <Panel title="השוואת אתרים" hint={`${VISITOR_HINT} ביקורים כוללים חזרה לאתר; צפיות הן פתיחות עמודים שנמדדו. סימן אזהרה ליד השינוי מציין מדגם קטן או חוסר מדידה. אין קודמים פירושו שלא נמדדה פעילות בתקופה הקודמת.`} className="comparison-panel" action={<>
+      <Panel title="השוואת אתרים" hint={`${VISITOR_HINT} הפס מציג ביקורים ביחס לאתר עם הכי הרבה ביקורים בטווח, ללא שינוי בקנה המידה בחיפוש. ביקורים כוללים חזרה לאתר; צפיות הן פתיחות עמודים שנמדדו. סימן אזהרה ליד השינוי מציין מדגם קטן או חוסר מדידה. אין קודמים פירושו שלא נמדדה פעילות בתקופה הקודמת.`} className="comparison-panel" action={<>
         <label className="search"><Search aria-hidden="true" /><input aria-label="חיפוש אתר" placeholder="חיפוש אתר" value={search} onChange={e => setSearch(e.target.value)} /></label>
         <label className="sort-control"><ArrowDownUp aria-hidden="true" /><select aria-label="מיון אתרים" value={sort} onChange={e => { setSort(e.target.value); try { localStorage.setItem(SORT_KEY, e.target.value); } catch { /* storage optional */ } }}><option value="activity">פעילות</option><option value="change">שינוי</option><option value="name">שם</option></select></label>
       </>} bleed>
@@ -75,7 +76,7 @@ const VisitorOverview = () => {
         <ol className="comparison-list">{sites.map(site => <li key={site.app_id}><Link to={destination(site.app_id)}>
           <span className="comparison-identity"><span className={`site-health ${site.health?.status === 'online' ? 'is-healthy' : 'is-attention'}`} role="img" aria-label={site.health?.status === 'online' ? 'זמין בבדיקה האחרונה' : site.health ? 'דורש בדיקה' : 'מצב זמינות לא ידוע'} title={site.health?.status === 'online' ? 'זמין בבדיקה האחרונה' : site.health ? 'דורש בדיקה' : 'מצב זמינות לא ידוע'}>{site.health?.status === 'online' ? <CircleCheck /> : site.health ? <TriangleAlert /> : <CircleHelp />}</span><b dir="auto">{site.name}</b></span>
           <span className="comparison-value" aria-label={`מבקרים משוערים: ${formatNumber(site.browser_signal_visitors)}`}><Users aria-hidden="true" /><strong>{formatNumber(site.browser_signal_visitors)}</strong></span>
-          <span className="comparison-value" aria-label={`ביקורים שנמדדו: ${formatNumber(site.browser_signal_sessions)}`}><Activity aria-hidden="true" /><strong>{formatNumber(site.browser_signal_sessions)}</strong></span>
+          <span className="comparison-value comparison-value--activity" aria-label={`ביקורים שנמדדו: ${formatNumber(site.browser_signal_sessions)}`}><strong>{formatNumber(site.browser_signal_sessions)}</strong><span className="activity-meter" aria-hidden="true"><i style={{ width: `${Math.max(0, Number(site.browser_signal_sessions) || 0) / peakSessions * 100}%` }} /></span></span>
           <span className="comparison-value" aria-label={`עמודים שנפתחו: ${formatNumber(site.browser_signal_page_views)}`}><Eye aria-hidden="true" /><strong>{formatNumber(site.browser_signal_page_views)}</strong></span>
           <span className="comparison-change"><Change current={site.browser_signal_sessions} previous={site.previous} />{!site.browser_signal_page_views ? <small>לא נמדד</small> : site.browser_signal_sessions < 30 && <TriangleAlert className="sample-warning" role="img" aria-label="מדגם קטן" title="מדגם קטן: פחות מ־30 ביקורים" />}</span><ChevronLeft className="comparison-open" aria-hidden="true" />
         </Link></li>)}</ol>

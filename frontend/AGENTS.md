@@ -52,6 +52,7 @@
 - PM2 and systemd applications share managed-service labels and start/stop/restart controls. Show the actual runtime identifier in infrastructure; static sites have no runtime actions.
 
 - The website comparison list precedes the chart; support search and local sort retention by activity, absolute change or name. Lead with browser visitor estimates, measured sessions and recorded page opens. Diagnostics stay expandable. Zero or absent measurements are never proof of no visitors.
+- The visits column includes an equivalent visual bar scaled to the maximum measured sessions across all sites in the selected period. Search/sort must not change that denominator. The count remains visible and accessible; zero activity has zero fill, and bars do not imply business success or people.
 - Small samples use absolute change; zero baselines say no previous activity. A failed comparison stays unavailable, never a fabricated zero. Show real data-generation/check timestamps, never unconditional connected badges.
 - Client overview prioritizes overdue follow-up, open inquiries and upcoming tasks; goals/campaigns/history/sharing are secondary. Browser clicks, source records and manual outcomes remain separate.
 - Service actions live in a separate administration disclosure, retaining confirmation. Navigation labels are `אתרים`, `לקוחות`, `שרת`, `שירותים`, `הגדרות`, with safe-area spacing and 44px targets.
@@ -62,7 +63,7 @@
 - Use existing component structure and CSS files before introducing new UI libraries.
 - Prefer lucide-react icons already installed when adding icon controls.
 - Follow `../DESIGN.md`: cool off-white and white application surfaces, charcoal infrastructure, Noto Sans Hebrew throughout, teal selection/links, green health, amber attention and red failure/destruction. The paper/ink and serif direction is superseded.
-- Anchor every workspace with charcoal navigation, a plain Server Monitor wordmark and a strong primary summary band. Prefer bold numbers and column alignment over decorative icons, pale cards or oversized titles. Selected content tabs use underlines; main navigation and period controls retain solid selection.
+- Anchor every workspace with charcoal navigation, toolbars, primary metrics and traffic plots; use existing cyan infrastructure tokens for selection and chart lines. Data tables remain light. Reset menu/date-popover tokens to the light palette inside dark toolbars. Prefer bold numbers and column alignment over decoration. Content tabs use underlines; navigation and period selections stay explicit.
 - Favour density over prose: one short screen title, no marketing copy, and explanatory caveats behind a `Hint` icon rather than repeated paragraphs.
 - Group related breakdowns behind `Tabs` in a single `Panel` instead of stacking one panel per dimension.
 - Keep desktop tables paired with purpose-built mobile cards and maintain 44px touch targets (see the `pointer: coarse` block in `index.css`), visible focus states, and reduced-motion support.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-24T13:33:56.962803+00:00",
+  "generatedAt": "2026-09-24T13:48:38.579937+00:00",
   "title": "Design System: Server Monitor",
   "extensions": {
     "colorMeta": {
@@ -442,7 +442,7 @@
       "refersTo": "nav-selected",
       "description": "Compact workspace destinations with a pale teal current state.",
       "html": "<nav class=\"ds-nav\" dir=\"rtl\" aria-label=\"סביבות עבודה\"><a href=\"#visitors\" aria-current=\"page\">אתרים</a><a href=\"#clients\">לקוחות</a></nav>",
-      "css": ".ds-nav{display:grid;gap:.15rem;font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;}.ds-nav a{display:flex;align-items:center;min-height:44px;padding:.5rem .55rem;border-radius:var(--radius,3px);color:var(--ink-muted,#43565F);font-size:.84rem;font-weight:600;text-decoration:none;}.ds-nav a:hover{background:var(--paper-deep,#E7EEF0);color:var(--ink,#172126);}.ds-nav a[aria-current]{background:#E6F1F3;color:var(--accent,#006775);}.ds-nav a:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}.ds-nav{padding:.75rem;background:#172126;}.ds-nav a{color:#C9D7DC;}.ds-nav a[aria-current]{background:#006775;color:#FFFFFF;}"
+      "css": ".ds-nav{display:grid;gap:.15rem;font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;}.ds-nav a{display:flex;align-items:center;min-height:44px;padding:.5rem .55rem;border-radius:var(--radius,3px);color:var(--ink-muted,#43565F);font-size:.84rem;font-weight:600;text-decoration:none;}.ds-nav a:hover{background:var(--paper-deep,#E7EEF0);color:var(--ink,#172126);}.ds-nav a[aria-current]{background:#E6F1F3;color:var(--accent,#006775);}.ds-nav a:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}.ds-nav{padding:.75rem;background:#172126;}.ds-nav a{color:#C9D7DC;}.ds-nav a[aria-current]{background:#006775;color:#FFFFFF;}.ds-nav a[aria-current]{background:#203A43;color:#81D4DF;outline:1px solid #3D6570;outline-offset:-1px;}"
     },
     {
       "name": "Health Chip",
@@ -470,10 +470,10 @@
   ],
   "narrative": {
     "northStar": "חדר בקרה חד וברור",
-    "overview": "A precise Hebrew daily-check workspace with strong contrast, restrained functional icons and aligned numeric tables. Dark navigation and a deep-teal summary band establish hierarchy; the main content remains light and infrastructure stays charcoal.",
+    "overview": "A mature technical Hebrew workspace: charcoal chrome, cyan signals, light data tables and one proportional measured-session bar per site. No decorative effects, invented data or expanded copy.",
     "keyCharacteristics": [
       "Hebrew RTL with readable mixed-direction names, dates and paths.",
-      "Charcoal navigation, one solid teal summary band, aligned table columns and strong section rules.",
+      "Charcoal toolbars, summaries and traffic plots with restrained cyan selection; light aligned data tables and measured activity bars.",
       "Teal actions and selection; explicit, restrained status colors.",
       "Explanations available on demand, with uncertainty retained in visible labels."
     ],
