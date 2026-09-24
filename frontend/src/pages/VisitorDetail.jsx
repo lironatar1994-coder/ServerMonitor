@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink, MapPin, MonitorSmartphone, Search, X } from 'lucide-react';
+import { ChartNoAxesCombined, ChevronLeft, ChevronRight, ExternalLink, Eye, Footprints, Globe, MapPin, MonitorSmartphone, PanelsTopLeft, Search, Users, X } from 'lucide-react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch, rangeQuery } from '../lib/api';
 import { useRange } from '../lib/useRange';
@@ -156,7 +156,7 @@ const VisitorDetail = () => {
               </span>
             )}
             {data?.app?.url && (
-              <a className="crumb" href={data.app.url} target="_blank" rel="noreferrer">פתיחת האתר <ExternalLink aria-hidden="true" /></a>
+              <a className="icon-btn" href={data.app.url} target="_blank" rel="noreferrer" aria-label="פתיחת האתר" title="פתיחת האתר"><ExternalLink aria-hidden="true" /></a>
             )}
           </>
         }
@@ -178,15 +178,15 @@ const VisitorDetail = () => {
         <TrackingStatus health={data?.tracking_health} />
         {data?.app?.status && data.app.status !== 'online' && <div className="attention-list"><Link to={`/services/${id}`}>האתר דורש בדיקת זמינות <ChevronLeft /></Link></div>}
         <StatRow>
-          <Stat label="מבקרים משוערים" value={summary.browser_signal_visitors} previous={data?.comparison?.previous?.browser_signal_visitors} tone="forest" hint={BROWSER_SIGNAL_HINT} />
-          <Stat label="ביקורים שנמדדו" value={summary.browser_signal_sessions} previous={data?.comparison?.previous?.browser_signal_sessions} foot="ביקורים חוזרים נכללים" />
-          <Stat label="עמודים שנפתחו" value={summary.browser_signal_page_views} previous={data?.comparison?.previous?.browser_signal_page_views} foot="כולל צפיות חוזרות" hint={BROWSER_SIGNAL_HINT} />
+          <Stat icon={Users} label="מבקרים משוערים" value={summary.browser_signal_visitors} previous={data?.comparison?.previous?.browser_signal_visitors} tone="forest" />
+          <Stat icon={Footprints} label="ביקורים" value={summary.browser_signal_sessions} previous={data?.comparison?.previous?.browser_signal_sessions} />
+          <Stat icon={Eye} label="צפיות" value={summary.browser_signal_page_views} previous={data?.comparison?.previous?.browser_signal_page_views} />
         </StatRow>
-        <div className="workspace-tabs"><Tabs label="תצוגת אתר" tabs={[{ id: 'overview', label: 'סקירה' }, { id: 'pages', label: 'עמודים ופעולות' }, { id: 'audience', label: 'מקורות וקהל' }]} value={view} onChange={value => { const next = new URLSearchParams(query); next.set('view', value); next.delete('page'); setQuery(next); }} /></div>
+        <div className="workspace-tabs"><Tabs label="תצוגת אתר" tabs={[{ id: 'overview', label: 'סקירה', icon: ChartNoAxesCombined }, { id: 'pages', label: 'עמודים', icon: PanelsTopLeft }, { id: 'audience', label: 'קהל', icon: Globe }]} value={view} onChange={value => { const next = new URLSearchParams(query); next.set('view', value); next.delete('page'); setQuery(next); }} /></div>
         {view === 'overview' && <>
-          {!summary.browser_signal_page_views && <p className="status-line is-attention">אין מדידת דפדפן בטווח הזה; ייתכנו ביקורים שלא נמדדו.</p>}
+          {!summary.browser_signal_page_views && <p className="status-line is-attention">לא נמדדה פעילות בטווח הזה.</p>}
           <TrafficChart data={data} previous={previous} comparisonError={comparisonError} />
-          <Panel title="עמודים מובילים" hint={PAGE_VIEW_HINT}><RankedList items={data?.pages} max={5} onSelect={setSelectedPath} labelFor={value => pageName(value, data?.app?.name)} /></Panel>
+          <Panel title="עמודים מובילים" hint={`${PAGE_VIEW_HINT} ${BROWSER_SIGNAL_HINT} ביקורים וצפיות כוללים חזרות.`}><RankedList items={data?.pages} max={5} onSelect={setSelectedPath} labelFor={value => pageName(value, data?.app?.name)} /></Panel>
         </>}
         {view === 'audience' && <Panel title="מקורות וקהל" hint="פילוח לפי פתיחות עמודים שנרשמו בשרת; מיקום משוער לפי כתובת רשת." action={<Tabs tabs={BREAKDOWN_TABS} value={breakdown} onChange={setBreakdown} />}><RankedList items={data?.[breakdown]} color={breakdownMeta.color} empty={breakdownMeta.empty} /></Panel>}
         {view === 'pages' && <>
@@ -197,7 +197,7 @@ const VisitorDetail = () => {
           {selectedPath && data?.app && <PageInsights key={`${id}:${selectedPath}:${days}:${custom?.from}`} app={data.app} path={selectedPath} resolveRange={resolveRange} onClose={() => setSelectedPath(null)} onSelect={setSelectedPath} />}
         </div>
         <JewelryInterest interest={data?.jewelry_interest} siteUrl={data?.app?.url} />
-        <details className="measurement-details"><summary>איך השתמשו בעמודים?</summary>
+        <details className="measurement-details"><summary>מעורבות</summary>
         {engagementError && <div className="banner banner--error" role="alert">מדידת השימוש לא נטענה. {engagementError}<button className="btn" onClick={fetchAnalytics}>ניסיון נוסף</button></div>}
         {(data?.app?.name === 'PDF Studio' || data?.app?.name === 'LA webs' || data?.app?.name === 'Miryam Zelig' || data?.app?.name === 'Seder' || Boolean(engagement?.engagement_samples) || Boolean(engagement?.product?.summary?.sessions)) && (
           <ProductAnalytics engagement={engagement || {}} mode={data?.app?.name === 'PDF Studio' ? 'product' : 'site'} />
@@ -205,7 +205,7 @@ const VisitorDetail = () => {
         </details>
 
         </>}
-        <details className="measurement-details"><summary>אבחון מדידה ונתוני שרת</summary>
+        <details className="measurement-details"><summary>אבחון</summary>
         <StatRow>
           <Stat label="כתובות רשת שונות" value={summary.unique_candidates} previous={data?.comparison?.previous?.unique_candidates} hint={CANDIDATE_HINT} />
           <Stat label="פתיחות עמודים לפי השרת" value={summary.page_views} previous={data?.comparison?.previous?.page_views} hint={PAGE_VIEW_HINT} />

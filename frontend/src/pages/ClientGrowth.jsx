@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowUpRight, Check, Copy, Mail, MessageCircle, Pencil, Plus, RefreshCw, X } from 'lucide-react';
+import { ArrowUpRight, Check, CircleAlert, ClipboardList, Copy, Inbox, Mail, MessageCircle, Pencil, Plus, RefreshCw, Timer, X } from 'lucide-react';
 import { DataState, Empty, Hint, PageHead, Panel, Stat, StatRow, Tabs } from '../components/AnalyticsParts';
 import { apiFetch } from '../lib/api';
 import { formatDateTime, formatNumber } from '../lib/format';
@@ -12,7 +12,7 @@ const leadStatuses = { new: 'חדש', working: 'בטיפול', contacted: 'נו�
 const placements = { header: 'תפריט', hero: 'פתיח', floating: 'כפתור צף', contact: 'אזור קשר', footer: 'תחתית', content: 'תוכן' };
 const actions = { contact_click: 'לחיצת קשר', project_open: 'פתיחת פרויקט', outbound_click: 'מעבר לאתר פעיל' };
 const taskStatuses = { planned: 'מתוכנן', working: 'בביצוע', waiting_client: 'ממתין ללקוח', published: 'פורסם · במדידה', done: 'הושלם', cancelled: 'בוטל' };
-const tabs = [{ id: 'overview', label: 'לטיפול היום' }, { id: 'leads', label: 'פניות' }, { id: 'tasks', label: 'משימות' }, { id: 'goals', label: 'מטרות' }, { id: 'campaigns', label: 'קמפיינים' }, { id: 'activity', label: 'יומן עבודה' }, { id: 'share', label: 'סיכום לשיתוף' }];
+const tabs = [{ id: 'overview', label: 'היום', icon: Timer }, { id: 'leads', label: 'פניות', icon: Inbox }, { id: 'tasks', label: 'משימות', icon: ClipboardList }, { id: 'goals', label: 'מטרות' }, { id: 'campaigns', label: 'קמפיינים' }, { id: 'activity', label: 'יומן עבודה' }, { id: 'share', label: 'סיכום לשיתוף' }];
 const origins = { manual: 'דיווח ידני', quotes: 'מערכת הצעות מחיר', contact: 'מערכת הטפסים', registrations: 'מערכת הרשמות', leads: 'מערכת הפניות' };
 const num = formatNumber;
 const options = obj => Object.entries(obj).map(([value, label]) => ({ value, label }));
@@ -112,27 +112,27 @@ export default function ClientGrowth() {
     .sort((a, b) => Number(Boolean(isOverdue(b))) - Number(Boolean(isOverdue(a))) || Number(b.kind === 'leads') - Number(a.kind === 'leads') || Date.parse(a.due_at || '9999-01-01') - Date.parse(b.due_at || '9999-01-01'));
 
   return <div className="page page--visitors growth-workspace">
-    <PageHead title={id ? data?.app?.name || 'לקוח' : 'לקוחות'} meta={id ? <Link className="crumb" to="/clients">כל הלקוחות</Link> : 'סביבת עבודה פנימית'}>
+    <PageHead title={id ? data?.app?.name || 'לקוח' : 'לקוחות'} meta={id ? <Link className="crumb" to="/clients">כל הלקוחות</Link> : null}>
       <Tabs label="טווח מדידה" tabs={[{ id: 7, label: '7 ימים' }, { id: 30, label: '30 יום' }, { id: 90, label: '90 יום' }]} value={days} onChange={setDays} />
       <button className="icon-btn" onClick={() => load()} aria-label="רענון"><RefreshCw /></button>
     </PageHead>
     {feedback && <div className={`banner banner--${feedback.isError ? 'error' : 'success'}`} role={feedback.isError ? 'alert' : 'status'}>{feedback.message}</div>}
     <DataState loading={loading} error={error} onRetry={() => load()}>{data && <>
       {!id ? <>
-        <StatRow><Stat label="מעקבים ומשימות באיחור" value={data.sites.filter(s => s.insights.some(i => ['unanswered', 'overdue-tasks'].includes(i.key))).length} foot="לקוחות שדורשים טיפול" /><Stat label="דורשים תשומת לב" value={data.sites.filter(s => s.insights.length).length} /><Stat label="פניות פתוחות" value={data.sites.reduce((n, s) => n + s.open_leads, 0)} /><Stat label="משימות פתוחות" value={data.sites.reduce((n, s) => n + s.open_tasks, 0)} /></StatRow>
+        <StatRow><Stat icon={Timer} label="באיחור" value={data.sites.filter(s => s.insights.some(i => ['unanswered', 'overdue-tasks'].includes(i.key))).length} hint="מספר לקוחות עם מעקב או משימה באיחור" /><Stat icon={CircleAlert} label="לטיפול" value={data.sites.filter(s => s.insights.length).length} /><Stat icon={Inbox} label="פניות פתוחות" value={data.sites.reduce((n, s) => n + s.open_leads, 0)} /><Stat icon={ClipboardList} label="משימות" value={data.sites.reduce((n, s) => n + s.open_tasks, 0)} /></StatRow>
         <Panel title="סדר העבודה" hint="הסדר מתעדף פניות שממתינות, בעיות איסוף ומשימות באיחור. ההשוואה היא של כל אתר לעצמו.">
-          <div className="growth-toolbar"><label className="growth-search"><span className="sr-only">חיפוש לקוח</span><input placeholder="חיפוש לקוח או אחראי" value={search} onChange={e => setSearch(e.target.value)} /></label><Tabs tabs={[{ id: 'all', label: 'כל הלקוחות' }, { id: 'attention', label: 'דורשים טיפול' }]} value={filter} onChange={setFilter} /></div>
+          <div className="growth-toolbar"><label className="growth-search"><span className="sr-only">חיפוש לקוח</span><input placeholder="חיפוש לקוח" value={search} onChange={e => setSearch(e.target.value)} /></label><Tabs tabs={[{ id: 'all', label: 'כל הלקוחות' }, { id: 'attention', label: 'דורשים טיפול' }]} value={filter} onChange={setFilter} /></div>
           <div className="growth-list">{sites.map(site => <Link className="growth-client" key={site.id} to={`/clients/${site.id}`}>
-            <div><strong>{site.name}</strong><p>{site.objective}</p><small>{site.owner || 'טרם הוגדר אחראי'}</small></div>
-            <dl><div><dt>פניות בתקופה</dt><dd>{num(site.metrics.lead_received)}</dd></div><div><dt>ממתינות לטיפול</dt><dd>{num(site.open_leads)}</dd></div><div><dt>משימות</dt><dd>{num(site.open_tasks)}</dd></div></dl>
-            <div className="growth-next"><span>{site.insights[0]?.title || 'מטרות ומעקב שוטף'}</span><small>{site.coverage.first ? `מדידת פעולות מ־${formatDateTime(site.coverage.first)}` : 'ממתינים למדידת פעולות ראשונה'}</small></div><ArrowUpRight aria-hidden="true" />
+            <div><strong>{site.name}</strong>{site.owner && <small>{site.owner}</small>}</div>
+            <dl><div><dt><Inbox aria-hidden="true" />פניות</dt><dd>{num(site.metrics.lead_received)}</dd></div><div><dt><Timer aria-hidden="true" />ממתינות</dt><dd>{num(site.open_leads)}</dd></div><div><dt><ClipboardList aria-hidden="true" />משימות</dt><dd>{num(site.open_tasks)}</dd></div></dl>
+            <div className="growth-next">{site.insights[0]?.title && <span>{site.insights[0].title}</span>}</div><ArrowUpRight aria-hidden="true" />
           </Link>)}</div>{!sites.length && <Empty text="אין לקוחות שמתאימים לסינון" />}
         </Panel>
       </> : <>
-        <div className="growth-toolbar"><Tabs tabs={tabs.slice(0, 3)} value={tab} onChange={value => { setTab(value); setEdit(null); setFilter('all'); }} label="סביבת לקוח" /><label className="client-secondary"><span className="sr-only">תצוגות נוספות ללקוח</span><select value={tabs.slice(3).some(t => t.id === tab) ? tab : ''} onChange={e => { if (e.target.value) { setTab(e.target.value); setEdit(null); } }}><option value="">תצוגות נוספות</option>{tabs.slice(3).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></label><Link className="btn" to={`/visitors/${id}`}>נתוני מבקרים<ArrowUpRight /></Link></div>
+        <div className="growth-toolbar"><Tabs tabs={tabs.slice(0, 3)} value={tab} onChange={value => { setTab(value); setEdit(null); setFilter('all'); }} label="סביבת לקוח" /><label className="client-secondary"><span className="sr-only">תצוגות נוספות ללקוח</span><select value={tabs.slice(3).some(t => t.id === tab) ? tab : ''} onChange={e => { if (e.target.value) { setTab(e.target.value); setEdit(null); } }}><option value="">עוד</option>{tabs.slice(3).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></label><Link className="btn" to={`/visitors/${id}`}>אתר<ArrowUpRight /></Link></div>
         {edit && <Editor key={`${edit.kind}:${edit.value.id || 'new'}`} edit={edit} onSave={save} onClose={() => setEdit(null)} busy={busy} />}
         {tab === 'overview' && <>
-          <StatRow><Stat label="מעקבים באיחור" value={openLeads.filter(isOverdue).length} /><Stat label="פניות פתוחות" value={openLeads.length} /><Stat label="משימות פתוחות" value={activeTasks.length} /></StatRow>
+          <StatRow><Stat icon={Timer} label="באיחור" value={openLeads.filter(isOverdue).length} /><Stat icon={Inbox} label="פניות פתוחות" value={openLeads.length} /><Stat icon={ClipboardList} label="משימות" value={activeTasks.length} /></StatRow>
           <Panel title="לטיפול היום" hint="פניות ומשימות מכל התקופות. לחיצות בדפדפן אינן פניות.">
             {queue.slice(0, 8).map(row => <div className="growth-item" key={`${row.kind}:${row.id}`}><div><strong>{row.title}</strong><small>{row.kind === 'leads' ? origins[row.origin] || 'מקור מחובר' : 'משימה'} · {row.due_at ? formatDateTime(row.due_at) : 'ללא מועד'}</small></div><span className={isOverdue(row) ? 'is-attention' : 'muted'}>{isOverdue(row) ? 'באיחור' : row.kind === 'leads' ? leadStatuses[row.status] : taskStatuses[row.status]}</span><button className="btn" onClick={() => { setTab(row.kind); startEdit(row.kind, row); }}>עדכון</button></div>)}
             {!queue.length && <Empty text="אין פניות או משימות פתוחות" />}
@@ -163,19 +163,19 @@ export default function ClientGrowth() {
           <div className="growth-stages">{(data.outcomes || []).map(row => <div key={row.status}><strong>{num(row.total)}</strong><span>{leadStatuses[row.status]} · מהתקופה</span></div>)}</div>
           <div className="growth-coverage"><span>פניות מהתקופה שסומנו כהצלחה: {num(m.won)}</span><span>סכום מדווח עבורן: {num(m.revenue)} ₪</span><Hint text="סכומים שהוזנו ידנית; אין אימות תשלום או חישוב הכנסה אוטומטי." /></div><div className="growth-toolbar"><label>סינון מצב<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">כל הפניות</option>{options(leadStatuses).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label><span className="muted">{data.lead_total} פניות · מוצגות עד 500 אחרונות</span></div>
           {data.leads.filter(l => filter === 'all' || l.status === filter).sort((a,b) => Number(Boolean(isOverdue(b))) - Number(Boolean(isOverdue(a)))).map(l => <div className="growth-item" key={l.id}><div><strong>{l.reference}</strong><small>{origins[l.origin] || 'מקור מחובר'} · {formatDateTime(l.occurred_at)}</small><small>{l.owner || 'ללא אחראי'}{l.due_at ? ` · מעקב: ${formatDateTime(l.due_at)}` : ''}{l.source_status === 'notification_failed' ? ' · הודעת המייל במקור נכשלה' : ''}</small></div><span className="growth-status">{leadStatuses[l.status]}</span><button className="btn" onClick={() => startEdit('leads', l)}>עדכון טיפול</button></div>)}
-          {!data.leads.filter(l => filter === 'all' || l.status === filter).length && <Empty text="אין פניות להצגה. אפשר להוסיף דיווח ידני ללא פרטי קשר." />}
+          {!data.leads.filter(l => filter === 'all' || l.status === filter).length && <Empty text="אין פניות להצגה" />}
         </Panel>}
         {tab === 'tasks' && <Panel title="שיפורים ותוכן" action={<button className="btn" onClick={() => startEdit('tasks')}><Plus />משימה</button>}>
           {[...data.tasks].sort((a,b) => Number(['done','cancelled'].includes(a.status)) - Number(['done','cancelled'].includes(b.status)) || Date.parse(a.due_at || '9999-01-01') - Date.parse(b.due_at || '9999-01-01')).map(t => <article className="growth-task" key={t.id}><div className="growth-item"><div><strong>{t.title}</strong><small>{t.owner || 'ללא אחראי'} · {t.due_at ? formatDateTime(t.due_at) : 'ללא מועד'} · {t.priority === 'high' ? 'עדיפות גבוהה' : 'עדיפות רגילה'}</small></div><span className="growth-status">{taskStatuses[t.status]}</span><button className="btn" onClick={() => startEdit('tasks', t)}>עדכון</button></div>
             {t.hypothesis && <p className="growth-note">{t.hypothesis}</p>}
             {t.impact && <div className="growth-impact">{t.impact.ready ? <><strong>{metrics[t.metric]}: {num(t.impact.before)} לפני ← {num(t.impact.after)} אחרי</strong><span>{t.impact.days} ימים בכל צד · ביקורים: {num(t.impact.sessions_before)} לפני / {num(t.impact.sessions_after)} אחרי{t.impact.confidence === 'low_sample' ? ' · מדגם קטן' : ''}</span><Hint text={t.impact.caveat} /></> : t.impact.reason}</div>}
-          </article>)}{!data.tasks.length && <Empty text="הוסיפו משימת תוכן או שיפור. סימון כפורסם מתחיל השוואת לפני ואחרי." />}
+          </article>)}{!data.tasks.length && <Empty text="אין משימות" />}
         </Panel>}
         {tab === 'campaigns' && <Panel title="קישורים ומדידת קמפיינים" hint="השיוך הוא למקור בתחילת הביקור. פניות ישויכו לקמפיין רק לאחר עדכון מפורש על בסיס מידע ידוע." action={<button className="btn" onClick={() => startEdit('campaigns')}><Plus />קמפיין</button>}>
           {data.campaigns.map(c => <article className="growth-task" key={c.id}><div className="growth-item"><div><strong>{c.name}</strong><small>{c.source} · {c.medium}</small></div><span>{num(c.sessions)} ביקורים · {num(c.contacts)} עם קשר · {num(c.attributed_leads)} פניות משויכות</span><button className="btn" onClick={() => startEdit('campaigns', c)}>עריכה</button></div><div className="growth-link"><a dir="ltr" href={c.url} target="_blank" rel="noopener noreferrer">{c.url}</a><button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(c.url); notify('הקישור הועתק'); } catch { notify('אפשר לסמן ולהעתיק את הקישור ידנית', true); } }}><Copy />העתקת קישור</button></div>{c.cost !== null && <p className="muted">תקציב מדווח: {num(c.cost)} ₪ לכל הקמפיין. ההיקפים מעל מתייחסים לטווח שנבחר.</p>}</article>)}
-          {!data.campaigns.length && <Empty text="צרו קישור מסומן לפוסט, מודעה או קוד QR. אין צורך בחיבור לחשבון פרסום." />}
+          {!data.campaigns.length && <Empty text="אין קמפיינים" />}
         </Panel>}
-        {tab === 'activity' && <Panel title="יומן עבודה פנימי"><div className="growth-list">{data.activity.map(a => <div className="growth-item" key={a.id}><div><strong>{a.summary}</strong><small>{a.actor}</small></div><time>{formatDateTime(a.occurred_at)}</time></div>)}</div>{!data.activity.length && <Empty text="שינויים במטרות, בפניות ובמשימות יתועדו כאן" />}</Panel>}
+        {tab === 'activity' && <Panel title="יומן עבודה פנימי"><div className="growth-list">{data.activity.map(a => <div className="growth-item" key={a.id}><div><strong>{a.summary}</strong><small>{a.actor}</small></div><time>{formatDateTime(a.occurred_at)}</time></div>)}</div>{!data.activity.length && <Empty text="אין עדכונים" />}</Panel>}
         {tab === 'share' && <ShareDraft key={`${id}:${days}`} id={id} days={days} notify={notify} />}
       </>}
     </>}</DataState>

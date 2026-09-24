@@ -1,15 +1,16 @@
 import { useState } from 'react';
+import { Eye, Users } from 'lucide-react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Panel, Tabs } from './AnalyticsParts';
 import { comparisonSeries } from '../lib/dailyCheck';
 import { formatDateTime, formatNumber } from '../lib/format';
 
-const metrics = [{ id: 'browser_signal_visitors', label: 'מבקרים משוערים' }, { id: 'browser_signal_page_views', label: 'עמודים שנפתחו' }];
+const metrics = [{ id: 'browser_signal_visitors', label: 'משוערים', icon: Users }, { id: 'browser_signal_page_views', label: 'צפיות', icon: Eye }];
 export default function TrafficChart({ data, previous, comparisonError }) {
   const [metric, setMetric] = useState(metrics[0].id);
   const rows = comparisonSeries(data?.series, previous?.series, data?.range, metric);
-  return <Panel title="פעילות לאורך זמן" action={<Tabs tabs={metrics} value={metric} onChange={setMetric} label="מדד בגרף" />}>
-    <div className="chart-legend"><span>קו מלא · התקופה שנבחרה</span><span>קו מקווקו · התקופה הקודמת</span></div>
+  return <Panel title="פעילות" hint="מבקרים משוערים או פתיחות עמודים שנמדדו, לפי מקטע זמן. חוסר מדידה אינו הוכחה שאין מבקרים." action={<Tabs tabs={metrics} value={metric} onChange={setMetric} label="מדד בגרף" />}>
+    <div className="chart-legend"><span><i aria-hidden="true" />נבחרה</span><span><i aria-hidden="true" />קודמת</span></div>
     {comparisonError && <p className="status-line is-attention" role="status">ההשוואה לא נטענה · {comparisonError}</p>}
     <div className="chart" role="img" aria-label={`${metrics.find(m => m.id === metric).label}: התקופה שנבחרה לעומת התקופה הקודמת`}>
       <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
@@ -23,6 +24,5 @@ export default function TrafficChart({ data, previous, comparisonError }) {
         </LineChart>
       </ResponsiveContainer>
     </div>
-    <p className="muted">ספירה לפי מקטע זמן; אין מדידה אינה הוכחה שאין מבקרים.</p>
   </Panel>;
 }

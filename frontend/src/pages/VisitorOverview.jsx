@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, Search } from 'lucide-react';
+import { ArrowDownUp, ChevronLeft, CircleCheck, CircleHelp, Eye, Footprints, Search, TriangleAlert, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiFetch, rangeQuery } from '../lib/api';
 import { useRange } from '../lib/useRange';
-import { DataState, Empty, Panel, PageHead, RangePicker, RankedList, Stat, StatRow, Tabs } from '../components/AnalyticsParts';
+import { Change, DataState, Empty, Panel, PageHead, RangePicker, RankedList, Stat, StatRow, Tabs } from '../components/AnalyticsParts';
 import { formatNumber } from '../lib/format';
 import TrackingStatus from '../components/TrackingStatus';
 import TrafficChart from '../components/TrafficChart';
-import { changeLabel, previousRange, rangeSearch } from '../lib/dailyCheck';
+import { previousRange, rangeSearch } from '../lib/dailyCheck';
 import { VISITOR_HINT, CONNECTION_HINT } from '../lib/analyticsLabels';
 
 const SORT_KEY = 'vee-monitor.site-sort';
@@ -62,22 +62,22 @@ const VisitorOverview = () => {
       {healthError && <p className="status-line is-attention" role="status">{healthError}</p>}
       <TrackingStatus health={data?.tracking_health} />
       <StatRow>
-        <Stat label="מבקרים משוערים" value={summary.browser_signal_visitors} previous={before.browser_signal_visitors} hint={VISITOR_HINT} />
-        <Stat label="ביקורים שנמדדו" value={summary.browser_signal_sessions} previous={before.browser_signal_sessions} />
-        <Stat label="עמודים שנפתחו" value={summary.browser_signal_page_views} previous={before.browser_signal_page_views} />
+        <Stat icon={Users} label="מבקרים משוערים" value={summary.browser_signal_visitors} previous={before.browser_signal_visitors} />
+        <Stat icon={Footprints} label="ביקורים" value={summary.browser_signal_sessions} previous={before.browser_signal_sessions} />
+        <Stat icon={Eye} label="צפיות" value={summary.browser_signal_page_views} previous={before.browser_signal_page_views} />
       </StatRow>
-      <Panel title="השוואת אתרים" className="comparison-panel" action={<>
+      <Panel title="השוואת אתרים" hint={`${VISITOR_HINT} ביקורים כוללים חזרה לאתר; צפיות הן פתיחות עמודים שנמדדו. סימן אזהרה ליד השינוי מציין מדגם קטן או חוסר מדידה. אין קודמים פירושו שלא נמדדה פעילות בתקופה הקודמת.`} className="comparison-panel" action={<>
         <label className="search"><Search aria-hidden="true" /><input aria-label="חיפוש אתר" placeholder="חיפוש אתר" value={search} onChange={e => setSearch(e.target.value)} /></label>
-        <label className="sort-control">מיון<select aria-label="מיון אתרים" value={sort} onChange={e => { setSort(e.target.value); try { localStorage.setItem(SORT_KEY, e.target.value); } catch { /* storage optional */ } }}><option value="activity">פעילות</option><option value="change">שינוי</option><option value="name">שם</option></select></label>
+        <label className="sort-control"><ArrowDownUp aria-hidden="true" /><select aria-label="מיון אתרים" value={sort} onChange={e => { setSort(e.target.value); try { localStorage.setItem(SORT_KEY, e.target.value); } catch { /* storage optional */ } }}><option value="activity">פעילות</option><option value="change">שינוי</option><option value="name">שם</option></select></label>
       </>} bleed>
         {comparisonError && <p className="status-line is-attention">ההשוואה לתקופה הקודמת לא נטענה</p>}
-        <div className="comparison-labels" aria-hidden="true"><span>אתר</span><span>מבקרים משוערים</span><span>ביקורים שנמדדו</span><span>עמודים שנפתחו</span><span>שינוי בביקורים</span></div>
+        <div className="comparison-labels" aria-hidden="true"><span>אתר</span><span><Users />משוערים</span><span><Footprints />ביקורים</span><span><Eye />צפיות</span><span>שינוי בביקורים</span></div>
         <ol className="comparison-list">{sites.map(site => <li key={site.app_id}><Link to={destination(site.app_id)}>
-          <span className="comparison-identity"><b dir="auto">{site.name}</b><small>{site.health?.status === 'online' ? 'זמין בבדיקה האחרונה' : site.health ? 'דורש בדיקה' : 'מצב זמינות לא ידוע'}</small></span>
-          <span className="comparison-value"><small>מבקרים משוערים</small><strong>{formatNumber(site.browser_signal_visitors)}</strong></span>
-          <span className="comparison-value"><small>ביקורים שנמדדו</small><strong>{formatNumber(site.browser_signal_sessions)}</strong></span>
-          <span className="comparison-value"><small>עמודים שנפתחו</small><strong>{formatNumber(site.browser_signal_page_views)}</strong></span>
-          <span className="comparison-change">{changeLabel(site.browser_signal_sessions, site.previous)}<small>{!site.browser_signal_page_views ? 'אין מדידת דפדפן בטווח' : site.browser_signal_sessions < 30 ? 'מדגם קטן' : 'מול תקופה שווה'}</small></span><ChevronLeft aria-hidden="true" />
+          <span className="comparison-identity"><span className={`site-health ${site.health?.status === 'online' ? 'is-healthy' : 'is-attention'}`} role="img" aria-label={site.health?.status === 'online' ? 'זמין בבדיקה האחרונה' : site.health ? 'דורש בדיקה' : 'מצב זמינות לא ידוע'} title={site.health?.status === 'online' ? 'זמין בבדיקה האחרונה' : site.health ? 'דורש בדיקה' : 'מצב זמינות לא ידוע'}>{site.health?.status === 'online' ? <CircleCheck /> : site.health ? <TriangleAlert /> : <CircleHelp />}</span><b dir="auto">{site.name}</b></span>
+          <span className="comparison-value" aria-label={`מבקרים משוערים: ${formatNumber(site.browser_signal_visitors)}`}><Users aria-hidden="true" /><strong>{formatNumber(site.browser_signal_visitors)}</strong></span>
+          <span className="comparison-value" aria-label={`ביקורים שנמדדו: ${formatNumber(site.browser_signal_sessions)}`}><Footprints aria-hidden="true" /><strong>{formatNumber(site.browser_signal_sessions)}</strong></span>
+          <span className="comparison-value" aria-label={`עמודים שנפתחו: ${formatNumber(site.browser_signal_page_views)}`}><Eye aria-hidden="true" /><strong>{formatNumber(site.browser_signal_page_views)}</strong></span>
+          <span className="comparison-change"><Change current={site.browser_signal_sessions} previous={site.previous} />{!site.browser_signal_page_views ? <small>לא נמדד</small> : site.browser_signal_sessions < 30 && <TriangleAlert className="sample-warning" role="img" aria-label="מדגם קטן" title="מדגם קטן: פחות מ־30 ביקורים" />}</span><ChevronLeft className="comparison-open" aria-hidden="true" />
         </Link></li>)}</ol>
         {!sites.length && <Empty text={search ? 'אין אתרים שתואמים לחיפוש' : 'אין אתרים מוגדרים למדידה'} />}
       </Panel>

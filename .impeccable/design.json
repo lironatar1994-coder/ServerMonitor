@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-24T11:32:09.023375+00:00",
+  "generatedAt": "2026-09-24T13:01:21.316048+00:00",
   "title": "Design System: Server Monitor",
   "extensions": {
     "colorMeta": {
@@ -483,9 +483,9 @@
     {
       "name": "Site Comparison Row",
       "kind": "custom",
-      "description": "A named site, measured activity and a neutral comparison lead to detail.",
-      "html": "<a class=\"ds-row\" href=\"#site\" dir=\"rtl\"><span><b>LA webs</b><small>זמין בבדיקה האחרונה</small></span><span><strong>5</strong><small>ביקורים שנמדדו</small></span><span>3 יותר<small>מדגם קטן</small></span></a>",
-      "css": ".ds-row{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;display:grid;grid-template-columns:minmax(8rem,1.6fr) 1fr 1fr;gap:1rem;align-items:center;min-height:80px;padding:.8rem 1rem;border-bottom:1px solid var(--line,#D9E1E4);background:var(--paper-light,#fff);color:var(--ink,#172126);text-decoration:none;}.ds-row b{color:var(--accent,#006775);font-size:1rem;}.ds-row strong{font-size:1.2rem;}.ds-row small{display:block;color:var(--ink-muted,#53656D);font-size:.75rem;}.ds-row:hover{background:#EDF5F6;}.ds-row:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}@media(max-width:760px){.ds-row{grid-template-columns:1fr 1fr;}.ds-row>span:first-child{grid-column:1/-1;}}"
+      "description": "Named status and metric icons, one shared legend, neutral signed change; no repeated health sentences.",
+      "html": "<a class=\"ds-row\" href=\"#site\" dir=\"rtl\"><span><b>LA webs</b></span><span aria-label=\"5 ביקורים שנמדדו\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" aria-hidden=\"true\"><path d=\"M5 17a3 3 0 0 0 6 0V6a3 3 0 0 0-6 0v11ZM14 7a3 3 0 0 1 6 0v11a3 3 0 0 1-6 0V7Z\"/></svg><strong>5</strong></span><span aria-label=\"3 יותר, מדגם קטן\"><bdi>+3</bdi><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" aria-hidden=\"true\"><path d=\"m12 3 10 18H2L12 3Zm0 5v6m0 3v1\"/></svg></span></a>",
+      "css": ".ds-row{font-family:var(--sans,'Noto Sans Hebrew',sans-serif);font-variant-numeric:tabular-nums;display:grid;grid-template-columns:minmax(8rem,1.6fr) 1fr 1fr;gap:1rem;align-items:center;min-height:60px;padding:.8rem 1rem;border-bottom:1px solid var(--line,#D9E1E4);background:var(--paper-light,#fff);color:var(--ink,#172126);text-decoration:none;}.ds-row b{color:var(--accent,#006775);font-size:1rem;}.ds-row strong{font-size:1.2rem;}.ds-row small{display:block;color:var(--ink-muted,#53656D);font-size:.75rem;}.ds-row:hover{background:#EDF5F6;}.ds-row:focus-visible{outline:2px solid var(--accent,#006775);outline-offset:3px;}@media(max-width:760px){.ds-row{grid-template-columns:1fr 1fr;}.ds-row>span:first-child{grid-column:1/-1;}}.ds-row>span{display:flex;align-items:center;gap:.4rem;}"
     }
   ],
   "narrative": {
@@ -493,7 +493,7 @@
     "overview": "The interface should answer what changed, what needs attention, and which site to open. It is a quiet, compact Hebrew workspace: numbers, comparisons and actions precede explanations. This direction comes from the user's precise brief and the built interface; no separate approved visual comp exists.\n\nUse one light theme for websites, client follow-up, services, settings and authentication. Infrastructure uses a charcoal workspace with the same components and hierarchy. The cool palette and single sans family replace the former beige paper and serif direction.",
     "keyCharacteristics": [
       "Hebrew RTL with readable mixed-direction names, dates and paths.",
-      "Compact comparison rows and divided metric strips, with fewer enclosing boxes.",
+      "Icon-led compact rows, one metric legend and short labels; explanations open on demand.",
       "Teal actions and selection; explicit, restrained status colors.",
       "Explanations available on demand, with uncertainty retained in visible labels."
     ],

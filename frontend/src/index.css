@@ -686,9 +686,9 @@ button, select { max-width: 100%; }
 .comparison-labels, .comparison-list a { display: grid; grid-template-columns: minmax(10rem, 1.6fr) repeat(3, minmax(5rem, .8fr)) minmax(8rem, 1.1fr) 1rem; gap: 1rem; padding: .8rem 1rem; align-items: center; }
 .comparison-labels { font-size: .75rem; color: var(--ink-muted); background: var(--paper); }
 .comparison-list li + li { border-top: 1px solid var(--line); }
-.comparison-list a { min-height: 80px; }
+.comparison-list a { min-height: 60px; }
 .comparison-list a:hover { background: #EDF5F6; }
-.comparison-identity, .comparison-change { min-width: 0; }
+.comparison-identity, .comparison-change { min-width: 0; display: flex; align-items: center; gap: .5rem; }
 .comparison-identity b { display: block; color: var(--accent); font-size: 1rem; overflow-wrap: anywhere; }
 .comparison-list small { display: block; color: var(--ink-muted); font-size: .75rem; }
 .comparison-value strong { font-size: 1.2rem; }
@@ -697,7 +697,10 @@ button, select { max-width: 100%; }
 .sort-control { display: flex; align-items: center; gap: .4rem; color: var(--ink-muted); font-size: .8rem; }
 .sort-control select { min-height: 44px; padding-inline: .5rem; border: 1px solid var(--line); background: white; border-radius: var(--radius); }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 1rem; color: var(--ink-muted); font-size: .8rem; margin-bottom: .75rem; }
+.chart-legend span { display: inline-flex; align-items: center; gap: .4rem; }
 .chart-legend span:first-child { color: var(--accent); }
+.chart-legend i { display: block; width: 1.5rem; border-top: 2px solid currentColor; }
+.chart-legend span + span i { border-top-style: dashed; }
 .chart-tooltip { background: var(--paper-light); color: var(--ink); padding: .75rem; border: 1px solid var(--line); font-size: .8rem; }
 .page-explorer { display: grid; gap: 1rem; align-items: start; }
 .page-explorer.has-selection { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); }
@@ -765,13 +768,14 @@ button, select { max-width: 100%; }
   .stat__foot small { font-size: .7rem; }
   .stat .hint { margin: 0; }
   .stat .hint__trigger { width: 44px; height: 44px; }
-  .comparison-labels { display: none; }
-  .comparison-list a { grid-template-columns: repeat(3, minmax(0, 1fr)) 1rem; gap: .55rem; padding: .85rem; }
-  .comparison-identity { grid-column: 1 / 4; }
-  .comparison-list a > svg { grid-column: 4; grid-row: 1; }
+  .comparison-labels { display: flex; flex-wrap: wrap; gap: .75rem; padding: .55rem .85rem; }
+  .comparison-labels > span:first-child, .comparison-labels > span:last-child { display: none; }
+  .comparison-list a { grid-template-columns: repeat(3, minmax(0, .65fr)) minmax(5.25rem, 1.2fr); gap: .45rem; padding: .7rem .85rem; }
+  .comparison-identity { grid-column: 1 / -1; padding-inline-end: 1.5rem; grid-row: 1; }
+  .comparison-list a > .comparison-open { grid-column: 4; grid-row: 1; justify-self: end; }
   .comparison-value { grid-row: 2; }
   .comparison-value small { display: block; font-size: .68rem; }
-  .comparison-change { grid-column: 1 / -1; display: flex; gap: .6rem; flex-wrap: wrap; }
+  .comparison-change { grid-column: 4; grid-row: 2; display: flex; gap: .3rem; flex-wrap: wrap; justify-content: flex-end; font-size: .7rem; }
   .page-explorer.has-selection { grid-template-columns: minmax(0, 1fr); }
   .page-insights { position: fixed; inset: 0; z-index: 120; max-height: none; height: 100dvh; border: 0; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
   .page-insights .panel__action { width: auto; margin-inline-start: auto; }
@@ -810,3 +814,42 @@ button { min-width: 44px; }
 .service-list i.is-online, .service-status-list i.is-online { background: var(--healthy); box-shadow: none; }
 .service-list i.is-offline, .service-status-list i.is-offline { box-shadow: none; }
 .loader-mark { border-top-color: var(--accent); }
+/* Icon-led daily scan: one legend, numbers in rows, explanations on demand. */
+.stat__label > svg, .tabs svg, .sort-control > svg { width: 18px; height: 18px; flex: 0 0 18px; }
+.stat__label { gap: .4rem; }
+.tabs button { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; }
+.page-insights .hint__bubble { top: calc(100% + .5rem); bottom: auto; }
+.stat__foot:empty { display: none; }
+.stat__value { margin-block-start: auto; }
+.compact-change { display: inline-flex; align-items: center; gap: .3rem; color: var(--ink-muted); font-size: .75rem; }
+.compact-change > svg { width: 15px; height: 15px; flex: 0 0 15px; }
+.comparison-labels > span { display: inline-flex; align-items: center; gap: .35rem; }
+.comparison-labels svg, .comparison-value > svg, .site-health svg, .sample-warning { width: 17px; height: 17px; flex: 0 0 17px; }
+.site-health { display: inline-flex; }
+.site-health.is-healthy { color: var(--healthy); }
+.site-health.is-attention, .sample-warning { color: var(--attention); }
+.comparison-value { display: inline-flex; align-items: center; gap: .35rem; min-width: 0; }
+.comparison-value > svg { display: none; color: var(--ink-muted); }
+.comparison-change small { font-size: .7rem; }
+.status-line { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+.status-line > svg { width: 16px; height: 16px; }
+.status-line time { color: var(--ink-muted); font-size: .72rem; }
+.engagement-strip { display: flex; flex-wrap: wrap; gap: .75rem; font-size: .8rem; margin-block: .75rem; }
+.engagement-strip span { display: inline-flex; align-items: center; gap: .3rem; }
+.engagement-strip svg { width: 17px; height: 17px; }
+.page-insights .measurement-details { margin-block: .5rem 0; }
+.page-insights .measurement-details p { font-size: .8rem; line-height: 1.6; }
+@media (max-width: 760px) {
+  .comparison-panel .panel__action { display: flex; flex-wrap: nowrap; width: 100%; gap: .5rem; }
+  .comparison-panel .search { min-width: 0; width: auto; flex: 1; }
+  .comparison-panel .sort-control { flex: 0 0 auto; gap: .25rem; }
+  .comparison-panel .sort-control select { max-width: 6rem; }
+  .comparison-value > svg { display: block; }
+  .comparison-value strong { font-size: 1.05rem; }
+  .comparison-labels { font-size: .72rem; }
+  .comparison-change .compact-change { font-size: .68rem; gap: .2rem; }
+  .comparison-change .compact-change > svg { width: 13px; height: 13px; flex-basis: 13px; }
+  .stat__label { gap: .3rem; min-height: 2.1rem; align-content: start; }
+  .stat__label > svg { width: 16px; height: 16px; flex-basis: 16px; }
+  .workspace-tabs .tabs button { gap: .3rem; padding-inline: .6rem; }
+}

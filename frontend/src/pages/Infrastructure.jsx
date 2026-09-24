@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Cpu, HardDrive, MemoryStick, RefreshCw, TriangleAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { DataState, Empty, Panel, PageHead, Stat, StatRow, Tabs } from '../components/AnalyticsParts';
@@ -119,15 +119,15 @@ const Infrastructure = () => {
         title="שרת ומשאבים"
         meta={<span>עודכן {formatTime(updatedAt)}</span>}
       >
-        <button type="button" className="btn" onClick={fetchData}>רענון</button>
+        <button type="button" className="icon-btn" onClick={fetchData} aria-label="רענון" title="רענון"><RefreshCw aria-hidden="true" /></button>
       </PageHead>
 
       <DataState loading={loading && !stats} error={error} onRetry={fetchData}>
         <StatRow label="משאבי שרת">
-          <Stat label="זיכרון זמין" value={formatBytes(stats?.ram?.available)} tone={toneFor(ram)} foot={`${ram.toFixed(0)}% בשימוש`} />
-          <Stat label="מעבד" value={load.toFixed(2)} tone={toneFor(loadPercent)} foot={`עומס דקה · ${formatNumber(cores)} ליבות`} />
-          <Stat label="מקום פנוי בדיסק" value={stats?.disk ? formatBytes(stats.disk.available) : "—"} tone={toneFor(disk)} foot={`${disk.toFixed(0)}% בשימוש`} />
-          <Stat label="שירותים לבדיקה" value={offline.length} tone={offline.length ? 'vermilion' : 'forest'} foot={offline.length ? `${offline.length} דורשים בדיקה` : 'הכול תקין'} />
+          <Stat icon={MemoryStick} label="זיכרון זמין" value={formatBytes(stats?.ram?.available)} tone={toneFor(ram)} foot={`${ram.toFixed(0)}% בשימוש`} />
+          <Stat icon={Cpu} label="מעבד" value={load.toFixed(2)} tone={toneFor(loadPercent)} foot={`עומס דקה · ${formatNumber(cores)} ליבות`} />
+          <Stat icon={HardDrive} label="דיסק פנוי" value={stats?.disk ? formatBytes(stats.disk.available) : "—"} tone={toneFor(disk)} foot={`${disk.toFixed(0)}% בשימוש`} />
+          <Stat icon={TriangleAlert} label="לבדיקה" value={offline.length} tone={offline.length ? 'vermilion' : 'forest'} />
         </StatRow>
 
         {offline.length > 0 && <Panel title="שירותים שדורשים בדיקה"><div className="attention-list">{offline.map(app => <Link key={app.id} to={`/services/${app.id}`}>{app.name} · {app.status === 'offline' ? 'לא פעיל' : 'מצב לא ידוע'}<ChevronLeft /></Link>)}</div></Panel>}
@@ -136,15 +136,15 @@ const Infrastructure = () => {
           <Stat label="זמן פעילות" value={`${uptimeDays}י ${uptimeHours}ש`} foot="מאז האתחול" />
         </StatRow></details>
         <Panel
-          title="מי משתמש במשאבים"
+          title="צריכת משאבים"
           hint="RAM ו-Swap נספרים לכל עץ התהליכים, כולל תהליכי־משנה של השירות. האחסון נסרק בעדיפות נמוכה ונשמר במטמון לחצי שעה."
           action={<Tabs tabs={RESOURCE_TABS} value={resourceView} onChange={setResourceView} label="סוג פירוט משאבים" />}
           bleed
         >
           <div className="resource-summary" aria-label="עיקרי צריכת המשאבים">
-            <span><small>טביעת הזיכרון הגדולה</small><strong>{largestApp?.name || 'לא זמין'}</strong><b>{formatBytes(largestApp?.memory_bytes)} + {formatBytes(largestApp?.swap_bytes)}</b></span>
-            <span><small>תלויות בפרויקטים</small><strong>{formatBytes(storage?.totals?.dependency_bytes)}</strong><b>{storage?.projects?.length || 0} פרויקטים</b></span>
-            <span><small>גיבויים ו-Rollback</small><strong>{formatBytes((Number(storage?.totals?.backup_bytes) || 0) + (Number(storage?.totals?.rollback_bytes) || 0))}</strong><b>קיבולת התאוששות</b></span>
+            <span><small>מוביל בזיכרון</small><strong>{largestApp?.name || 'לא זמין'}</strong><b>{formatBytes(largestApp?.memory_bytes)} + {formatBytes(largestApp?.swap_bytes)}</b></span>
+            <span><small>תלויות</small><strong>{formatBytes(storage?.totals?.dependency_bytes)}</strong><b>{storage?.projects?.length || 0} פרויקטים</b></span>
+            <span><small>גיבויים ו-Rollback</small><strong>{formatBytes((Number(storage?.totals?.backup_bytes) || 0) + (Number(storage?.totals?.rollback_bytes) || 0))}</strong></span>
           </div>
           <ResourceRows items={selectedItems} kind={resourceView} />
         </Panel>
@@ -158,7 +158,7 @@ const Infrastructure = () => {
                     <i className={app.status === 'online' ? 'is-online' : 'is-offline'} aria-hidden="true" />
                     <span className="service-status-list__name">
                       <b>{app.name}</b>
-                      <small dir="ltr">{app.pm2_name || app.systemd_unit || 'static / log'}</small>
+                      <small dir="ltr">{app.pm2_name || app.systemd_unit}</small>
                     </span>
                     <span className={`chip ${app.status === 'online' ? 'is-online' : 'is-offline'}`}>
                       {app.status === 'online' ? 'פעיל' : app.status === 'offline' ? 'לא פעיל' : 'לא ידוע'}

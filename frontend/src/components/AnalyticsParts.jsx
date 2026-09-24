@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { CalendarDays, Check, ChevronLeft, Info, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
+import { CalendarDays, Check, ChevronLeft, Info, Minus, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
 import { formatDateTime, formatNumber } from '../lib/format';
 import { changeLabel } from '../lib/dailyCheck';
 
@@ -36,16 +36,24 @@ export const StatRow = ({ children, label = 'מדדים מרכזיים' }) => (
   <section className="stat-row" aria-label={label}>{children}</section>
 );
 
-export const Stat = ({ label, value, delta, previous, tone = 'ink', hint, foot }) => {
+export const Change = ({ current, previous }) => {
+  const label = changeLabel(current, previous);
+  const valid = current != null && previous != null && Number.isFinite(Number(current)) && Number.isFinite(Number(previous));
+  const difference = Number(current) - Number(previous);
+  const Icon = !valid || !difference || !Number(previous) ? Minus : difference > 0 ? TrendingUp : TrendingDown;
+  return <span className="compact-change" aria-label={label} title={label}><Icon aria-hidden="true" /><span aria-hidden="true">{!valid ? '—' : !Number(previous) ? 'אין קודמים' : !difference ? '0' : <bdi>{difference > 0 ? '+' : '−'}{formatNumber(Math.abs(difference))}{Number(previous) >= 30 ? ` (${Math.round(Math.abs(difference) / Number(previous) * 100)}%)` : ''}</bdi>}</span></span>;
+};
+
+export const Stat = ({ label, icon: Icon, value, delta, previous, tone = 'ink', hint, foot }) => {
   const numericDelta = Number(delta);
   const showDelta = previous === undefined && delta !== undefined && delta !== null && Number.isFinite(numericDelta);
   const display = value == null ? '—' : typeof value === 'string' ? value : formatNumber(value);
   return (
     <article className={`stat stat--${tone}`}>
-      <span className="stat__label">{label}{hint && <Hint text={hint} />}</span>
-      <strong className="stat__value">{display}</strong>
+      <span className="stat__label">{Icon && <Icon aria-hidden="true" />}{label}{hint && <Hint text={hint} />}</span>
+      <strong className="stat__value"><bdi>{display}</bdi></strong>
       <span className="stat__foot">
-        {previous !== undefined && <small>{changeLabel(value, previous)}</small>}
+        {previous !== undefined && <Change current={value} previous={previous} />}
         {showDelta && (
           <span className={`stat__delta ${numericDelta >= 0 ? 'is-up' : 'is-down'}`}>
             {numericDelta >= 0 ? <TrendingUp aria-hidden="true" /> : <TrendingDown aria-hidden="true" />}
@@ -70,7 +78,7 @@ export const Tabs = ({ tabs, value, onChange, label = 'בחירת תצוגה' })
         className={value === tab.id ? 'is-active' : ''}
         onClick={() => onChange(tab.id)}
       >
-        {tab.label}
+        {tab.icon && <tab.icon aria-hidden="true" />}{tab.label}
       </button>
     ))}
   </div>
@@ -175,7 +183,7 @@ export const RankedList = ({ items = [], empty = 'אין נתונים בטווח
     <ol className="ranked-list">
       {rows.map((item, index) => (
         <li className="ranked-row" key={`${item.label}-${index}`} style={{ '--bar': `${(Number(item.requests) / peak) * 100}%`, '--bar-color': `var(--${color})` }}>
-          {onSelect ? <button className="ranked-row__button" data-page-path={item.label} type="button" onClick={(event) => onSelect(item.label, event.currentTarget)} aria-expanded={selected === item.label}><span className="ranked-row__name"><b>{labelFor(item.label) || 'לא ידוע'}</b><small dir="ltr">{item.label}</small></span><strong>{formatNumber(item.requests)}</strong><ChevronLeft aria-hidden="true" /></button> : <><b title={item.label}>{labelFor(item.label) || 'לא ידוע'}</b><strong>{formatNumber(item.requests)}</strong></>}
+          {onSelect ? <button className="ranked-row__button" title={item.label} data-page-path={item.label} type="button" onClick={(event) => onSelect(item.label, event.currentTarget)} aria-expanded={selected === item.label}><span className="ranked-row__name"><b>{labelFor(item.label) || 'לא ידוע'}</b></span><strong>{formatNumber(item.requests)}</strong><ChevronLeft aria-hidden="true" /></button> : <><b title={item.label}>{labelFor(item.label) || 'לא ידוע'}</b><strong>{formatNumber(item.requests)}</strong></>}
         </li>
       ))}
     </ol>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { X, ExternalLink } from 'lucide-react';
+import { X, ExternalLink, Eye, Footprints, MessageCircle, MousePointer2, Timer, ArrowDownToLine, TriangleAlert } from 'lucide-react';
 import { apiFetch, rangeQuery } from '../lib/api';
 import { pageName, PAGE_HINT } from '../lib/analyticsLabels';
 import { formatNumber, formatDateTime } from '../lib/format';
@@ -52,18 +52,18 @@ export default function PageInsights({ app, path, resolveRange, onClose, onSelec
   destination.pathname = path.startsWith('/') ? path : '/';
   destination.search = ''; destination.hash = '';
   return <section ref={section} tabIndex={-1} role="dialog" aria-label="מה קרה אחרי הצפייה בעמוד" className="page-insights">
-    <Panel title={pageName(path, app.name)} action={<button className="icon-btn" type="button" onClick={onClose} aria-label="סגירת פירוט העמוד"><X /></button>}>
+    <Panel title={pageName(path, app.name)} hint={`${PAGE_HINT} הביקורים ולחיצות הקשר נמדדו בדפדפן. לחיצה אינה פנייה שנשלחה; אין הוכחה שהעמוד גרם לה.`} action={<button className="icon-btn" type="button" onClick={onClose} aria-label="סגירת פירוט העמוד"><X /></button>}>
       <DataState loading={state.loading} error={state.error} onRetry={() => { setState(s => ({ ...s, loading: true, error: '' })); setRetry(n => n + 1); }}>
         {data && <>
-          <StatRow><Stat label="צפיות לפי השרת" value={data.log.views} hint={PAGE_HINT} /><Stat label="ביקורים שנמדדו בעמוד" value={data.visits} hint="ביקורים אנונימיים שבהם פעלה מדידת הפעולות. אלה אינם אנשים מזוהים." /><Stat label="ביקורים עם לחיצת קשר בהמשך" value={data.contact_visits} hint="לחיצה בעמוד הזה או אחריו, באותו ביקור שנמדד. לא אישור שנשלחה פנייה ולא הוכחה לסיבה ללחיצה." /></StatRow>
+          <StatRow><Stat icon={Eye} label="צפיות שרת" value={data.log.views} /><Stat icon={Footprints} label="ביקורים" value={data.visits} /><Stat icon={MousePointer2} label="עם לחיצת קשר" value={data.contact_visits} /></StatRow>
           <h3>מה עשו אחר כך?</h3>
-          {data.actions.length ? <ul className="insight-list">{data.actions.map((row, i) => <li key={i}><span>{row.event_type === 'outbound_click' ? 'עברו לאתר שמוצג בפרויקט' : row.label === 'whatsapp' ? 'לחצו על WhatsApp' : row.label === 'phone' ? 'לחצו להתקשר' : 'לחצו ליצירת קשר'} · {pageName(row.path, app.name)}</span><b>{formatNumber(row.visits)} ביקורים</b></li>)}</ul> : <Empty text="לא נמדדו לחיצות קשר או מעבר לאתר פעיל אחרי הצפייה בעמוד." />}
-          <h3>העמוד הבא שנצפה</h3>
-          {data.next.length ? <ul className="insight-list">{data.next.map(row => <li key={row.path}><button className="text-action" type="button" onClick={() => onSelect(row.path)}>{pageName(row.path, app.name)}</button><b>{formatNumber(row.visits)} ביקורים</b></li>)}</ul> : <Empty text="לא נמדד מעבר לעמוד נוסף. זה לא בהכרח אומר שהגלישה הסתיימה." />}
-          {data.engagement?.visits > 0 && <p>זמן פעיל ממוצע בעמוד: {formatNumber(Math.round(data.engagement.active_ms / 1000))} שניות · עומק גלילה ממוצע: {formatNumber(Math.round(data.engagement.scroll))}%</p>}
-          <p className="insight-note">{data.low_sample ? 'עדיין מעט מדי ביקורים כדי להסיק מה כדאי לשנות. אפשר לראות את הפעולות שנמדדו, בלי להסיק שהעמוד מצליח או נכשל.' : data.contact_visits === 0 ? 'יש צפיות בעמוד, אבל לא נמדדה לחיצת קשר בהמשך. כדאי לבדוק אם הצעד הבא ברור. זו הצעה לבדיקה, לא הסבר מוכח.' : 'נמדדו לחיצות קשר אחרי הצפייה בעמוד. בדקו במעקב הפניות אם התקבלו פניות בפועל; אין שיוך אוטומטי ביניהן.'}</p>
-          <div className="insight-actions"><a className="btn" href={destination.href} target="_blank" rel="noopener noreferrer">פתיחת העמוד <ExternalLink /></a><Link className="btn" to={`/clients/${app.id}`}>מעקב פניות ותוצאות</Link></div>
-          <small className="muted">מדידת הפעולות באתר החלה ב־{formatDateTime(data.coverage_since)}. תוצאות חסרות עשויות לנבוע מחסימת מדידה.</small>
+          {data.actions.length ? <ul className="insight-list">{data.actions.map((row, i) => <li key={i}><span>{row.event_type === 'outbound_click' ? 'מעבר לאתר' : row.label === 'whatsapp' ? 'לחיצת WhatsApp' : row.label === 'phone' ? 'לחיצת טלפון' : 'לחיצת קשר'} · {pageName(row.path, app.name)}</span><b>{formatNumber(row.visits)} ביקורים</b></li>)}</ul> : <Empty text="לא נמדדו לחיצות בהמשך" />}
+          <h3>עמודים הבאים</h3>
+          {data.next.length ? <ul className="insight-list">{data.next.map(row => <li key={row.path}><button className="text-action" type="button" onClick={() => onSelect(row.path)}>{pageName(row.path, app.name)}</button><b>{formatNumber(row.visits)} ביקורים</b></li>)}</ul> : <Empty text="לא נמדד מעבר נוסף" />}
+          {data.engagement?.visits > 0 && <div className="engagement-strip"><span><Timer aria-hidden="true" />{formatNumber(Math.round(data.engagement.active_ms / 1000))} שנ׳ פעילות בממוצע</span><span><ArrowDownToLine aria-hidden="true" />{formatNumber(Math.round(data.engagement.scroll))}% גלילה</span></div>}
+          {data.low_sample && <p className="status-line is-attention"><TriangleAlert aria-hidden="true" /> מדגם קטן</p>}
+          <div className="insight-actions"><a className="btn" href={destination.href} target="_blank" rel="noopener noreferrer"><ExternalLink aria-hidden="true" />לעמוד</a><Link className="btn" to={`/clients/${app.id}`}><MessageCircle aria-hidden="true" />פניות</Link></div>
+          <details className="measurement-details"><summary>מגבלות המדידה</summary><p>המדידה החלה ב־{formatDateTime(data.coverage_since)}. חוסר מדידה אינו מעיד בהכרח על סיום הביקור; ייתכנו חסימות מדידה. מדגם קטן אינו מספיק למסקנות. לחיצות קשר אינן פניות מאומתות ואין שיוך אוטומטי ביניהן.</p></details>
         </>}
       </DataState>
     </Panel>
