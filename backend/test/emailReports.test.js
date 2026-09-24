@@ -41,6 +41,12 @@ test('builds per-client comparisons and safe HTML', () => {
     db.prepare(`INSERT INTO browser_signals (
         app_id, event_id, occurred_at, ip, visitor_hash, session_hash, path
     ) VALUES (?, 'email-signal-event', '2026-07-11T10:01:00.000Z', '1.1.1.1', 'visitor-hash', 'session-hash', '/pricing')`).run(appId);
+    const action = db.prepare(`INSERT INTO growth_events (app_id,event_id,occurred_at,session_hash,event_type,path,device,automation_hint)
+        VALUES (?, ?, ?, 'session', ?, '/', 'desktop', ?)`);
+    action.run(appId, 'contact', '2026-07-11T10:00:00.000Z', 'contact_click', 0);
+    action.run(appId, 'robot', '2026-07-11T10:00:00.000Z', 'contact_click', 1);
+    action.run(appId, 'other-action', '2026-07-11T10:00:00.000Z', 'project_open', 0);
+    action.run(appId, 'past-contact', '2026-07-10T10:00:00.000Z', 'contact_click', 0);
 
     const period = {
         type: 'daily', periodKey: '2026-07-11',
@@ -56,15 +62,38 @@ test('builds per-client comparisons and safe HTML', () => {
     assert.equal(row.browserSignalVisitors, 1);
     assert.equal(row.browserSignalSessions, 1);
     assert.equal(row.browserSignalPageViews, 1);
+    assert.equal(row.contactClicks, 1);
     assert.equal(row.topPage, '/pricing');
 
     const rendered = renderEmail('daily', period, [row]);
-    assert.match(rendered.subject, /דוח תנועה יומי/);
-    assert.match(rendered.html, /אינו הוכחה לאדם או ללקוח/);
-    assert.match(rendered.html, /צפיות לוג/);
+    assert.match(rendered.subject, /דוח אתרים יומי/);
+    assert.match(rendered.html, /המבקרים הם הערכה/);
+    assert.match(rendered.html, /נתוני שרת נפרדים/);
+    assert.match(rendered.html, new RegExp(`/visitors/${appId}\\?from=`));
+    assert.doesNotMatch(rendered.html, /אותות דפדפן|מועמדי IP|גלה עוד/);
     assert.match(rendered.html, /monitor\.vee-app\.co\.il\/serve-monitor\/visitors/);
     assert.match(rendered.html, /Client &lt;One&gt;/);
     assert.doesNotMatch(rendered.html, /Client <One>/);
+});
+
+test('report links preserve app and period, and small counts do not become percentage headlines', () => {
+    const { reportLink } = require('../emailReportTemplate');
+    const period = buildPeriod('daily', new Date('2026-09-24T10:00:00Z'));
+    const row = { id: 20, name: 'LA webs', browserSignalVisitors: 2, previousBrowserSignalVisitors: 1,
+        browserSignalSessions: 2, previousBrowserSignalSessions: 1, browserSignalPageViews: 3,
+        previousBrowserSignalPageViews: 0, pageViews: 5, uniqueCandidates: 3, contactClicks: 1, topPage: '/work/miryam/' };
+    const url = new URL(reportLink(row, period));
+    assert.equal(url.pathname, '/serve-monitor/visitors/20');
+    assert.equal(url.searchParams.get('from'), period.from);
+    assert.equal(url.searchParams.get('to'), period.to);
+    assert.equal(new URL(reportLink(row, period, true)).pathname, '/serve-monitor/services/20');
+    const content = renderEmail('daily', period, [row]);
+    assert.match(content.html, /פרויקט מרים זליג/);
+    assert.match(content.html, /עדיין מוקדם להסיק מגמה/);
+    assert.match(content.html, /לא נרשמה פעילות בתקופה הקודמת/);
+    assert.doesNotMatch(content.text, /100%|Infinity|NaN/);
+    assert.ok(content.text.includes(url.toString()));
+    assert.match(content.text, /לחיצות ליצירת קשר אינן פניות שהתקבלו/);
 });
 
 test('includes seeded Libi Diamonds in client comparison reports', () => {
@@ -132,6 +161,6 @@ test('expanded daily and weekly coverage separates traffic from operational inve
         const rendered = renderEmail(type, period, rows, [...operations, { name: 'Worker <unsafe>', status: 'offline' }]);
         assert.match(rendered.html, /Worker &lt;unsafe&gt;/);
         assert.match(rendered.html, /Maavar Worker/);
-        assert.match(rendered.text, /מצב כל האפליקציות/);
+        assert.match(rendered.text, /מצב האתרים והשירותים/);
     }
 });

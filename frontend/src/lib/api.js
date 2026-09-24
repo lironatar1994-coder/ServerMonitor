@@ -20,7 +20,8 @@ export async function apiFetch(path, options = {}) {
   if (response.status === 401 || response.status === 403) {
     localStorage.removeItem('token');
     window.dispatchEvent(new Event('auth-change'));
-    window.location.assign(`${import.meta.env.BASE_URL}login`);
+    const destination = window.location.pathname.replace(/^\/serve-monitor/, '') + window.location.search;
+    window.location.assign(`${import.meta.env.BASE_URL}login?returnTo=${encodeURIComponent(destination)}`);
     throw new Error('ההתחברות פגה. יש להתחבר מחדש.');
   }
 

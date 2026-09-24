@@ -26,6 +26,7 @@
 - Use `מבקרים משוערים`, `ביקורים שנמדדו` and `עמודים שנפתחו` as primary visitor labels. Explain anonymous browser counting in a hint; network-address/server counts and individual connection rows belong in expandable diagnostics.
 - Page rows are keyboard-operable buttons with friendly names and an explicit continuation action. Drill-downs show observed next pages, later contact actions and low-sample guidance; do not equate no recorded continuation with an exit or a click with a lead.
 - API requests time out after 20 seconds with recovery text, validate JSON responses, and preserve cancellation. Lazy-load failures offer reload; the loader offers recovery if a chunk stalls. Never disguise a failed request as no traffic.
+- Report links preserve the requested internal app route through login/session expiry. Only allow-listed local destinations are accepted. Valid `from`/`to` query dates initialize the analytics range (maximum 90 days); manual range changes clear those query dates.
 
 - `/clients` and `/clients/:id` are internal-only. Keep Search Console and customer portals absent. Email/WhatsApp controls open editable drafts; opening is not proof of sending. Summaries remain reviewable before the user shares.
 - Show source-confirmed, manual and observed browser actions separately. Expose collection start and source-sync gaps, independent goal periods, low-sample comparisons, and the absence of confirmed session-to-lead attribution. Source PII is not copied into forms.

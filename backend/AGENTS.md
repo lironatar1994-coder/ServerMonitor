@@ -20,6 +20,7 @@
 - `jewelryAnalytics.js` owns canonical Libi product/collection path aggregation, catalog labels, category inference, and equal-period comparisons.
 - `resourceUsage.js` owns complete PM2 process-tree attribution and cached, bounded production-storage scans.
 - `emailReports.js` owns daily and weekly client comparison reports, Resend delivery, scheduling, and delivery deduplication.
+- `emailReportTemplate.js` owns shared Hebrew HTML/plain-text report presentation and app-specific monitor links.
 - `routes/` owns HTTP route handlers and request/response contracts.
 - `monitor.db` is runtime state and must not be treated as a source schema definition.
 
@@ -73,6 +74,8 @@
 - Reject analytics ranges longer than 90 days, cap visitor pages at 100 rows, keep all analytics endpoints authenticated, and use parameterized SQL.
 - Email reports use completed Israel calendar periods: daily compares yesterday with the day before; weekly compares the previous Monday–Sunday with the preceding week. Reports must use candidate language and state that the classification is an estimate.
 - Email report engagement metrics and top pages use page views rather than raw candidate requests. Include only records with a non-empty website URL, keep the HTML responsive and email-client-safe, and link to the production monitor hostname.
+- Reports lead with measured visits and observed contact clicks; show browser visitor estimates, visits and page opens together. Keep server estimates separately labeled and never add them to browser counts. Suppress percentage claims with fewer than 30 prior observations; call out low samples and missing browser measurements without declaring an outage. Never treat contact clicks as received inquiries.
+- Each site name links to `/visitors/:id` with the completed report's `from`/`to`; operational inventory links to `/services/:id`. The same destinations and caveats must appear in plain text. Preserve delivery schedule, recipient and deduplication; previews must not send email.
 - The Libi email row includes its top viewed product and leading collection for the completed period when product traffic exists.
 - Daily and weekly client comparison emails must include Libi Diamonds as its own row whenever its seeded monitored-app record is present.
 - Daily delivery defaults to 08:00 and weekly delivery to Monday at 08:05 Israel time. `email_report_deliveries` prevents duplicate sends after restarts.

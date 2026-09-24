@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Activity, ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { safeReturnPath } from '../lib/reportNavigation';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -9,6 +10,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -24,7 +26,7 @@ const Login = () => {
       if (!response.ok) throw new Error(data.error || 'שם המשתמש או הסיסמה אינם נכונים');
       localStorage.setItem('token', data.token);
       window.dispatchEvent(new Event('auth-change'));
-      navigate('/visitors', { replace: true });
+      navigate(safeReturnPath(new URLSearchParams(location.search).get('returnTo')), { replace: true });
     } catch (loginError) { setError(loginError.name === 'TimeoutError' ? 'השרת לא השיב בזמן. נסו להתחבר שוב.' : loginError.message); }
     finally { setLoading(false); }
   };

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { safeReturnPath } from './lib/reportNavigation';
 import AppShell from './components/AppShell';
 import LoadBoundary from './components/LoadBoundary';
 
@@ -22,9 +23,15 @@ const PageLoader = () => {
   </div>;
 };
 
-const ProtectedRoute = ({ children }) => (
-  localStorage.getItem('token') ? children : <Navigate to="/login" replace />
-);
+const ProtectedRoute = ({ children }) => {
+  const location = useLocation();
+  return localStorage.getItem('token') ? children : <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`} replace />;
+};
+
+const LoginDestination = () => {
+  const location = useLocation();
+  return <Navigate to={safeReturnPath(new URLSearchParams(location.search).get('returnTo'))} replace />;
+};
 
 function App() {
   const [authenticated, setAuthenticated] = useState(Boolean(localStorage.getItem('token')));
@@ -43,7 +50,7 @@ function App() {
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <LoadBoundary><Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/login" element={authenticated ? <Navigate to="/visitors" replace /> : <Login />} />
+          <Route path="/login" element={authenticated ? <LoginDestination /> : <Login />} />
           <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
             <Route index element={<Navigate to="/visitors" replace />} />
             <Route path="/visitors" element={<VisitorOverview />} />
