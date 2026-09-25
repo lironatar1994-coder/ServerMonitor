@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-24T13:48:38.579937+00:00",
+  "generatedAt": "2026-09-25T06:36:05.476908+00:00",
   "title": "Design System: Server Monitor",
   "extensions": {
     "colorMeta": {
@@ -470,7 +470,7 @@
   ],
   "narrative": {
     "northStar": "חדר בקרה חד וברור",
-    "overview": "A mature technical Hebrew workspace: charcoal chrome, cyan signals, light data tables and one proportional measured-session bar per site. No decorative effects, invented data or expanded copy.",
+    "overview": "A mature technical Hebrew workspace: charcoal chrome, cyan signals, short noun headings, contextual action icons and aligned numeric tables. Client columns are named once; explanations open on demand. Keep measured counts and uncertainty explicit.",
     "keyCharacteristics": [
       "Hebrew RTL with readable mixed-direction names, dates and paths.",
       "Charcoal toolbars, summaries and traffic plots with restrained cyan selection; light aligned data tables and measured activity bars.",

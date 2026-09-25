@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { CalendarDays, Check, ChevronLeft, Info, Minus, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
+import { CalendarDays, Check, ChevronLeft, Clock3, Info, Minus, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
 import { formatDateTime, formatNumber } from '../lib/format';
 import { changeLabel } from '../lib/dailyCheck';
 
@@ -20,6 +20,10 @@ export const Hint = ({ text }) => (
     <button type="button" className="hint__trigger" aria-label={text}><Info aria-hidden="true" /></button>
     <span className="hint__bubble" aria-hidden="true">{text}</span>
   </span>
+);
+
+export const IconAction = ({ icon: Icon, label, ...props }) => (
+  <button type="button" className="icon-btn" aria-label={label} title={label} {...props}><Icon aria-hidden="true" /></button>
 );
 
 export const PageHead = ({ title, meta, children }) => (
@@ -170,7 +174,7 @@ export const RangePicker = ({ days, onChange, loading, onRefresh, onCustom, cust
         <RefreshCw className={loading ? 'is-spinning' : ''} aria-hidden="true" />
       </button>
     )}
-    {updatedAt && <time className="range-updated" dateTime={updatedAt}>עודכן {formatDateTime(updatedAt)}</time>}
+    {updatedAt && <time className="range-updated" dateTime={updatedAt} aria-label={`עודכן ${formatDateTime(updatedAt)}`} title="עדכון נתונים אחרון"><Clock3 aria-hidden="true" />{formatDateTime(updatedAt)}</time>}
     {customActive && range && <span className="range-dates">{formatDateTime(range.from)} – {formatDateTime(range.to)}</span>}
   </div>
 );

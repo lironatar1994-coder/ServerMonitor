@@ -969,11 +969,18 @@ button { min-width: 44px; }
 .comparison-list a:hover .activity-meter > i { background: #004E59; }
 .status-line.is-healthy { font-size: .75rem; }
 .panel__action .search input:focus { border-color: #006775; }
+.range-updated { display: inline-flex; align-items: center; gap: .35rem; }
+.range-updated svg { width: 14px; height: 14px; }
+.page > .stat-row .stat__label > svg { display: block; width: 16px; height: 16px; color: #81D4DF; }
+.comparison-labels svg { display: block; width: 15px; height: 15px; }
+.crumb { min-width: 44px; }
 @media (max-width: 900px) {
   .bottom-nav a.is-active, .shell--infrastructure .bottom-nav a.is-active { background: #203A43; color: #81D4DF; box-shadow: inset 0 2px #81D4DF; }
   .mobile-header { border-bottom: 0; }
 }
 @media (max-width: 760px) {
+  .comparison-label-text { display: none; }
+  .page > .stat-row .stat__label { align-content: start; }
   .comparison-value--activity { justify-items: center; align-content: center; }
   .activity-meter { width: 1.9rem; }
 }

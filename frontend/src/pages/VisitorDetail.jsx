@@ -149,7 +149,7 @@ const VisitorDetail = () => {
         title={data?.app?.name || 'אתר'}
         meta={
           <>
-            <Link className="crumb" to={`/visitors${rangeSearch(data?.range || resolveRange())}`}><ChevronRight aria-hidden="true" /> כל האתרים</Link>
+            <Link className="crumb" to={`/visitors${rangeSearch(data?.range || resolveRange())}`}><ChevronRight aria-hidden="true" /> אתרים</Link>
             {data?.app && (
               <span className={`chip ${data.app.status === 'online' ? 'is-online' : 'is-offline'}`}>
                 {data.app.status === 'online' ? 'פעיל' : 'דורש בדיקה'}

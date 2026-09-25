@@ -67,12 +67,12 @@ const VisitorOverview = () => {
         <Stat icon={Activity} label="ביקורים" value={summary.browser_signal_sessions} previous={before.browser_signal_sessions} />
         <Stat icon={Eye} label="צפיות" value={summary.browser_signal_page_views} previous={before.browser_signal_page_views} />
       </StatRow>
-      <Panel title="השוואת אתרים" hint={`${VISITOR_HINT} הפס מציג ביקורים ביחס לאתר עם הכי הרבה ביקורים בטווח, ללא שינוי בקנה המידה בחיפוש. ביקורים כוללים חזרה לאתר; צפיות הן פתיחות עמודים שנמדדו. סימן אזהרה ליד השינוי מציין מדגם קטן או חוסר מדידה. אין קודמים פירושו שלא נמדדה פעילות בתקופה הקודמת.`} className="comparison-panel" action={<>
-        <label className="search"><Search aria-hidden="true" /><input aria-label="חיפוש אתר" placeholder="חיפוש אתר" value={search} onChange={e => setSearch(e.target.value)} /></label>
+      <Panel title="פעילות אתרים" hint={`${VISITOR_HINT} הפס מציג ביקורים ביחס לאתר עם הכי הרבה ביקורים בטווח, ללא שינוי בקנה המידה בחיפוש. ביקורים כוללים חזרה לאתר; צפיות הן פתיחות עמודים שנמדדו. סימן אזהרה ליד השינוי מציין מדגם קטן או חוסר מדידה. אין קודמים פירושו שלא נמדדה פעילות בתקופה הקודמת.`} className="comparison-panel" action={<>
+        <label className="search"><Search aria-hidden="true" /><input aria-label="חיפוש אתר" placeholder="חיפוש" value={search} onChange={e => setSearch(e.target.value)} /></label>
         <label className="sort-control"><ArrowDownUp aria-hidden="true" /><select aria-label="מיון אתרים" value={sort} onChange={e => { setSort(e.target.value); try { localStorage.setItem(SORT_KEY, e.target.value); } catch { /* storage optional */ } }}><option value="activity">פעילות</option><option value="change">שינוי</option><option value="name">שם</option></select></label>
       </>} bleed>
         {comparisonError && <p className="status-line is-attention">ההשוואה לתקופה הקודמת לא נטענה</p>}
-        <div className="comparison-labels" aria-hidden="true"><span>אתר</span><span><Users />אומדן</span><span><Activity />ביקורים</span><span><Eye />צפיות</span><span>שינוי בביקורים</span></div>
+        <div className="comparison-labels" aria-hidden="true"><span>אתר</span><span title="מבקרים משוערים"><Users /><span className="comparison-label-text">אומדן</span></span><span title="ביקורים שנמדדו"><Activity /><span className="comparison-label-text">ביקורים</span></span><span title="צפיות שנרשמו"><Eye /><span className="comparison-label-text">צפיות</span></span><span>שינוי</span></div>
         <ol className="comparison-list">{sites.map(site => <li key={site.app_id}><Link to={destination(site.app_id)}>
           <span className="comparison-identity"><span className={`site-health ${site.health?.status === 'online' ? 'is-healthy' : 'is-attention'}`} role="img" aria-label={site.health?.status === 'online' ? 'זמין בבדיקה האחרונה' : site.health ? 'דורש בדיקה' : 'מצב זמינות לא ידוע'} title={site.health?.status === 'online' ? 'זמין בבדיקה האחרונה' : site.health ? 'דורש בדיקה' : 'מצב זמינות לא ידוע'}>{site.health?.status === 'online' ? <CircleCheck /> : site.health ? <TriangleAlert /> : <CircleHelp />}</span><b dir="auto">{site.name}</b></span>
           <span className="comparison-value" aria-label={`מבקרים משוערים: ${formatNumber(site.browser_signal_visitors)}`}><Users aria-hidden="true" /><strong>{formatNumber(site.browser_signal_visitors)}</strong></span>
@@ -83,7 +83,7 @@ const VisitorOverview = () => {
         {!sites.length && <Empty text={search ? 'אין אתרים שתואמים לחיפוש' : 'אין אתרים מוגדרים למדידה'} />}
       </Panel>
       <TrafficChart data={data} previous={previous} comparisonError={comparisonError} />
-      <details className="measurement-details"><summary>נתוני שרת ואבחון מדידה</summary>
+      <details className="measurement-details"><summary>אבחון מדידה</summary>
         <StatRow><Stat label="כתובות רשת שונות" value={summary.unique_candidates} hint={CONNECTION_HINT} /><Stat label="פתיחות עמודים לפי השרת" value={summary.page_views} /><Stat label="בקשות אוטומטיות שסוננו" value={summary.bot_requests} /></StatRow>
         <Panel title="פילוח לפי נתוני השרת" action={<Tabs tabs={[{ id: 'pages', label: 'עמודים' }, { id: 'locations', label: 'מיקומים' }, { id: 'devices', label: 'מכשירים' }, { id: 'referrers', label: 'מקורות' }]} value={breakdown} onChange={setBreakdown} />}><RankedList items={data?.[breakdown]} empty="אין מדידות לפילוח בטווח הזה" /></Panel>
       </details>

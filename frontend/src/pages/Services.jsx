@@ -73,7 +73,7 @@ const Services = () => {
                       <small dir="ltr">{app.url || app.pm2_name || app.systemd_unit || app.log_path || '—'}</small>
                     </span>
                     <span className="service-list__meta">
-                      <b>{(app.pm2_name || app.systemd_unit) ? 'שירות מנוהל' : app.log_path ? 'אתר סטטי' : 'ניטור בסיסי'}</b>
+                      <b>{(app.pm2_name || app.systemd_unit) ? 'מנוהל' : app.log_path ? 'סטטי' : 'ניטור'}</b>
                       <small>
                         {app.pm2_name
                           ? `${(app.cpu || 0).toFixed(1)}% CPU · ${((app.memory || 0) / 1024 / 1024).toFixed(0)} MB`

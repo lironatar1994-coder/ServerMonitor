@@ -56,11 +56,11 @@ export default function PageInsights({ app, path, resolveRange, onClose, onSelec
       <DataState loading={state.loading} error={state.error} onRetry={() => { setState(s => ({ ...s, loading: true, error: '' })); setRetry(n => n + 1); }}>
         {data && <>
           <StatRow><Stat icon={Eye} label="צפיות שרת" value={data.log.views} /><Stat icon={Activity} label="ביקורים" value={data.visits} /><Stat icon={MousePointer2} label="עם לחיצת קשר" value={data.contact_visits} /></StatRow>
-          <h3>מה עשו אחר כך?</h3>
+          <h3>פעולות המשך</h3>
           {data.actions.length ? <ul className="insight-list">{data.actions.map((row, i) => <li key={i}><span>{row.event_type === 'outbound_click' ? 'מעבר לאתר' : row.label === 'whatsapp' ? 'לחיצת WhatsApp' : row.label === 'phone' ? 'לחיצת טלפון' : 'לחיצת קשר'} · {pageName(row.path, app.name)}</span><b>{formatNumber(row.visits)} ביקורים</b></li>)}</ul> : <Empty text="לא נמדדו לחיצות בהמשך" />}
-          <h3>עמודים הבאים</h3>
+          <h3>המשך ביקור</h3>
           {data.next.length ? <ul className="insight-list">{data.next.map(row => <li key={row.path}><button className="text-action" type="button" onClick={() => onSelect(row.path)}>{pageName(row.path, app.name)}</button><b>{formatNumber(row.visits)} ביקורים</b></li>)}</ul> : <Empty text="לא נמדד מעבר נוסף" />}
-          {data.engagement?.visits > 0 && <div className="engagement-strip"><span><Timer aria-hidden="true" />{formatNumber(Math.round(data.engagement.active_ms / 1000))} שנ׳ פעילות בממוצע</span><span><ArrowDownToLine aria-hidden="true" />{formatNumber(Math.round(data.engagement.scroll))}% גלילה</span></div>}
+          {data.engagement?.visits > 0 && <div className="engagement-strip"><span><Timer aria-hidden="true" />{formatNumber(Math.round(data.engagement.active_ms / 1000))} שנ׳ בממוצע</span><span><ArrowDownToLine aria-hidden="true" />{formatNumber(Math.round(data.engagement.scroll))}% גלילה</span></div>}
           {data.low_sample && <p className="status-line is-attention"><TriangleAlert aria-hidden="true" /> מדגם קטן</p>}
           <div className="insight-actions"><a className="btn" href={destination.href} target="_blank" rel="noopener noreferrer"><ExternalLink aria-hidden="true" />לעמוד</a><Link className="btn" to={`/clients/${app.id}`}><MessageCircle aria-hidden="true" />פניות</Link></div>
           <details className="measurement-details"><summary>מגבלות המדידה</summary><p>המדידה החלה ב־{formatDateTime(data.coverage_since)}. חוסר מדידה אינו מעיד בהכרח על סיום הביקור; ייתכנו חסימות מדידה. מדגם קטן אינו מספיק למסקנות. לחיצות קשר אינן פניות מאומתות ואין שיוך אוטומטי ביניהן.</p></details>

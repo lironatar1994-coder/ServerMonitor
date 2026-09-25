@@ -6,9 +6,9 @@ import { DataState, Empty, Panel, PageHead, Stat, StatRow, Tabs } from '../compo
 import { formatNumber, formatTime } from '../lib/format';
 
 const RESOURCE_TABS = [
-  { id: 'applications', label: 'זיכרון לפי שירות' },
-  { id: 'storage', label: 'אחסון לפי פרויקט' },
-  { id: 'processes', label: 'תהליכים' }
+  { id: 'applications', label: 'זיכרון', icon: MemoryStick },
+  { id: 'storage', label: 'אחסון', icon: HardDrive },
+  { id: 'processes', label: 'תהליכים', icon: Cpu }
 ];
 
 const formatBytes = (bytes) => {
@@ -116,7 +116,7 @@ const Infrastructure = () => {
   return (
     <div className="page page--infrastructure">
       <PageHead
-        title="שרת ומשאבים"
+        title="שרת"
         meta={<span>עודכן {formatTime(updatedAt)}</span>}
       >
         <button type="button" className="icon-btn" onClick={fetchData} aria-label="רענון" title="רענון"><RefreshCw aria-hidden="true" /></button>
@@ -130,7 +130,7 @@ const Infrastructure = () => {
           <Stat icon={TriangleAlert} label="לבדיקה" value={offline.length} tone={offline.length ? 'vermilion' : 'forest'} />
         </StatRow>
 
-        {offline.length > 0 && <Panel title="שירותים שדורשים בדיקה"><div className="attention-list">{offline.map(app => <Link key={app.id} to={`/services/${app.id}`}>{app.name} · {app.status === 'offline' ? 'לא פעיל' : 'מצב לא ידוע'}<ChevronLeft /></Link>)}</div></Panel>}
+        {offline.length > 0 && <Panel title="שירותים לבדיקה"><div className="attention-list">{offline.map(app => <Link key={app.id} to={`/services/${app.id}`}>{app.name} · {app.status === 'offline' ? 'לא פעיל' : 'מצב לא ידוע'}<ChevronLeft /></Link>)}</div></Panel>}
         <details className="measurement-details"><summary>Swap וזמן פעילות</summary><StatRow>
           <Stat label="Swap" value={`${swap.toFixed(0)}%`} tone={swap >= 75 ? 'ochre' : 'forest'} hint="Swap יכול להכיל דפים ישנים גם כשהשרת אינו תחת עומס פעיל" foot={`${formatBytes(swapUsed)} / ${formatBytes(swapTotal)}`} />
           <Stat label="זמן פעילות" value={`${uptimeDays}י ${uptimeHours}ש`} foot="מאז האתחול" />
