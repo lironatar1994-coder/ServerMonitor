@@ -55,7 +55,7 @@ let browser;
     await page.goto(`${monitor}/visitors/${app.id}`);
     await page.locator('.stat__label').filter({ hasText: 'מבקרים משוערים' }).waitFor();
     await page.locator('.ranked-row__button').first().click();
-    await page.getByRole('heading', { name: 'מה עשו אחר כך?', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'פעולות המשך', exact: true }).waitFor();
     assert.ok(new URL(page.url()).searchParams.get('page'), 'Selected page missing from URL');
     assert.equal(Math.round((await page.locator('.page-insights').boundingBox()).y), 0, 'Mobile panel is not full-screen');
     assert.equal(await page.locator('.page-insights .error-state').count(), 0);
