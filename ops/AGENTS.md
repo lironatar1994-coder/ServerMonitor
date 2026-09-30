@@ -38,7 +38,7 @@
 ## Verification
 - `node ops/accessibility-check.cjs` verifies text-token contrast (4.5:1), activity bar/track contrast (3:1) and visible 44px controls at desktop/390px/320px; `UI_REVIEW_CLIENT_ONLY=1` rechecks the client-detail correction.
 - `node ops/ui-review.cjs` checks desktop, 390px and 320px local surfaces, period/sort preservation, page URL/Back/focus and login return. Requires Vite remote mode on port 5180, local Chrome, and production key-only SSH.
-- `node ops/email-preview.cjs` checks daily and weekly email overflow at desktop/390px/320px, emits HTML/text and screenshots, and never invokes sendReport.
+- `node ops/email-preview.cjs` checks daily and weekly email overflow and table columns at desktop/390px/320px, plus 390px dark mode and 320px inline-only fallback; emits HTML/text and screenshots and never invokes sendReport.
 - Run `/usr/local/sbin/lawebs-maintenance browser` on production after deployment; check both monitor hostnames, desktop/mobile routes, page drill-down, all eight project pages, live beacon storage and internal exclusion. Its runtime user must be able to read the existing server authentication configuration and write the protected result file. Inspect service resource limits and completion result.
 - Run `python3 -m unittest discover -s ops -p 'test_*.py'` on Linux.
 - Inspect the cleanup plan before an applied run and verify backup integrity, protected release hashes, services, and actual freed disk space afterward.

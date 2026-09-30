@@ -88,12 +88,32 @@ test('report links preserve app and period, and small counts do not become perce
     assert.equal(url.searchParams.get('to'), period.to);
     assert.equal(new URL(reportLink(row, period, true)).pathname, '/serve-monitor/services/20');
     const content = renderEmail('daily', period, [row]);
-    assert.match(content.html, /פרויקט מרים זליג/);
-    assert.match(content.html, /עדיין מוקדם להסיק מגמה/);
-    assert.match(content.html, /לא נרשמה פעילות בתקופה הקודמת/);
+    assert.doesNotMatch(content.html, /\/work\/miryam\//);
+    assert.match(content.html, /מדגם קטן/);
+    assert.match(content.html, /מוקדם להסיק מגמה/);
+    assert.match(content.html, /\+1/);
     assert.doesNotMatch(content.text, /100%|Infinity|NaN/);
     assert.ok(content.text.includes(url.toString()));
     assert.match(content.text, /לחיצות ליצירת קשר אינן פניות שהתקבלו/);
+});
+
+test('compact reports distinguish missing measurements, zero traffic and service health', () => {
+    const period = buildPeriod('daily', new Date('2026-09-30T10:00:00Z'));
+    const rows = [
+        { id: 101, name: 'Missing', pageViews: 40, browserSignalPageViews: 0, browserSignalSessions: 0, previousBrowserSignalSessions: 50 },
+        { id: 102, name: 'Quiet', pageViews: 0, browserSignalPageViews: 0, browserSignalSessions: 0 },
+        { id: 103, name: 'Measured', browserSignalVisitors: 30, browserSignalSessions: 45, previousBrowserSignalSessions: 30, browserSignalPageViews: 60, contactClicks: 3 }
+    ];
+    for (const type of ['daily', 'weekly']) {
+        const report = renderEmail(type, period, rows, [{ id: 104, name: 'Worker', status: 'offline' }]);
+        assert.match(report.text, /Missing\nמבקרים משוערים: — · ביקורים שנמדדו: — · עמודים שנפתחו: —\nמדידה חסרה/);
+        assert.match(report.text, /Quiet\nמבקרים משוערים: 0 · ביקורים שנמדדו: 0 · עמודים שנפתחו: 0/);
+        assert.match(report.text, /\+15 \(50%\)/);
+        assert.match(report.text, /3 לחיצות קשר/);
+        assert.match(report.html, /Worker/);
+        assert.match(report.html, /דורש בדיקה/);
+        assert.doesNotMatch(report.html, /לחיצות קשר: 0|העמוד הנצפה ביותר לפי נתוני השרת/);
+    }
 });
 
 test('includes seeded Libi Diamonds in client comparison reports', () => {

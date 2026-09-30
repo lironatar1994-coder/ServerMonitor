@@ -4,114 +4,111 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 const date = value => new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value));
 const status = value => value === 'online' ? 'תקין' : value === 'unknown' || !value ? 'טרם נבדק' : 'דורש בדיקה';
 const linkStyle = 'color:#006775;text-decoration:underline';
-const noteHtml = value => esc(value).replace(/\/[a-zA-Z0-9_/%.-]+/g, path => `<span dir="ltr" style="unicode-bidi:isolate">${path}</span>`);
+const muted = 'color:#43565F;font-size:11px;line-height:1.5';
+const rule = 'border-top:1px solid #BAC8CE';
 
 function siteUrl(value) {
     try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) ? url.href : null; }
     catch { return null; }
 }
-
 function periodLabel(from, to) {
     const start = date(from), end = date(new Date(new Date(to).getTime() - 1));
     return start === end ? start : `${start}–${end}`;
 }
-
 function reportLink(row, period, operational = false) {
     const id = Number(row.id);
     const route = operational ? 'services' : 'visitors';
     const suffix = Number.isSafeInteger(id) && id > 0 ? `/${id}` : '';
     return `${BASE}/${route}${suffix}${operational ? '' : `?${new URLSearchParams({ from: period.from, to: period.to })}`}`;
 }
-
 function change(current, previous) {
     const a = Number(current) || 0, b = Number(previous) || 0;
-    if (!b) return a ? 'לא נרשמה פעילות בתקופה הקודמת' : 'ללא שינוי';
     if (a === b) return 'ללא שינוי';
-    const delta = Math.abs(a - b);
-    // Small counts do not justify dramatic percentage headlines.
-    return `${n(delta)} ${a > b ? 'יותר' : 'פחות'}${b >= 30 ? ` (${Math.round(delta / b * 100)}%)` : ''}`;
+    if (!b) return 'חדש';
+    const delta = a - b;
+    // Small comparison samples do not justify percentage headlines.
+    return `${delta > 0 ? '+' : '−'}${n(Math.abs(delta))}${b >= 30 ? ` (${Math.round(Math.abs(delta) / b * 100)}%)` : ''}`;
 }
-
-function pageName(row) {
-    if (row.topPage === '/') return 'עמוד הבית';
-    const names = { miryam: 'מרים זליג', libi: 'ליבי יהלומים', pinhas: 'פנחס רצון', koral: 'קורל אירועים', reuven: 'דפוס ראובן', sos: 'בדרך אליך', seder: 'סדר', pdf: 'PDF Studio' };
-    const slug = row.name === 'LA webs' && row.topPage?.match(/^\/work\/([^/]+)\/?$/)?.[1];
-    return slug && names[slug] ? `פרויקט ${names[slug]}` : row.topPage;
+function measurementNote(row) {
+    if (!row.browserSignalPageViews) return row.pageViews > 0 ? 'מדידה חסרה' : 'ללא תנועה שנרשמה';
+    return row.browserSignalSessions < 30 ? 'מדגם קטן' : '';
 }
-
-function siteNotes(row) {
+function jewelryNotes(row) {
     const notes = [];
-    if (!row.browserSignalPageViews && row.pageViews > 0) notes.push('השרת רשם פתיחת עמודים, אך לא נמדדו ביקורים באתר. כדאי לבדוק את המדידה.');
-    else if (!row.browserSignalPageViews && !row.pageViews) notes.push('לא נרשמה תנועה בתקופה הזו. זה לבדו אינו מעיד על תקלה.');
-    else if (row.browserSignalSessions < 30) notes.push('מעט ביקורים נמדדו; עדיין מוקדם להסיק מגמה.');
-    if (row.topPage && row.topPage !== '—') notes.push(`העמוד הנצפה ביותר לפי נתוני השרת: ${pageName(row)}`);
     const product = row.jewelryInterest?.summary?.top_product;
-    if (product) notes.push(`התכשיט הנצפה ביותר: ${product.name} · ${n(product.page_views)} צפיות`);
+    if (product) notes.push(`התכשיט הנצפה ביותר: ${product.name} · ${n(product.page_views)} צפיות שרת`);
     const collection = row.jewelryInterest?.summary?.top_collection;
     if (collection) notes.push(`קטגוריה מובילה: ${collection.label}`);
     return notes;
 }
-
-function highlights(rows, operations) {
-    const items = [];
-    const attention = operations.filter(app => app.status !== 'online');
-    if (attention.length) items.push(`מצב נוכחי: ${attention.map(app => `${app.name} — ${status(app.status)}`).join(' · ')}`);
-    const changed = rows.filter(row => row.previousBrowserSignalSessions >= 30 &&
-        Math.abs(row.browserSignalSessions - row.previousBrowserSignalSessions) >= 10 &&
-        Math.abs(row.browserSignalSessions - row.previousBrowserSignalSessions) / row.previousBrowserSignalSessions >= .25)
-        .sort((a, b) => Math.abs(b.browserSignalSessions - b.previousBrowserSignalSessions) - Math.abs(a.browserSignalSessions - a.previousBrowserSignalSessions)).slice(0, 2);
-    for (const row of changed) items.push(`${row.name}: ${n(row.browserSignalSessions)} ביקורים שנמדדו, ${change(row.browserSignalSessions, row.previousBrowserSignalSessions)} לעומת התקופה הקודמת.`);
-    const contacts = rows.filter(row => row.contactClicks > 0).sort((a, b) => b.contactClicks - a.contactClicks).slice(0, 3);
-    if (contacts.length) items.push(`לחיצות ליצירת קשר: ${contacts.map(row => `${row.name} — ${n(row.contactClicks)}`).join(' · ')}. לחיצה אינה אישור שנשלחה פנייה.`);
-    return items;
+function checked(value) {
+    if (!value) return 'טרם נבדק';
+    const parsed = new Date(value.includes('T') ? value : `${value.replace(' ', 'T')}Z`);
+    return Number.isNaN(parsed.getTime()) ? 'מועד לא ידוע' : new Intl.DateTimeFormat('he-IL', {
+        timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).format(parsed);
 }
-
 function renderEmail(type, period, rows, operations = []) {
     const title = type === 'daily' ? 'דוח אתרים יומי' : 'דוח אתרים שבועי';
     const label = periodLabel(period.from, period.to);
     const comparison = periodLabel(period.previousFrom, period.from);
-    const insights = highlights(rows, operations);
     const orderedRows = [...rows].sort((a, b) => b.browserSignalSessions - a.browserSignalSessions || b.pageViews - a.pageViews || a.name.localeCompare(b.name));
     const totalVisits = rows.reduce((sum, row) => sum + (Number(row.browserSignalSessions) || 0), 0);
     const previousVisits = rows.reduce((sum, row) => sum + (Number(row.previousBrowserSignalSessions) || 0), 0);
     const totalContacts = rows.reduce((sum, row) => sum + (Number(row.contactClicks) || 0), 0);
-    const caveat = 'המבקרים הם הערכה, לא זיהוי של אנשים. אותו אדם עשוי להיספר בכמה מכשירים או אתרים, וחלק מהביקורים אינם נמדדים. אוטומציה מוכרת מסוננת. לחיצות ליצירת קשר אינן פניות שהתקבלו.';
-    const siteCards = orderedRows.map(row => {
-        const href = esc(reportLink(row, period));
-        const metrics = [
-            ['מבקרים משוערים', row.browserSignalVisitors, row.previousBrowserSignalVisitors],
-            ['ביקורים שנמדדו', row.browserSignalSessions, row.previousBrowserSignalSessions],
-            ['עמודים שנפתחו', row.browserSignalPageViews, row.previousBrowserSignalPageViews]
-        ];
-        return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;table-layout:fixed;border-collapse:collapse;background:#fff;border-bottom:1px solid #D9E1E4;margin:0 0 12px">
-<tr><td style="padding:18px 18px 12px"><a href="${href}" dir="auto" style="${linkStyle};display:inline-block;font-weight:bold;font-size:20px">${esc(row.name)}</a>${siteUrl(row.url) ? `<br><a href="${esc(siteUrl(row.url))}" dir="ltr" style="display:inline-block;max-width:100%;overflow-wrap:anywhere;color:#53656D;font-size:12px;margin-top:6px">${esc(row.url)}</a>` : ''}</td></tr>
-<tr><td style="padding:0 18px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed"><tr>${metrics.map(([name, value, previous]) => `<td width="33%" valign="top" style="padding:8px 2px 16px;text-align:right"><span style="font-size:13px;color:#53656D">${name}</span><br><strong style="font-size:25px;line-height:1.5">${n(value)}</strong><br><span style="font-size:12px;color:#53656D">${esc(change(value, previous))}</span></td>`).join('')}</tr></table></td></tr>
-<tr><td style="padding:12px 18px;border-top:1px solid #D9E1E4;font-size:14px;line-height:1.7"><strong>לחיצות ליצירת קשר: ${n(row.contactClicks)}</strong>${siteNotes(row).map(note => `<div style="overflow-wrap:anywhere;word-break:break-word">${noteHtml(note)}</div>`).join('')}</td></tr>
-<tr><td style="padding:10px 18px;background:#F5F7F8;font-size:12px;line-height:1.7;color:#53656D">נתוני שרת נפרדים: ${n(row.pageViews)} פתיחות עמודים · ${n(row.uniqueCandidates)} כתובות רשת שונות. אלה אינם מבקרים נוספים.</td></tr>
-</table>`;
-    }).join('');
     const orderedOps = [...operations].sort((a, b) => Number(a.status === 'online') - Number(b.status === 'online') || a.name.localeCompare(b.name));
-    const checked = value => {
-        if (!value) return 'טרם נבדק';
-        const parsed = new Date(value.includes('T') ? value : `${value.replace(' ', 'T')}Z`);
-        return Number.isNaN(parsed.getTime()) ? 'מועד לא ידוע' : new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(parsed);
-    };
-    const operationsHtml = operations.length ? `<h2 style="font-size:20px;margin:26px 0 6px">מצב האתרים והשירותים</h2><p style="font-size:13px;color:#53656D;margin:0 0 12px">הבדיקה האחרונה בלבד, ולא סיכום תקלות לאורך תקופת הדוח.</p><table width="100%" cellpadding="10" cellspacing="0" style="table-layout:fixed;border-collapse:collapse;background:#fff;font-size:13px"><tr><th scope="col" align="right" width="45%">אתר או שירות</th><th scope="col" align="right" width="25%">מצב</th><th scope="col" align="right">נבדק ב־</th></tr>${orderedOps.map(app => `<tr><td style="border-top:1px solid #D9E1E4;overflow-wrap:anywhere"><a href="${esc(reportLink(app, period, true))}" style="${linkStyle}">${esc(app.name)}</a></td><td style="border-top:1px solid #D9E1E4;color:${app.status === 'online' ? '#19704B' : '#B42332'}">${status(app.status)}</td><td style="border-top:1px solid #D9E1E4">${esc(checked(app.last_checked))}</td></tr>`).join('')}</table>` : '';
-    const summary = `${rows.length} אתרים · ${n(totalVisits)} ביקורים שנמדדו · ${n(totalContacts)} לחיצות ליצירת קשר`;
-    const html = `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>@media(max-width:600px){.email-wrap{padding:12px!important}.intro{padding:20px!important}}</style></head><body style="margin:0;background:#F5F7F8;color:#172126;font-family:'Noto Sans Hebrew',Arial,sans-serif;font-variant-numeric:tabular-nums"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all">${esc(summary)}</div><div class="email-wrap" style="max-width:680px;margin:0 auto;padding:24px;text-align:right">
-<div class="intro" style="background:#006775;color:#FFFFFF;padding:22px;margin-bottom:18px"><h1 style="font-size:24px;margin:0 0 10px">${title}</h1><div>${esc(label)}</div><div style="font-size:13px;color:#C7D9DF;margin-top:6px">בהשוואה ל־${esc(comparison)} · שעון ישראל</div></div>
-<p style="font-size:16px;line-height:1.8;margin:0 0 4px"><strong>${esc(summary)}</strong></p><p style="font-size:13px;color:#53656D;margin:0 0 18px">ביקורים לעומת התקופה הקודמת: ${esc(change(totalVisits, previousVisits))}. הסכום הוא לפי אתר.</p>
-${insights.length ? `<div style="padding:16px 18px;background:#E7EEF0;margin-bottom:20px"><h2 style="font-size:17px;margin:0 0 8px">מה השתנה ומה דורש בדיקה</h2>${insights.map(text => `<p style="margin:6px 0;font-size:14px;line-height:1.7">${esc(text)}</p>`).join('')}</div>` : ''}
-${siteCards || '<p>אין אתרים להצגה.</p>'}${operationsHtml}
-<p style="font-size:12px;color:#53656D;line-height:1.8;margin:22px 0 12px">${caveat} נתוני השרת כוללים פתיחת עמודים בלבד, ללא תמונות וקובצי אתר. בשתי שיטות המדידה ייתכן שתיכלל אוטומציה שלא זוהתה.</p>
-<p style="font-size:14px"><a href="${esc(reportLink({}, period))}" style="${linkStyle}">כל האתרים ב־Server Monitor</a></p></div></body></html>`;
-    const text = [title, label, `בהשוואה ל־${comparison} · שעון ישראל`, summary, `ביקורים לעומת התקופה הקודמת: ${change(totalVisits, previousVisits)}. הסכום הוא לפי אתר.`, '', ...insights, '', ...orderedRows.flatMap(row => [
-        row.name, `מבקרים משוערים: ${n(row.browserSignalVisitors)} · ביקורים שנמדדו: ${n(row.browserSignalSessions)} · עמודים שנפתחו: ${n(row.browserSignalPageViews)}`,
-        `ביקורים לעומת התקופה הקודמת: ${change(row.browserSignalSessions, row.previousBrowserSignalSessions)}`,
-        `לחיצות ליצירת קשר: ${n(row.contactClicks)}`, ...siteNotes(row),
-        `נתוני שרת נפרדים: ${n(row.pageViews)} פתיחות עמודים · ${n(row.uniqueCandidates)} כתובות רשת שונות. אלה אינם מבקרים נוספים.`, reportLink(row, period), ''
-    ]), ...(operations.length ? ['מצב האתרים והשירותים — הבדיקה האחרונה בלבד', ...orderedOps.map(app => `${app.name}: ${status(app.status)} · ${checked(app.last_checked)}\n${reportLink(app, period, true)}`)] : []), '', caveat, reportLink({}, period)].join('\n');
+    const attention = orderedOps.filter(app => app.status !== 'online');
+    const caveat = 'המבקרים הם הערכה, לא אנשים מזוהים; הסכומים הם לפי אתר. לחיצות ליצירת קשר אינן פניות שהתקבלו. ייתכן שתיכלל אוטומציה שלא זוהתה.';
+    const measurementHelp = 'מדגם קטן: פחות מ־30 ביקורים; מוקדם להסיק מגמה. מדידה חסרה: נרשמו עמודים בשרת ללא ביקורים שנמדדו. היעדר תנועה אינו מעיד לבדו על תקלה.';
+    const summary = `${n(rows.length)} אתרים · ${n(totalVisits)} ביקורים שנמדדו · ${n(totalContacts)} לחיצות קשר`;
+    const metricCell = (value, extra = '', primary = false) => `<td class="rule" align="center" valign="top" style="padding:14px 3px;${rule}"><strong dir="ltr" style="display:block;font-size:${primary ? 22 : 18}px;line-height:1.35;font-weight:${primary ? 700 : 400}">${esc(value)}</strong>${extra ? `<span class="muted" style="display:block;margin-top:4px;${muted}">${extra}</span>` : ''}</td>`;
+    const siteRows = orderedRows.map(row => {
+        const note = measurementNote(row);
+        const missing = !row.browserSignalPageViews && row.pageViews > 0;
+        const contact = Number(row.contactClicks) > 0 ? `<span class="muted" style="display:block;margin-top:4px;${muted}">${n(row.contactClicks)} לחיצות קשר</span>` : '';
+        const detail = jewelryNotes(row);
+        return `<tr><th class="rule" scope="row" align="right" valign="top" style="padding:14px 6px 14px 0;${rule};font-weight:400;overflow-wrap:anywhere"><a class="link" href="${esc(reportLink(row, period))}" dir="auto" style="${linkStyle};font-size:14px;font-weight:700;line-height:1.45">${esc(row.name)}</a>${contact}${note ? `<span class="muted" style="display:block;margin-top:4px;${muted}">${esc(note)}</span>` : ''}</th>
+${metricCell(missing ? '—' : n(row.browserSignalVisitors))}${metricCell(missing ? '—' : n(row.browserSignalSessions), missing ? '' : `<span dir="auto">${esc(change(row.browserSignalSessions, row.previousBrowserSignalSessions))}</span>`, true)}${metricCell(missing ? '—' : n(row.browserSignalPageViews))}</tr>
+${detail.length ? `<tr><td colspan="4" class="muted" style="padding:0 0 14px;color:#43565F;font-size:12px;line-height:1.6">${detail.map(esc).join('<br>')}${siteUrl(row.url) ? `<br><a class="link" href="${esc(siteUrl(row.url))}" style="${linkStyle}">לאתר ${esc(row.name)}</a>` : ''}</td></tr>` : ''}`;
+    }).join('');
+    const operationsHtml = operations.length ? `<h2 style="font-size:16px;margin:28px 0 6px">מצב האתרים והשירותים</h2><p class="muted" style="font-size:12px;color:#43565F;margin:0 0 12px;line-height:1.6">הבדיקה האחרונה בלבד · שעון ישראל</p>
+<table dir="rtl" width="100%" cellpadding="0" cellspacing="0" style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px"><thead><tr><th scope="col" align="right" width="44%" class="muted" style="padding:0 0 8px;color:#43565F;font-weight:400">אתר / שירות</th><th scope="col" align="right" width="24%" class="muted" style="padding:0 4px 8px;color:#43565F;font-weight:400">מצב</th><th scope="col" align="left" width="32%" class="muted" style="padding:0 0 8px;color:#43565F;font-weight:400">נבדק ב־</th></tr></thead><tbody>${orderedOps.map(app => `<tr><th class="rule" scope="row" align="right" style="padding:8px 0;${rule};font-weight:400;overflow-wrap:anywhere"><a class="link" dir="auto" href="${esc(reportLink(app, period, true))}" style="${linkStyle}">${esc(app.name)}</a></th><td class="rule ${app.status === 'online' ? 'muted' : 'attention'}" style="padding:8px 4px;${rule};color:${app.status === 'online' ? '#43565F' : '#B42332'}">${status(app.status)}</td><td dir="ltr" align="left" class="rule muted" style="padding:8px 0;${rule};${muted};overflow-wrap:anywhere">${esc(checked(app.last_checked))}</td></tr>`).join('')}</tbody></table>` : '';
+    const overviewLink = esc(reportLink({}, period));
+    // Inline styles and bgcolor remain usable when an email client strips CSS.
+    const html = `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><style>
+:root{color-scheme:light dark}a:focus-visible{outline:2px solid #006775;outline-offset:3px}
+@media(max-width:600px){.outer{padding:12px 8px!important}.content{padding:20px 12px!important}}
+@media(prefers-color-scheme:dark){body,.canvas{background:#111A1F!important;color:#F0F5F7!important}.sheet{background:#202D34!important;color:#F0F5F7!important}.summary{background:#2C3B43!important;color:#F0F5F7!important}.muted{color:#ADBDC5!important}.link{color:#81D4DF!important}.rule{border-color:#3D515B!important}.attention{color:#F0A8B1!important}}
+</style></head><body class="canvas" style="margin:0;padding:0;background:#F5F7F8;color:#172126;font-family:'Noto Sans Hebrew',Arial,sans-serif;font-variant-numeric:tabular-nums">
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all">${esc(summary)}</div>
+<table role="presentation" dir="rtl" width="100%" cellpadding="0" cellspacing="0" class="canvas" bgcolor="#F5F7F8" style="width:100%;background:#F5F7F8"><tr><td class="outer" align="center" style="padding:24px 12px">
+<!--[if mso]><table role="presentation" width="640"><tr><td><![endif]-->
+<table role="presentation" dir="rtl" width="100%" cellpadding="0" cellspacing="0" class="sheet" bgcolor="#FFFFFF" style="max-width:640px;width:100%;table-layout:fixed;background:#FFFFFF;color:#172126"><tr><td class="content" style="padding:28px;text-align:right;overflow-wrap:anywhere">
+<h1 style="font-size:21px;line-height:1.4;margin:0 0 6px">${title}</h1><p style="margin:0;font-size:14px;line-height:1.6"><span dir="ltr">${esc(label)}</span></p><p class="muted" style="margin:4px 0 20px;font-size:12px;line-height:1.6;color:#43565F">מול <span dir="ltr">${esc(comparison)}</span> · שעון ישראל</p>
+<table role="presentation" dir="rtl" width="100%" cellpadding="0" cellspacing="0" class="summary" bgcolor="#E7EEF0" style="width:100%;table-layout:fixed;background:#E7EEF0"><tr>${[
+        ['ביקורים שנמדדו', n(totalVisits), `<span dir="auto">${esc(change(totalVisits, previousVisits))}</span> · קודם ${n(previousVisits)}`],
+        ['לחיצות קשר', n(totalContacts), ''], ['אתרים', n(rows.length), '']
+    ].map(([name, value, sub]) => `<td align="center" valign="top" width="33%" style="padding:14px 3px"><span class="muted" style="font-size:12px;color:#43565F">${name}</span><strong dir="ltr" style="display:block;font-size:26px;line-height:1.4;margin-top:4px">${value}</strong>${sub ? `<span class="muted" style="display:block;${muted}">${sub}</span>` : ''}</td>`).join('')}</tr></table>
+${attention.length ? `<p class="attention" style="margin:16px 0 0;color:#B42332;font-size:13px;line-height:1.6">${n(attention.length)} דורשים בדיקה: ${attention.map(app => `<a class="link" href="${esc(reportLink(app, period, true))}" dir="auto" style="${linkStyle}">${esc(app.name)}</a>`).join(' · ')}</p>` : ''}
+<h2 style="font-size:16px;margin:24px 0 12px">לפי אתר</h2>
+<table dir="rtl" width="100%" cellpadding="0" cellspacing="0" style="width:100%;table-layout:fixed;border-collapse:collapse"><thead><tr><th scope="col" align="right" width="34%" class="muted" style="padding:0 0 10px;font-size:11px;line-height:1.4;color:#43565F;font-weight:400">אתר</th>${['מבקרים<br>משוערים', 'ביקורים<br>שנמדדו', 'עמודים<br>שנפתחו'].map(name => `<th scope="col" width="22%" align="center" class="muted" style="padding:0 2px 10px;font-size:11px;line-height:1.4;color:#43565F;font-weight:400">${name}</th>`).join('')}</tr></thead><tbody>${siteRows || '<tr><td colspan="4" style="padding:14px 0">אין אתרים להצגה.</td></tr>'}</tbody></table>
+<p style="margin:16px 0 0;font-size:14px"><a class="link" href="${overviewLink}" style="${linkStyle}">הדוח המלא ב־Server Monitor</a></p>
+${operationsHtml}
+<p class="rule muted" style="${rule};margin:24px 0 0;padding-top:14px;${muted}">${esc(caveat)}<br>${esc(measurementHelp)} נתוני שרת נפרדים בדוח המלא.</p>
+</td></tr></table><!--[if mso]></td></tr></table><![endif]--></td></tr></table></body></html>`;
+    const text = [title, label, `מול ${comparison} · שעון ישראל`, summary,
+        `שינוי בביקורים: ${change(totalVisits, previousVisits)} · קודם ${n(previousVisits)}`, '', 'לפי אתר',
+        ...orderedRows.flatMap(row => [row.name,
+            !row.browserSignalPageViews && row.pageViews > 0
+                ? 'מבקרים משוערים: — · ביקורים שנמדדו: — · עמודים שנפתחו: —'
+                : `מבקרים משוערים: ${n(row.browserSignalVisitors)} · ביקורים שנמדדו: ${n(row.browserSignalSessions)} · עמודים שנפתחו: ${n(row.browserSignalPageViews)}`,
+            ...(!row.browserSignalPageViews && row.pageViews > 0 ? [] : [`שינוי בביקורים: ${change(row.browserSignalSessions, row.previousBrowserSignalSessions)}`]),
+            ...(row.contactClicks > 0 ? [`${n(row.contactClicks)} לחיצות קשר`] : []),
+            ...(measurementNote(row) ? [measurementNote(row)] : []), ...jewelryNotes(row),
+            ...(jewelryNotes(row).length && siteUrl(row.url) ? [siteUrl(row.url)] : []), reportLink(row, period), ''
+        ]), ...(operations.length ? ['מצב האתרים והשירותים — הבדיקה האחרונה בלבד · שעון ישראל',
+            ...orderedOps.map(app => `${app.name}: ${status(app.status)} · ${checked(app.last_checked)}\n${reportLink(app, period, true)}`)] : []),
+        '', caveat, measurementHelp, 'נתוני שרת נפרדים בדוח המלא.', reportLink({}, period)].join('\n');
     return { subject: `Server Monitor — ${title} | ${label}`, html, text };
 }
-
 module.exports = { renderEmail, reportLink };
