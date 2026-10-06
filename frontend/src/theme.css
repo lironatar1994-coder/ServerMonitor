@@ -128,7 +128,7 @@ a { text-underline-offset: .2em; }
 .search input { font-size: .8rem; }
 .sort-control select { color: var(--ink); }
 .form label, .login__card label { color: var(--ink-muted); font-size: .8rem; font-weight: 400; gap: .4rem; }
-input:focus-visible, textarea:focus-visible, select:focus-visible, .search input:focus-visible, .form input:focus-visible, .form textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-color: var(--accent); }
+input:focus-visible, textarea:focus-visible, select:focus-visible, .search input:focus-visible, .form input:focus-visible, .form textarea:focus-visible, .login__card input:focus-visible, .add-service-dialog input:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-color: var(--accent); }
 .chip { border-radius: 6px; font-size: .72rem; font-weight: 700; }
 .chip.is-online, .page--infrastructure .chip.is-online { color: var(--healthy); background: var(--healthy-surface); }
 .chip.is-offline, .page--infrastructure .chip.is-offline { color: var(--vermilion); background: var(--danger-surface); }
