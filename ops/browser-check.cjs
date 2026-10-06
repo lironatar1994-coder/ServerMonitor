@@ -89,11 +89,12 @@ let browser;
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.locator('#work').scrollIntoViewIfNeeded();
     await page.waitForResponse(r => r.url().endsWith('/.well-known/vee-visitor-signal') && r.request().postDataJSON()?.kind === 'engagement', { timeout: 22000 });
-    await page.locator('#work a[href="/work/miryam/"]').click();
+    await page.locator('#project-miryam').getByRole('link', { name: 'לפרויקט', exact: true }).click();
     await page.getByRole('slider').press('ArrowRight');
     assert.equal(await page.getByRole('slider').inputValue(), '51');
   });
   await check('portfolio-contact-attribution', async () => {
+    await page.goto('https://lawebs.co.il/work/miryam/');
     // Observe the click without opening WhatsApp or sending any message.
     await page.locator('#contact').scrollIntoViewIfNeeded();
     await page.evaluate(() => document.addEventListener('click', e => { if (e.target.closest('a[href*="wa.me"]')) e.preventDefault(); }, { once: true }));

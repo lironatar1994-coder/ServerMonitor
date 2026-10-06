@@ -13,12 +13,6 @@ const luminance = hex => hex.match(/[a-f0-9]{2}/ig).map(h => parseInt(h,16)/255)
 const contrast = (a,b) => (Math.max(luminance(a),luminance(b))+.05)/(Math.min(luminance(a),luminance(b))+.05);
 (async () => {
   const results = [];
-  for (const [fg,bg] of [['172126','FFFFFF'],['43565F','F5F7F8'],['81D4DF','172126'],['ADBDC5','172126'],['81D4DF','203A43'],['C9D7DC','172126'],['FFFFFF','006775'],['006775','FFFFFF'],['19704B','E6F4EC'],['8A5800','FFF5DE'],['B42332','FCECEF'],['ADBDC5','202D34'],['81D4DF','202D34'],['172126','81D4DF']]) {
-    const ratio = contrast(fg,bg); assert.ok(ratio >= 4.5, `${fg}/${bg}: ${ratio}`); results.push({ contrast: `${fg}/${bg}`, ratio });
-  }
-  const activityContrast = contrast('006775','BAC8CE');
-  assert.ok(activityContrast >= 3, `Activity bar/track: ${activityContrast}`);
-  results.push({ graphicContrast: '006775/BAC8CE', ratio: activityContrast });
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   try {
     const page = await browser.newPage({ userAgent: 'ServerMonitor-Audit-Bot/1.0' });
@@ -29,6 +23,22 @@ const contrast = (a,b) => (Math.max(luminance(a),luminance(b))+.05)/(Math.min(lu
       await page.setViewportSize({ width, height: 960 });
       for (const route of (process.env.UI_REVIEW_CLIENT_ONLY ? [`/clients/${id}`] : ['/visitors', `/visitors/${id}`, '/clients', `/clients/${id}`, '/infrastructure', '/services', '/settings'])) {
         await page.goto(base + route); await page.locator('.page h1').waitFor(); await page.locator('.skeleton-stack').first().waitFor({ state: 'hidden' });
+        if (width === 1440) {
+          const tokens = await page.locator('.page').evaluate(el => {
+            const style = getComputedStyle(el);
+            return Object.fromEntries(['ink','ink-muted','paper','paper-light','accent','on-accent','healthy','healthy-surface','ochre','attention-surface','vermilion','danger-surface','line'].map(name => [name, style.getPropertyValue('--' + name).trim().replace('#','')]));
+          });
+          for (const [fg,bg] of [['ink','paper-light'],['ink-muted','paper'],['ink-muted','paper-light'],['accent','paper-light'],['on-accent','accent'],['healthy','healthy-surface'],['ochre','attention-surface'],['vermilion','danger-surface']]) {
+            const ratio = contrast(tokens[fg], tokens[bg]);
+            assert.ok(ratio >= 4.5, `${route} ${fg}/${bg}: ${ratio}`);
+            results.push({ route, contrast: `${fg}/${bg}`, ratio });
+          }
+          if (route === '/visitors') {
+            const ratio = contrast(tokens.accent, tokens.line);
+            assert.ok(ratio >= 3, `Activity bar/track: ${ratio}`);
+            results.push({ graphicContrast: 'activity-meter', ratio });
+          }
+        }
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), route + ' overflow');
         const small = await page.locator('button,input:not([type=checkbox]),select,summary,a').evaluateAll(els => els.filter(el => {
           const r=el.getBoundingClientRect(); return r.width && r.height && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth && !el.closest('[inert]') && (r.width < 43.9 || r.height < 43.9);

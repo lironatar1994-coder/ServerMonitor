@@ -12,6 +12,7 @@
 - `src/pages/ClientGrowth.jsx` and `client-growth.css` own the internal client workspace: prioritization, goals, leads, tasks, campaigns, activity and editable manual-share drafts, composed from AnalyticsParts.
 
 - `src/App.jsx` owns client routing and session-level app shell behavior.
+- `src/theme.css` owns the fleet-console palette, surfaces, controls and density; `src/index.css` owns the base layout and component geometry. Load the theme after the base stylesheet in `src/main.jsx`; route styles use shared tokens.
 - `src/components/AppShell.jsx` owns the collapsible desktop rail, mobile header/bottom navigation, and visitor/infrastructure visual-mode boundary.
 - `src/components/AnalyticsParts.jsx` owns the shared UI kit every screen composes from: `PageHead`, `Stat`/`StatRow`, `Panel`, `Tabs`, `RangePicker`, `RankedList`, `Hint`, `Empty`, `DataState`.
 - `src/components/ProductAnalytics.jsx` owns reusable engagement heatmaps, named click/visibility zones, and scroll reach, plus PDF Studio usage totals and per-tool outcomes.
@@ -24,7 +25,7 @@
 
 ## Local Contracts
 
-- Keep `מבקרים משוערים` explicit; compact labels `ביקורים` and `צפיות` mean measured visits and recorded page opens, with full meaning in accessible labels and shared hints. Mobile comparison tables retain aligned numeric columns with one dark icon header matching the named summary icons; omit repeated row icons. Keep low samples visible with a named warning icon and missing measurement with `לא נמדד`.
+- Keep `מבקרים משוערים` explicit; compact labels `ביקורים` and `צפיות` mean measured visits and recorded page opens, with full meaning in accessible labels and shared hints. Mobile comparison tables retain aligned numeric columns with one subdued text header; omit repeated row icons. Keep low samples visible with a named warning icon and missing measurement with `לא נמדד`.
 - Shared `Change` renders neutral signed absolute changes with accessible full explanations. Zero baselines show `אין קודמים`; unavailable comparisons stay an em dash. Client objectives/coverage remain in detail views rather than repeating in overview rows. Page limitations live in a disclosure, with low samples still flagged outside it.
 - Client overview uses one aligned header for period inquiries, all open inquiries and open tasks; row metric names remain available to assistive technology. A named attention icon links into the detailed work queue. Insight evidence opens in a disclosure. Shared `IconAction` requires a contextual accessible label and title; retain labels for primary creation, destructive and sharing actions.
 - The full page row is one keyboard-operable button with a friendly name, count and chevron; do not repeat continuation prompts. Store the selected exact page in `page` and the view in the URL. Back, refresh and shared links preserve context; closing returns focus to the originating row. Drill-downs show observed next pages, later contact actions and low-sample guidance; do not equate no recorded continuation with an exit or a click with a lead.
@@ -63,12 +64,14 @@
 - Compose screens from `AnalyticsParts` primitives instead of adding per-page layout classes; extend the kit when a genuinely new pattern appears.
 - Use existing component structure and CSS files before introducing new UI libraries.
 - Prefer lucide-react icons already installed when adding icon controls.
-- Follow `../DESIGN.md`: cool off-white and white application surfaces, charcoal infrastructure, Noto Sans Hebrew throughout, teal selection/links, green health, amber attention and red failure/destruction. The paper/ink and serif direction is superseded.
-- Anchor every workspace with charcoal navigation, toolbars, primary metrics and traffic plots; use existing cyan infrastructure tokens for selection and chart lines. Data tables remain light. Reset menu/date-popover tokens to the light palette inside dark toolbars. Prefer bold numbers and column alignment over decoration. Content tabs use underlines; navigation and period selections stay explicit.
+- Follow `../DESIGN.md`: porcelain canvas, white summaries/data/plots, slate navigation, petrol actions, and graphite infrastructure. Use Noto Sans Hebrew throughout, green health, amber attention and red failure/destruction.
+- Navigation separates `מעקב` from `תפעול`; its destinations retain accessible names when collapsed. Use one subtle boundary per surface, 12px section corners and 8px controls. Content tabs use underlines; navigation and period selections stay explicit. Shared tokens carry all light/dark control, status and overlay colors.
 - Favour density over prose: one short screen title, no marketing copy, and explanatory caveats behind a `Hint` icon rather than repeated paragraphs.
 - Group related breakdowns behind `Tabs` in a single `Panel` instead of stacking one panel per dimension.
 - Keep desktop tables paired with purpose-built mobile cards and maintain 44px touch targets (see the `pointer: coarse` block in `index.css`), visible focus states, and reduced-motion support.
 - Infrastructure dark mode works by re-declaring the colour tokens on `.page--infrastructure`; style shared components once against the tokens rather than adding dark-mode variants.
+- Isolate byte values and complete RAM/Swap/PID/CPU fragments with explicit LTR `bdi`; label RAM and Swap separately in resource summaries.
+- WhatsApp status follows the running PM2 process: an old READY/QR file cannot imply an active worker. Show `לא פעיל` and disable the manual test-send control while the sender is stopped.
 - Absolutely positioned overlays such as `Hint` bubbles must be `display: none` when hidden — `visibility: hidden` still widens the document scroll area and breaks RTL mobile layout.
 - Avoid editing `dist/` manually; rebuild it from source when production assets need updating.
 

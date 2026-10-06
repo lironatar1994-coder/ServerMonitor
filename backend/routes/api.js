@@ -6,23 +6,13 @@ const fs = require('fs');
 const path = require('path');
 const { getRecentVisitors, getUniqueVisitors, isTargetAppLine } = require('../logParser');
 const { getResourceUsage } = require('../resourceUsage');
+const { normalizeWhatsappStatus, whatsappRuntimeStatus } = require('../whatsappRuntime');
 
 const { UNIT_PATTERN, getSystemdSnapshot } = require('../systemd');
 const router = express.Router();
 const WHATSAPP_STATUS_PATH = process.env.WHATSAPP_STATUS_PATH || '/root/Vee/backend/whatsapp_status.json';
 let pm2SnapshotCache = { fetchedAt: 0, processes: [] };
 let cpuSnapshotCache = { fetchedAt: 0, snapshot: null };
-
-function normalizeWhatsappStatus(rawStatus) {
-    const qr = rawStatus?.qr || rawStatus?.qrCode || rawStatus?.qr_code || null;
-    const status = (rawStatus?.status || '').toString().trim().toUpperCase();
-
-    return {
-        status: status || (qr ? 'NEEDS_SCAN' : 'UNKNOWN'),
-        qr,
-        updatedAt: rawStatus?.updatedAt || rawStatus?.updated_at || null
-    };
-}
 
 function normalizeWhatsappMessageStatus(rawStatus) {
     const status = (rawStatus || '').toString().trim().toLowerCase();
@@ -202,12 +192,9 @@ function enrichAppStatus(app) {
     if (app.pm2_name === 'vee-whatsapp-worker') {
         try {
             if (fs.existsSync(WHATSAPP_STATUS_PATH)) {
-                enriched.whatsapp_status = normalizeWhatsappStatus(
-                    JSON.parse(fs.readFileSync(WHATSAPP_STATUS_PATH, 'utf8'))
+                enriched.whatsapp_status = whatsappRuntimeStatus(
+                    JSON.parse(fs.readFileSync(WHATSAPP_STATUS_PATH, 'utf8')), pm2Data.status === 'online'
                 );
-                if (enriched.whatsapp_status.status !== 'UNKNOWN') {
-                    enriched.status = 'online';
-                }
             }
         } catch (e) {
             console.error('Failed to read whatsapp_status.json for app details:', e.message);
@@ -630,13 +617,7 @@ router.get('/:id/whatsapp-status', (req, res) => {
         }
         
         const isOnline = getLivePm2Metrics(app.pm2_name).status === 'online';
-        const hasActiveWhatsAppState = ['INITIALIZING', 'NEEDS_SCAN', 'READY'].includes(statusData.status) || !!statusData.qr;
-
-        res.json({
-            ...statusData,
-            isOnline: isOnline || hasActiveWhatsAppState,
-            pm2Online: isOnline
-        });
+        res.json(whatsappRuntimeStatus(statusData, isOnline));
         return;
     }
     

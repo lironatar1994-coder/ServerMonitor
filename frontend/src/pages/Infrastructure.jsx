@@ -35,10 +35,10 @@ const ResourceRows = ({ items, kind }) => {
         const displayedBytes = kind === 'applications' ? Number(item.memory_bytes) || 0 : bytes;
         const isProcess = kind === 'processes';
         const subtitle = kind === 'applications'
-          ? `${formatNumber(item.process_count)} תהליכים · ${formatBytes(item.child_memory_bytes)} בתהליכי־משנה`
+          ? <>{formatNumber(item.process_count)} תהליכים · <bdi dir="ltr">{formatBytes(item.child_memory_bytes)}</bdi> בתהליכי־משנה</>
           : kind === 'storage'
-            ? `${formatBytes(item.dependency_bytes)} תלויות · ${Number(item.dependency_percent || 0).toFixed(0)}% מהפרויקט`
-            : `${item.owner || 'ללא שיוך'} · PID ${item.pid} · CPU ${Number(item.cpu || 0).toFixed(1)}%`;
+            ? <><bdi dir="ltr">{formatBytes(item.dependency_bytes)}</bdi> תלויות · <bdi dir="ltr">{Number(item.dependency_percent || 0).toFixed(0)}%</bdi> מהפרויקט</>
+            : <><bdi>{item.owner || 'ללא שיוך'}</bdi> · <bdi dir="ltr">PID {item.pid}</bdi> · <bdi dir="ltr">CPU {Number(item.cpu || 0).toFixed(1)}%</bdi></>;
         const label = isProcess ? item.command : item.name;
 
         return (
@@ -48,8 +48,8 @@ const ResourceRows = ({ items, kind }) => {
               <small>{subtitle}</small>
             </span>
             <span className="resource-list__value">
-              <strong>{formatBytes(displayedBytes)}</strong>
-              {kind === 'applications' && <small>{formatBytes(item.swap_bytes)} Swap · {Number(item.memory_percent || 0).toFixed(1)}% RAM</small>}
+              <strong><bdi dir="ltr">{formatBytes(displayedBytes)}</bdi></strong>
+              {kind === 'applications' && <small><bdi dir="ltr">Swap {formatBytes(item.swap_bytes)}</bdi> · <bdi dir="ltr">RAM {Number(item.memory_percent || 0).toFixed(1)}%</bdi></small>}
               {kind === 'storage' && <small>{Number(item.disk_percent || 0).toFixed(1)}% מהדיסק</small>}
             </span>
           </li>
@@ -132,7 +132,7 @@ const Infrastructure = () => {
 
         {offline.length > 0 && <Panel title="שירותים לבדיקה"><div className="attention-list">{offline.map(app => <Link key={app.id} to={`/services/${app.id}`}>{app.name} · {app.status === 'offline' ? 'לא פעיל' : 'מצב לא ידוע'}<ChevronLeft /></Link>)}</div></Panel>}
         <details className="measurement-details"><summary>Swap וזמן פעילות</summary><StatRow>
-          <Stat label="Swap" value={`${swap.toFixed(0)}%`} tone={swap >= 75 ? 'ochre' : 'forest'} hint="Swap יכול להכיל דפים ישנים גם כשהשרת אינו תחת עומס פעיל" foot={`${formatBytes(swapUsed)} / ${formatBytes(swapTotal)}`} />
+          <Stat label="Swap" value={`${swap.toFixed(0)}%`} tone={swap >= 75 ? 'ochre' : 'forest'} hint="Swap יכול להכיל דפים ישנים גם כשהשרת אינו תחת עומס פעיל" foot={<bdi dir="ltr">{formatBytes(swapUsed)} / {formatBytes(swapTotal)}</bdi>} />
           <Stat label="זמן פעילות" value={`${uptimeDays}י ${uptimeHours}ש`} foot="מאז האתחול" />
         </StatRow></details>
         <Panel
@@ -142,9 +142,9 @@ const Infrastructure = () => {
           bleed
         >
           <div className="resource-summary" aria-label="עיקרי צריכת המשאבים">
-            <span><small>מוביל בזיכרון</small><strong>{largestApp?.name || 'לא זמין'}</strong><b>{formatBytes(largestApp?.memory_bytes)} + {formatBytes(largestApp?.swap_bytes)}</b></span>
-            <span><small>תלויות</small><strong>{formatBytes(storage?.totals?.dependency_bytes)}</strong><b>{storage?.projects?.length || 0} פרויקטים</b></span>
-            <span><small>גיבויים ו-Rollback</small><strong>{formatBytes((Number(storage?.totals?.backup_bytes) || 0) + (Number(storage?.totals?.rollback_bytes) || 0))}</strong></span>
+            <span><small>מוביל בזיכרון</small><strong>{largestApp?.name || 'לא זמין'}</strong><b><bdi dir="ltr">RAM {formatBytes(largestApp?.memory_bytes)} + Swap {formatBytes(largestApp?.swap_bytes)}</bdi></b></span>
+            <span><small>תלויות</small><strong><bdi dir="ltr">{formatBytes(storage?.totals?.dependency_bytes)}</bdi></strong><b>{storage?.projects?.length || 0} פרויקטים</b></span>
+            <span><small>גיבויים ו-Rollback</small><strong><bdi dir="ltr">{formatBytes((Number(storage?.totals?.backup_bytes) || 0) + (Number(storage?.totals?.rollback_bytes) || 0))}</bdi></strong></span>
           </div>
           <ResourceRows items={selectedItems} kind={resourceView} />
         </Panel>

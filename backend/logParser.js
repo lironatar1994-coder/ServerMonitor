@@ -2,7 +2,7 @@ const fs = require('fs');
 
 const DEFAULT_TAIL_BYTES = 65536;
 const VISITOR_TAIL_BYTES = 2097152;
-const CLASSIFICATION_RULESET_VERSION = '2026-08-10.1';
+const CLASSIFICATION_RULESET_VERSION = '2026-10-07.1';
 
 const botUserAgentPatterns = [
     /bot/i,
@@ -113,10 +113,11 @@ const suspiciousPathPatterns = [
 ];
 
 const nonPageViewPathPatterns = [
-    /^\/_next(?:\/|$)/i,
+    /(?:^|\/)(?:_next|api|\.well-known)(?:\/|$)/i,
     /^\/(?:api|assets|brand|fonts|images?|static)(?:\/|$)/i,
+    /(?:^|\/)data(?:image\/|:)/i,
     /^\/(?:robots\.txt|sitemap(?:-[^/]+)?\.xml)$/i,
-    /\.(?:avif|css|eot|gif|ico|jpe?g|js|json|map|mjs|mp4|pdf|png|svg|txt|webm|webp|woff2?|xml)$/i
+    /\.(?:avif|css|eot|gif|ico|jpe?g|js|json|map|mjs|mp4|pdf|png|svg|txt|wasm|webm|webmanifest|webp|woff2?|xml)$/i
 ];
 
 function readLogTail(logPath, tailBytes = DEFAULT_TAIL_BYTES) {

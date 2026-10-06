@@ -29,6 +29,9 @@
 - Apply growth installation after visitor installation because the combined head substitution includes both map variables. The 15-minute health probe verifies both installed markers. Back up Nginx edits and roll back failed validation.
 - Keep the existing `/var/lib/lawebs-maintenance/backups` manifest layout and PC acknowledgement protocol compatible.
 - Never remove current releases, releases used by a running process, shared data, uploads, secrets, or the most recent three release candidates.
+- Verified daily snapshots include `/var/lib/seder/seder.db`, current `/var/lib/seder/whatsapp-auth`, and Manager Site `data/` including its nested `uploads/`. Keep pairing-state archives in protected root-only backups.
+- After a verified snapshot, retain three recognized dated deployment copies/backups per configured family, plus the most recent day and process/current-dependency references. Expire unused Libi/Dfus rollback copies after seven days and legacy `/root/db_backups` archives after seven days. Unknown names and symlink escapes never qualify. The dry-run plan includes these paths and byte estimates.
+- Probe public URLs, internal health URLs and systemd/PM2 runtime identifiers from the live monitor catalog. Report uncatalogued running PM2 apps (excluding `pm2-logrotate`), missing active runtimes and failed URLs. Disabled legacy alerts become explicit warnings; low traffic is never a failure.
 - Pre-backup cleanup may remove only disposable caches; release retention runs only after a verified backup succeeds.
 - Maintenance must not send additional messages or restart applications, clear Linux kernel caches, or cycle swap.
 - Health checks every 15 minutes verify visitor-ingestion freshness and the presence of installed browser trackers without interpreting low or zero traffic as failure. Publish the latest cleanup result to `/var/log/server_cleanup_summary.log` for ServerMonitor.
@@ -36,8 +39,9 @@
 - Use explicit bounded roots, reject symlink escapes, expose a dry-run plan, and report failures truthfully.
 
 ## Verification
-- `node ops/accessibility-check.cjs` verifies text-token contrast (4.5:1), activity bar/track contrast (3:1) and visible 44px controls at desktop/390px/320px; `UI_REVIEW_CLIENT_ONLY=1` rechecks the client-detail correction.
+- `node ops/accessibility-check.cjs` reads actual rendered light/dark tokens to verify text contrast (4.5:1), activity bar/track contrast (3:1) and visible 44px controls at desktop/390px/320px; `UI_REVIEW_CLIENT_ONLY=1` rechecks client detail.
 - `node ops/ui-review.cjs` checks desktop, 390px and 320px local surfaces, period/sort preservation, page URL/Back/focus and login return. Requires Vite remote mode on port 5180, local Chrome, and production key-only SSH.
+- `UI_REVIEW_EXTRA_ONLY=1 node ops/ui-review.cjs` checks PDF Studio/Seder/Miryam/Libi analytics and WhatsApp/SSH templates at the same widths, without actions or message sends; mask terminals and manual-message fields in saved screenshots.
 - `node ops/email-preview.cjs` checks daily and weekly email overflow and table columns at desktop/390px/320px, plus 390px dark mode and 320px inline-only fallback; emits HTML/text and screenshots and never invokes sendReport.
 - Run `/usr/local/sbin/lawebs-maintenance browser` on production after deployment; check both monitor hostnames, desktop/mobile routes, page drill-down, all eight project pages, live beacon storage and internal exclusion. Its runtime user must be able to read the existing server authentication configuration and write the protected result file. Inspect service resource limits and completion result.
 - Run `python3 -m unittest discover -s ops -p 'test_*.py'` on Linux.

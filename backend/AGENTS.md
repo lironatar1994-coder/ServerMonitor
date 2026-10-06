@@ -19,6 +19,7 @@
 - `browserSignals.js` owns authenticated first-party browser-signal site matching, validation, identifier hashing, path/IP normalization, bot filtering, deduplication, and persistence for navigation, engagement, heatmap, and product-use events.
 - `jewelryAnalytics.js` owns canonical Libi product/collection path aggregation, catalog labels, category inference, and equal-period comparisons.
 - `resourceUsage.js` owns complete PM2 process-tree attribution and cached, bounded production-storage scans.
+- `whatsappRuntime.js` owns the distinction between actual PM2 availability and the persisted WhatsApp connection file. Stopped workers remain offline; hide stale QR codes and return `STOPPED` until the runtime is online.
 - `emailReports.js` owns daily and weekly client comparison reports, Resend delivery, scheduling, and delivery deduplication.
 - `emailReportTemplate.js` owns shared Hebrew HTML/plain-text report presentation and app-specific monitor links.
 - `routes/` owns HTTP route handlers and request/response contracts.
@@ -45,6 +46,7 @@
 - Keep `Pixel Dungeon` and `PDF Generator` in the explicit retired-app purge list so legacy metrics, visitor events, browser signals, ingestion state, and catalog rows cannot reappear after a restart.
 - Register PDF Studio as the static canonical site at `https://vee-app.co.il/pdf-studio/`, with exact `/pdf-studio` log ownership and no PM2 dependency.
 - Register Seder as the canonical app at `https://lawebs.co.il/seder`, tied to PM2 process `seder-live`, exact `lawebs.co.il|www.lawebs.co.il` host ownership, and the `/seder` path.
+- Register `Seder Calendar` as operational-only through `seder-calendar`, alongside `Seder WhatsApp`. The inactive legacy `vee-whatsapp-worker` stays visibly offline with repeated alerts disabled; do not restart a message sender as part of monitoring maintenance.
 - Do not hard-code local-only paths into server monitoring logic unless they are explicitly production paths.
 - Avoid logging secrets or authentication tokens.
 - For web apps, `metrics.visitors` and `metrics.requests` are candidate traffic that was not identified as bot traffic. Never describe this heuristic remainder as confirmed human activity; bot-looking traffic remains visible as `agent: "Bot"`.
@@ -60,6 +62,7 @@
 - Persistent analytics count unique candidates as distinct non-bot-classified IPs in the selected range. Candidate means “not identified as a bot,” not verified human. GeoIP is local and optional via `GEOIP_DB_PATH`; missing data must remain an explicit unknown rather than failing ingestion.
 - A unique candidate must have at least one successful page view. `visitor_events.is_page_view` excludes assets, API calls, robots/sitemaps, failed responses, and non-navigation methods; raw requests remain available for bot and diagnostic totals.
 - Version bot and page-view rules through `monitor_metadata`, and reclassify stored events when the ruleset changes so historical dashboards and emails do not keep stale classifications.
+- Exclude API and Next.js paths at any application prefix, certificate/infrastructure paths, web manifests and malformed inline-image requests from page views; retain their raw requests for diagnostics.
 - Bot classification has three explicit outcomes: `bot`, `likely_bot`, and `candidate`. Only strong signatures or observed hosting-network fingerprints may become `likely_bot`; ordinary cloud/VPN use alone is insufficient.
 - `/browser-signals/site` accepts only the shared server-to-server key, an exact stored website URL, and trusted visitor metadata forwarded by a client-site server bridge. Keep `/browser-signals/libi` only as a temporary compatibility route during migration. Store only site-scoped HMAC hashes of anonymous browser/session IDs, deduplicate by event ID, retain signals for 90 days, and exclude `automation_hint` rows from browser-signal metrics.
 - PDF Studio product analytics may store only allow-listed event types and labels, coarse 12x12 viewport heat cells, named click/visibility zones, counts, durations, and byte totals. Never ingest file names, free text, or document contents; classify the forwarded IP/user agent at ingestion and keep automated rows excluded but auditable.
@@ -67,6 +70,7 @@
 - Browser-signal visitors, sessions, and navigations confirm first-party JavaScript execution, not a human or customer. Keep them separate from IP candidates in APIs, dashboards, and email reports.
 - `/apps/server-stats` reports Linux `MemAvailable`-based RAM use, swap details, root-filesystem usage, load, and top processes. Its `resources` payload attributes descendant RSS and `/proc` Swap to every running PM2 app, enriches database-mapped apps with display names, and ranks memory-heavy processes by their combined footprint.
 - Storage visibility must scan only the production paths declared in `resourceUsage.js`, run `du` without blocking the Node event loop and at idle I/O priority when available, avoid redundant whole-root scans, cache snapshots for 30 minutes, refresh stale data in the background, distinguish dependency, rollback, backup, log, and cache bytes, and return stale cached data when a refresh fails.
+- Include verified maintenance backups, Seder's persistent data/release archives and retained dated Seder/Dfus/Libi deployment copies. Discover copies from one bounded `/root` directory listing with exact name patterns; exclude symlinks and unrelated folders.
 - App runtime health requires both an online PM2 process, when configured, and a successful 2xx/3xx `health_url`.
 - `analytics_enabled` separates visitor websites from operational services. Only enabled apps may ingest events or appear in visitor dashboards; `reporting_enabled` independently limits daily and weekly client emails to canonical client sites.
 - `alerts_enabled` may suppress repeated outage messages only for explicitly known legacy endpoints; their failed status must remain visible.

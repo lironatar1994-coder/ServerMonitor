@@ -80,7 +80,9 @@ class Cleanup(unittest.TestCase):
         (self.base / 'releases').mkdir(parents=True)
         (self.base / 'incoming').mkdir()
         self.patches = [patch.object(m, 'RELEASE_BASES', [self.base]), patch.object(m, 'BUILD_ROOTS', []),
-                        patch.object(m, 'NPX_ROOT', self.root / 'npx'), patch.object(m, 'process_paths', lambda: set())]
+                        patch.object(m, 'NPX_ROOT', self.root / 'npx'), patch.object(m, 'process_paths', lambda: set()),
+                        patch.object(m, 'RETENTION_GROUPS', []), patch.object(m, 'LIVE_COPY_ROOTS', []),
+                        patch.object(m, 'LEGACY_BACKUP_ROOT', self.root / 'legacy')]
         for item in self.patches: item.start()
 
     def tearDown(self):
@@ -141,6 +143,88 @@ class Cleanup(unittest.TestCase):
         with patch.object(m, 'cleanup', cleanup), patch.object(m, 'housekeeping', lambda: []), patch.object(m, 'snapshot', side_effect=RuntimeError('full')):
             with self.assertRaises(RuntimeError): m.daily()
         self.assertEqual(calls, [('cleanup', False)])
+
+class DeploymentRetention(unittest.TestCase):
+    def test_keep_three_and_protect_running_dependencies_and_unknown_names(self):
+        import os, time
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            copies = []
+            for i in range(6):
+                copy = root / f'Seder.previous-20261004-11000{i}-abcdef12'
+                (copy / 'node_modules').mkdir(parents=True)
+                (copy / 'file').write_text('deployment')
+                os.utime(copy, (time.time() - (i+2)*86400,) * 2)
+                copies.append(copy)
+            live = root / 'Seder'
+            live.mkdir()
+            (live / 'node_modules').symlink_to(copies[4] / 'node_modules', target_is_directory=True)
+            unknown = root / 'Seder.previous-important-data'
+            unknown.mkdir()
+            with patch.object(m, 'RETENTION_GROUPS', [(root, r'Seder\.previous-\d{8}-\d{6}-[0-9a-f]{8}', 3)]), patch.object(m, 'LIVE_COPY_ROOTS', [live]), patch.object(m, 'LEGACY_BACKUP_ROOT', root / 'absent'):
+                plan, errors = m.prune_deployment_artifacts({copies[5]}, False)
+                self.assertEqual([x['path'] for x in plan], [str(copies[3])])
+                self.assertTrue(copies[3].exists())
+                applied, errors = m.prune_deployment_artifacts({copies[5]}, True)
+            self.assertFalse(errors)
+            self.assertFalse(copies[3].exists())
+            self.assertTrue(unknown.exists())
+            for i in (0,1,2,4,5): self.assertTrue(copies[i].exists())
+
+    def test_legacy_backup_age_and_symlink_guard(self):
+        import os, time
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            old = root / 'server_monitor_20260916_030004.sqlite.gz'
+            old.write_text('old')
+            os.utime(old, (time.time() - 8*86400,) * 2)
+            recent = root / 'server_monitor_20261007_030004.sqlite.gz'
+            recent.write_text('recent')
+            unknown = root / 'customer.sqlite.gz'
+            unknown.write_text('important')
+            alias = root / 'vee_database_20260916_030004.sqlite.gz'
+            alias.symlink_to(unknown)
+            with patch.object(m, 'RETENTION_GROUPS', []), patch.object(m, 'LIVE_COPY_ROOTS', []), patch.object(m, 'LEGACY_BACKUP_ROOT', root):
+                files, errors = m.prune_deployment_artifacts(set(), True)
+            self.assertEqual([x['path'] for x in files], [str(old)])
+            self.assertFalse(errors)
+            self.assertTrue(recent.exists())
+            self.assertTrue(alias.is_symlink())
+            self.assertTrue(unknown.exists())
+
+    def test_retention_never_runs_before_verified_backup(self):
+        with patch.object(m, 'RELEASE_BASES', []), patch.object(m, 'BUILD_ROOTS', []), patch.object(m, 'NPX_ROOT', Path('/absent')), patch.object(m, 'process_paths', lambda:set()), patch.object(m, 'prune_deployment_artifacts') as prune:
+            m.cleanup(False, releases=False)
+            prune.assert_not_called()
+
+class CatalogHealth(unittest.TestCase):
+    def test_all_catalog_urls_and_workers_are_checked_and_legacy_is_visible(self):
+        with tempfile.TemporaryDirectory() as folder:
+            db_path = Path(folder) / 'catalog.sqlite'
+            with sqlite3.connect(db_path) as db:
+                db.execute('CREATE TABLE apps(name,pm2_name,systemd_unit,url,health_url,alerts_enabled)')
+                db.executemany('INSERT INTO apps VALUES(?,?,?,?,?,?)', [
+                    ('New calendar', 'seder-calendar', None, None, None, 1),
+                    ('Static site', None, None, 'https://example.test/', 'http://127.0.0.1/health', 1),
+                    ('Legacy sender', 'legacy-worker', None, None, None, 0)])
+            with patch.object(m, 'run') as run:
+                errors, warnings = m.catalog_health({'seder-calendar':'online', 'new-unmapped':'online', 'pm2-logrotate':'online'}, db_path)
+            self.assertIn('new-unmapped', errors[0])
+            self.assertEqual(len(errors), 1)
+            self.assertIn('legacy-worker', warnings[0])
+            self.assertEqual(run.call_count, 2)
+            self.assertTrue(all('--max-time' in call.args[0] for call in run.call_args_list))
+
+    def test_failed_runtime_and_url_are_reported(self):
+        with tempfile.TemporaryDirectory() as folder:
+            db_path = Path(folder) / 'catalog.sqlite'
+            with sqlite3.connect(db_path) as db:
+                db.execute('CREATE TABLE apps(name,pm2_name,systemd_unit,url,health_url,alerts_enabled)')
+                db.execute('INSERT INTO apps VALUES(?,?,?,?,?,?)', ('Broken','worker',None,'https://example.test/',None,1))
+            with patch.object(m, 'run', side_effect=RuntimeError('failed')):
+                errors, warnings = m.catalog_health({}, db_path)
+            self.assertEqual(len(errors), 2)
+            self.assertEqual(warnings, [])
 
 class VisitorHealth(unittest.TestCase):
     def test_detects_stalled_ingestion_without_treating_zero_traffic_as_failure(self):

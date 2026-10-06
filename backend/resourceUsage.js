@@ -29,6 +29,9 @@ const PROJECTS = [
 ];
 
 const OTHER_STORAGE = [
+    { id: 'maintenance-backups', name: 'Verified daily backups', path: '/var/lib/lawebs-maintenance/backups', type: 'backup' },
+    { id: 'seder-releases', name: 'Seder release archives', path: '/root/Seder.releases', type: 'backup' },
+    { id: 'seder-data', name: 'Seder persistent data', path: '/var/lib/seder', type: 'data' },
     { id: 'monitor-backups', name: 'Monitor backups', path: '/root/server-monitor-backups', type: 'backup' },
     { id: 'deployment-backups', name: 'Deployment backups', path: '/root/deployment-backups', type: 'backup' },
     { id: 'database-backups', name: 'Database backups', path: '/root/db_backups', type: 'backup' },
@@ -160,12 +163,23 @@ function readDuSizes(targets) {
     });
 }
 
+function deploymentCopyTargets(entries, root = '/root') {
+    return entries.filter((entry) => entry.isDirectory() && !entry.isSymbolicLink()
+        && /^(?:Seder\.previous-\d{8}-\d{6}-[0-9a-f]{8}|(?:LibiDiamonds|DfusReuven)-live\.rollback-\d{8}[A-Za-z0-9-]*)$/.test(entry.name))
+        .map((entry) => ({ id: entry.name, name: entry.name.replace('Seder.previous-', 'Seder rollback '),
+            path: path.posix.join(root, entry.name), type: 'rollback', dependencies: [path.posix.join(root, entry.name, 'node_modules')] }));
+}
+
 async function buildStorageSnapshot(diskTotal) {
-        const projectSizes = await readDuSizes(PROJECTS);
-        const dependencyTargets = PROJECTS.flatMap((project) => project.dependencies.map((dependencyPath) => ({ path: dependencyPath })));
+        // One bounded directory listing includes retained deployment copies in ownership.
+        let copies = [];
+        try { copies = deploymentCopyTargets(await fs.promises.readdir('/root', { withFileTypes: true })); } catch { /* Existing roots still report if /root is unavailable. */ }
+        const targets = [...PROJECTS, ...copies];
+        const projectSizes = await readDuSizes(targets);
+        const dependencyTargets = targets.flatMap((project) => project.dependencies.map((dependencyPath) => ({ path: dependencyPath })));
         const dependencySizes = await readDuSizes(dependencyTargets);
         const otherSizes = await readDuSizes(OTHER_STORAGE);
-        const projects = PROJECTS
+        const projects = targets
             .filter((project) => projectSizes.has(path.normalize(project.path)))
             .map((project) => {
                 const bytes = projectSizes.get(path.normalize(project.path)) || 0;
@@ -261,4 +275,4 @@ async function getResourceUsage({ pm2Processes, apps, totalMemory, diskTotal }) 
     }
 }
 
-module.exports = { buildApplicationUsage, collectProcessTree, getResourceUsage, parseProcessTable };
+module.exports = { buildApplicationUsage, collectProcessTree, deploymentCopyTargets, getResourceUsage, parseProcessTable };

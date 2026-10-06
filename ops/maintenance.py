@@ -26,10 +26,12 @@ DATABASES = {
     'server-monitor': '/root/ServerMonitor/backend/monitor.db',
     'koralevents': '/opt/koralevents/shared/data/koral.sqlite',
     'koralevents2': '/opt/koralevents2/shared/data/koral.sqlite',
+    'seder': '/var/lib/seder/seder.db',
 }
 ASSETS = {
     'maavar-encrypted': Path('/opt/maavar/shared/export'),
     'manager': Path('/root/Manager_Site/data'),
+    'seder-whatsapp-auth': Path('/var/lib/seder/whatsapp-auth'),
     'koral-uploads': Path('/opt/koralevents/shared/uploads'),
     'koral2-uploads': Path('/opt/koralevents2/shared/uploads'),
 }
@@ -39,7 +41,7 @@ URLS = ['https://vee-app.co.il/maavar/api/health', 'https://lawebs.co.il/', 'htt
 EXPECTED_PM2 = {'dfus-reuven', 'dfus-reuven-live', 'libi-diamonds-2',
                 'libi-diamonds-live', 'manager-site', 'on-your-way-backend',
                 'on-your-way-frontend', 'pinhas-ratzon-form', 'seder-live',
-                'seder-whatsapp', 'server-monitor', 'sos-landing-standalone', 'vee-app'}
+                'seder-whatsapp', 'seder-calendar', 'server-monitor', 'sos-landing-standalone', 'vee-app'}
 TRACKER_URLS = ['https://www.libidiamonds.co.il/', 'https://pinhasratzon.co.il/',
                 'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents',
                 'https://lawebs.co.il/Koralevents2', 'https://vee-app.co.il/DfusReuven',
@@ -141,6 +143,24 @@ BUILD_ROOTS = [Path(p) for p in (
     '/root/LibiDiamonds2', '/root/Seder', '/root/PDFStudio')]
 NPX_ROOT = Path('/root/.npm/_npx')
 RELEASE_NAME = re.compile(r'[0-9a-f]{40}(?:-[A-Za-z0-9-]+)?')
+LIVE_COPY_ROOTS = [Path(p) for p in ('/root/Seder', '/root/LibiDiamonds-live', '/root/DfusReuven-live')]
+# Only dated, explicitly named deployment artifacts qualify. Keep three per family,
+# the most recent day, and anything referenced by a process or a current dependency.
+RETENTION_GROUPS = [
+    (Path('/root'), r'Seder\.previous-\d{8}-\d{6}-[0-9a-f]{8}', 3),
+    (Path('/root'), r'(?:LibiDiamonds|DfusReuven)-live\.rollback(?:-\d{8}[A-Za-z0-9-]*)?', 0, 7 * 86400),
+    (Path('/root/Seder.releases'), r'\d{8}-\d{6}-[0-9a-f]{8}', 3),
+    (Path('/root/deployment-backups/seder'), r'\d{8}-\d{6}-[0-9a-f]{8}', 3),
+    (Path('/root/deployment-backups'), r'pinhas-[A-Za-z0-9-]+-\d{8}', 3),
+    (Path('/root/deployment-backups'), r'pdf-studio-\d{8}-\d{6}\.tar\.gz', 3),
+    (Path('/root/server-monitor-backups'), r'(?:release-before|daily-check|compact-ui|strong-ui|concise-ui|tech-ui|email-redesign|fleet-console|growth)-\d{8}(?:-\d{6}|T\d{6}Z)', 3),
+    (Path('/root/server-monitor-backups'), r'visitor-coverage-\d{8}-\d{6}', 3),
+    (Path('/root/server-monitor-backups'), r'growth-coverage-\d{8}-\d{6}', 3),
+    (Path('/root/server-monitor-backups'), r'monitor-\d{8}-\d{6}\.db', 3),
+    (Path('/root/server-monitor-backups'), r'host-log-before-\d{8}-\d{6}\.conf', 3),
+]
+LEGACY_BACKUP_ROOT = Path('/root/db_backups')
+LEGACY_BACKUP_NAME = re.compile(r'(?:vee_database|on_your_way_prod|sos_landing_analytics|server_monitor|manager_site)_\d{8}_\d{6}\.(?:sqlite|tar)\.gz')
 
 def tree_bytes(path):
     if path.is_symlink():
@@ -186,6 +206,39 @@ def remove_candidate(path, boundary, apply):
             path.unlink()
     return item
 
+def prune_deployment_artifacts(processes, apply):
+    candidates, errors = [], []
+    protected = set(processes)
+    for live in LIVE_COPY_ROOTS:
+        for target in (live, live / 'node_modules', live / '.next', live / 'public'):
+            if target.exists():
+                protected.add(target.resolve())
+    for group in RETENTION_GROUPS:
+        boundary, pattern, keep = group[:3]
+        minimum_age = group[3] if len(group) > 3 else 86400
+        if not boundary.is_dir() or boundary.is_symlink():
+            continue
+        versions = sorted((p for p in boundary.iterdir() if re.fullmatch(pattern, p.name)
+                           and not p.is_symlink() and (p.is_file() or p.is_dir())),
+                          key=lambda p: p.stat().st_mtime, reverse=True)
+        for target in versions[keep:]:
+            if target.stat().st_mtime >= time.time() - minimum_age or any(p == target or p.is_relative_to(target) for p in protected):
+                continue
+            try:
+                candidates.append(remove_candidate(target, boundary, apply))
+            except Exception as exc:
+                errors.append(str(exc))
+    # These databases/assets now have verified snapshots in the single backup store.
+    if LEGACY_BACKUP_ROOT.is_dir() and not LEGACY_BACKUP_ROOT.is_symlink():
+        for target in LEGACY_BACKUP_ROOT.iterdir():
+            if (LEGACY_BACKUP_NAME.fullmatch(target.name) and target.is_file() and not target.is_symlink()
+                    and target.stat().st_mtime < time.time() - 7 * 86400):
+                try:
+                    candidates.append(remove_candidate(target, LEGACY_BACKUP_ROOT, apply))
+                except Exception as exc:
+                    errors.append(str(exc))
+    return candidates, errors
+
 def cleanup(apply=False, releases=True):
     candidates, errors = [], []
     # Avoid touching caches/release staging while a production build is running.
@@ -197,6 +250,10 @@ def cleanup(apply=False, releases=True):
         except (OSError, PermissionError):
             pass
     processes = process_paths()
+    if releases:
+        artifacts, artifact_errors = prune_deployment_artifacts(processes, apply)
+        candidates.extend(artifacts)
+        errors.extend(artifact_errors)
     for base in RELEASE_BASES:
         if not base.exists():
             continue
@@ -248,7 +305,11 @@ def housekeeping():
     results = []
     commands = [(['journalctl', '--rotate'], 30), (['journalctl', '--vacuum-time=7d', '--vacuum-size=200M'], 60), (['apt-get', 'clean'], 60)]
     cache = Path('/root/.npm/_cacache')
-    if cache.exists() and tree_bytes(cache) > 128 * 1024**2:
+    disk = shutil.disk_usage('/')
+    fs = os.statvfs('/')
+    available = fs.f_bavail * fs.f_frsize
+    disk_percent = 100 * disk.used / (disk.used + available)
+    if cache.is_dir() and not cache.is_symlink() and (disk_percent >= 70 or tree_bytes(cache) > 128 * 1024**2):
         commands.append((['npm', 'cache', 'clean', '--force'], 120))
     for args, timeout in commands:
         try:
@@ -257,6 +318,31 @@ def housekeeping():
         except Exception as exc:
             results.append({'command': args[:2], 'ok': False, 'error': str(exc)})
     return results
+
+def catalog_health(pm2_status, db_path=Path('/root/ServerMonitor/backend/monitor.db')):
+    """Check the declarative catalog without relying on traffic or copying user data."""
+    errors, warnings = [], []
+    with closing(sqlite3.connect(db_path.as_uri() + '?mode=ro', uri=True)) as db:
+        rows = db.execute('SELECT name,pm2_name,systemd_unit,url,health_url,alerts_enabled FROM apps').fetchall()
+    registered = {row[1] for row in rows if row[1]}
+    for name, status in pm2_status.items():
+        if status == 'online' and name not in registered and name != 'pm2-logrotate':
+            errors.append(f'Running PM2 process missing from monitor catalog: {name}')
+    for name, process, unit, public_url, health_url, alerts in rows:
+        if process and pm2_status.get(process) != 'online':
+            message = f'Catalog runtime not online: {name} ({process})'
+            (warnings if alerts == 0 else errors).append(message)
+        if unit:
+            try:
+                run(['systemctl', 'is-active', unit], timeout=10)
+            except Exception:
+                errors.append(f'Catalog service not active: {name} ({unit})')
+        for url in {public_url, health_url} - {None, ''}:
+            try:
+                run(['curl', '--silent', '--show-error', '--location', '--fail', '--max-time', '10', '--output', '/dev/null', url], timeout=15)
+            except Exception:
+                errors.append(f'Catalog HTTP check failed: {name}')
+    return errors, warnings
 
 def daily():
     before = shutil.disk_usage('/').free
@@ -356,6 +442,9 @@ def health():
         for name in EXPECTED_PM2:
             if statuses.get(name) != 'online':
                 errors.append(f'PM2 process not online: {name}')
+        catalog_errors, catalog_warnings = catalog_health(statuses)
+        errors.extend(catalog_errors)
+        warnings.extend(catalog_warnings)
     except Exception as exc:
         errors.append(f'PM2 inspection: {exc}')
     for url in URLS:

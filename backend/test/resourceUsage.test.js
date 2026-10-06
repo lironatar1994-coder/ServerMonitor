@@ -1,6 +1,21 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildApplicationUsage, collectProcessTree, parseProcessTable } = require('../resourceUsage');
+const { buildApplicationUsage, collectProcessTree, deploymentCopyTargets, parseProcessTable } = require('../resourceUsage');
+
+test('storage ownership includes only named deployment copies and never symlinks', () => {
+    const entry = (name, directory = true, symlink = false) => ({ name, isDirectory: () => directory, isSymbolicLink: () => symlink });
+    const copies = deploymentCopyTargets([
+        entry('Seder.previous-20261004-201533-27b3c297'),
+        entry('DfusReuven-live.rollback-20260914-homepage-v2'),
+        entry('Seder.previous-20261004-110825-d61c6cac', true, true),
+        entry('Seder'), entry('important-data'), entry('Seder.previous-bad-name'),
+        entry('Seder.previous-20261004-201533-27b3c297', false)
+    ]);
+    assert.equal(copies.length, 2);
+    assert.equal(copies[0].type, 'rollback');
+    assert.equal(copies[0].path, '/root/Seder.previous-20261004-201533-27b3c297');
+    assert.deepEqual(copies[0].dependencies, ['/root/Seder.previous-20261004-201533-27b3c297/node_modules']);
+});
 
 const processTable = `
 100 1 0.2 20000 npm start

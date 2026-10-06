@@ -26,15 +26,22 @@ const check = async (name, fn) => { try { await fn(); results.push({ name, ok: t
     const id = apps.find(a => a.name === 'LA webs').id;
     const ready = async route => { await page.goto(base + route); await page.locator('.page h1, .login h1').waitFor(); await page.locator('.skeleton-stack,.page-loader').first().waitFor({ state: 'hidden' }); await page.evaluate(() => document.fonts.ready); assert.equal(await page.locator('.error-state').count(), 0); };
     const routes = ['/visitors', `/visitors/${id}`, '/clients', `/clients/${id}`, '/infrastructure', '/services', `/services/${id}`, '/settings'];
+    if (process.env.UI_REVIEW_EXTRA_ONLY) {
+      routes.splice(0, routes.length, ...apps.filter(app => ['PDF Studio','Seder','Miryam Zelig','Libi Diamonds','SSH Security','WhatsApp Worker'].includes(app.name))
+        .map(app => `/${app.analytics_enabled ? 'visitors' : 'services'}/${app.id}`));
+    }
     if (process.env.UI_REVIEW_FLOWS_ONLY) routes.splice(0);
     for (const width of [1440,390,320]) {
       await page.setViewportSize({ width, height: 960 });
       for (const route of routes) await check(`${width}${route}`, async () => {
         await ready(route);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'horizontal overflow: ' + JSON.stringify(await page.locator('body *').evaluateAll(els => els.filter(el => el.getBoundingClientRect().right > innerWidth + 1 || el.getBoundingClientRect().left < -1).slice(0,8).map(el => ({tag:el.tagName,cls:el.className,width:el.getBoundingClientRect().width})))));
-        await page.screenshot({ path: path.join(out, `${width}-${route.slice(1).replaceAll('/', '-')}.png`), fullPage: true });
+        await page.waitForLoadState('networkidle');
+        await page.screenshot({ path: path.join(out, `${width}-${route.slice(1).replaceAll('/', '-')}.png`), fullPage: true,
+          mask: [page.locator('.terminal-window, .whatsapp-test input, .whatsapp-test textarea')] });
       });
     }
+    if (process.env.UI_REVIEW_EXTRA_ONLY) { process.exitCode = results.some(r => !r.ok) ? 1 : 0; return; }
     await check('period-sort-search', async () => {
       await ready('/visitors'); await page.getByRole('button', { name: '7 ימים', exact: true }).click();
       await page.waitForResponse(r => r.url().includes('visitor-analytics/overview'));
@@ -120,7 +127,7 @@ const check = async (name, fn) => { try { await fn(); results.push({ name, ok: t
       await page.locator('.page-insights').waitFor(); assert.equal(new URL(page.url()).searchParams.get('page'), '/');
     });
     await check('browser-runtime', async () => assert.deepEqual(errors, []));
-  } finally { await browser.close(); fs.writeFileSync(path.join(out, 'ui-results.json'), JSON.stringify(results,null,2)); }
+  } finally { await browser.close(); fs.writeFileSync(path.join(out, process.env.UI_REVIEW_EXTRA_ONLY ? 'ui-extra-results.json' : 'ui-results.json'), JSON.stringify(results,null,2)); }
   process.exitCode = results.some(r => !r.ok) ? 1 : 0;
 })().catch(e => { console.error(e.message); process.exitCode = 1; });
 

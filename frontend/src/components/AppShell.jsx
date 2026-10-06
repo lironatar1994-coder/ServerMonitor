@@ -55,15 +55,22 @@ const AppShell = () => {
         </div>
 
         <nav className="rail-nav">
-          {navigation.map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} title={label} className={({ isActive }) => `rail-link ${isActive ? 'is-active' : ''}`}>
+          <span className="rail-section">מעקב</span>
+          {navigation.slice(0, 2).map(({ to, label, icon: Icon }) => (
+            <NavLink key={to} to={to} title={label} aria-label={label} className={({ isActive }) => `rail-link ${isActive ? 'is-active' : ''}`}>
+              <Icon aria-hidden="true" /><span>{label}</span>
+            </NavLink>
+          ))}
+          <span className="rail-section rail-section--operations">תפעול</span>
+          {navigation.slice(2).map(({ to, label, icon: Icon }) => (
+            <NavLink key={to} to={to} title={label} aria-label={label} className={({ isActive }) => `rail-link ${isActive ? 'is-active' : ''}`}>
               <Icon aria-hidden="true" /><span>{label}</span>
             </NavLink>
           ))}
         </nav>
 
         <div className="rail-foot">
-          <button type="button" className="rail-link rail-logout" onClick={handleLogout} title="התנתקות">
+          <button type="button" className="rail-link rail-logout" onClick={handleLogout} title="התנתקות" aria-label="התנתקות">
             <LogOut aria-hidden="true" /><span>התנתקות</span>
           </button>
         </div>

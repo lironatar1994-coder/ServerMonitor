@@ -61,12 +61,12 @@
   display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, 5rem) 2rem;
   align-items: center; gap: .6rem; padding: .8rem .65rem;
 }
-.growth-client-head { background: #172126; color: #F0F5F7; font-size: .75rem; }
+.growth-client-head { background: var(--paper-deep); color: var(--ink-muted); font-size: .75rem; border-bottom: 1px solid var(--line); }
 .growth-client-head > span:not(:first-child) { text-align: center; }
 .growth-client-table .growth-client dl { display: contents; }
 .growth-client-table .growth-client dl > div { text-align: center; }
-.growth-client-table .growth-client:nth-child(even) { background: var(--paper); }
-.growth-client-table .growth-client:hover { background: #E6F1F3; }
+.growth-client-table .growth-client:nth-child(even) { background: transparent; }
+.growth-client-table .growth-client:hover { background: var(--row-hover); }
 .growth-client-table .growth-client strong { font-size: .87rem; }
 .growth-client-table .growth-client dd { font-size: 1rem; }
 .growth-row-state { display: grid; place-items: center; }

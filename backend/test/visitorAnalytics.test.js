@@ -299,6 +299,20 @@ test('separates page views from assets, API calls, errors, and non-navigation me
     assert.equal(isPageView({ method: 'POST', path: '/checkout', status: 200 }), false);
 });
 
+test('excludes nested application APIs, framework images and infrastructure paths from pages', () => {
+    const diagnosticPaths = [
+        '/PizzaManager/api/public/shops/oven-demo',
+        '/seder/_next/image',
+        '/.well-known/acme-challenge',
+        '/pdf-studio/manifest.webmanifest',
+        '/dataimage/svg+xml;base64,PHN2Zw',
+        '/miryam/data:image/svg+xml;base64,PHN2Zw'
+    ];
+    diagnosticPaths.forEach(path => assert.equal(isPageView({ method: 'GET', path, status: 200 }), false, path));
+    ['/PizzaManager/oven-demo', '/seder', '/pdf-studio/', '/product/ring', '/jewelry/rings'].forEach(path =>
+        assert.equal(isPageView({ method: 'GET', path, status: 200 }), true, path));
+});
+
 test('backfills, classifies, deduplicates, and incrementally ingests', () => {
     const logPath = path.join(tempDir, 'access.log');
     fs.writeFileSync(logPath, `${withRecentTimestamp(humanLine, 3)}\n${withRecentTimestamp(botLine, 2)}\n`, 'utf8');
@@ -335,6 +349,10 @@ test('reclassifies stored automation and page views when rules change', () => {
         app_id, source_file_id, source_offset, occurred_at, ip, method, path,
         status, user_agent, is_bot, bot_reason, is_page_view
     ) VALUES (?, 'preserve-bot', 1002, '2026-07-12T10:01:00.000Z', '8.8.4.4', 'GET', '/', 200, 'Mozilla/5.0', 1, 'attack signature', 1)`).run(app.id);
+    db.prepare(`INSERT INTO visitor_events (
+        app_id, source_file_id, source_offset, occurred_at, ip, method, path,
+        status, user_agent, is_bot, is_page_view
+    ) VALUES (?, 'stale-page-rule', 1003, '2026-07-12T10:02:00.000Z', '8.8.4.4', 'GET', '/seder/_next/image', 200, 'Mozilla/5.0', 0, 1)`).run(app.id);
     const result = refreshStoredEventClassifications();
     const event = db.prepare("SELECT is_bot, bot_reason, bot_classification, bot_confidence, is_page_view FROM visitor_events WHERE source_file_id = 'reclassify'").get();
     assert.ok(result.scanned > 0);
@@ -345,6 +363,7 @@ test('reclassifies stored automation and page views when rules change', () => {
     assert.equal(event.is_page_view, 1);
     const preserved = db.prepare("SELECT is_bot, bot_reason, bot_classification FROM visitor_events WHERE source_file_id = 'preserve-bot'").get();
     assert.deepEqual(preserved, { is_bot: 1, bot_reason: 'attack signature', bot_classification: 'bot' });
+    assert.equal(db.prepare("SELECT is_page_view FROM visitor_events WHERE source_file_id = 'stale-page-rule'").get().is_page_view, 0);
 });
 
 test('ranks Libi products and collections from canonical candidate page views', () => {
