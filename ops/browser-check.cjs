@@ -128,6 +128,33 @@ let browser;
     assert.equal(recorded.length, after, 'Internal browser emitted analytics');
   });
   await check('browser-runtime-and-assets', async () => assert.deepEqual(failures, []));
+  // End the opt-out scenario, then release the page before checking the fleet.
+  await page.goto('https://lawebs.co.il/?monitor_internal=0', { waitUntil: 'domcontentloaded', timeout: 8000 });
+  await page.close();
+  const signalPage = await context.newPage();
+  await signalPage.route('**/*', route => ['image', 'font', 'media'].includes(route.request().resourceType()) ? route.abort() : route.continue());
+  const signalDeadline = Math.min(Date.now() + 55000, result.checked + 160000);
+  const sites = db.prepare("SELECT id,name,url FROM apps WHERE analytics_enabled=1 AND reporting_enabled=1 AND url IS NOT NULL AND trim(url)<>'' ORDER BY id").all();
+  for (const site of sites) await check(`site-browser-signal-${site.name}`, async () => {
+    const remaining = signalDeadline - Date.now();
+    assert.ok(remaining > 0, 'Canonical signal check exceeded its runtime budget');
+    const receipt = signalPage.waitForResponse(response => {
+      if (response.request().method() !== 'POST' || !/(?:visit(?:or)?|browser)[-_]signal/.test(response.url())) return false;
+      try {
+        const body = response.request().postDataJSON();
+        return Boolean(body?.event_id && !body.event_type && (!body.kind || body.kind === 'navigation'));
+      } catch { return false; }
+    }, { timeout: Math.min(6000, remaining) }).catch(error => error);
+    const response = await signalPage.goto(site.url, { waitUntil: 'domcontentloaded', timeout: Math.min(8000, remaining) });
+    assert.ok(response.ok(), 'Canonical website did not return a successful response');
+    const received = await receipt;
+    if (received instanceof Error) throw received;
+    assert.ok(received.ok(), `Browser signal returned HTTP ${received.status()}`);
+    const eventId = received.request().postDataJSON().event_id;
+    assert.equal(db.prepare('SELECT automation_hint FROM browser_signals WHERE app_id=? AND event_id=?').get(site.id, eventId)?.automation_hint, 1,
+      'Canonical browser signal missing or counted as visitor activity');
+  });
+  await signalPage.close();
   await context.close();
 })().catch(error => { result.errors.push(`Browser check could not finish: ${error.message.slice(0, 350)}`); }).finally(async () => {
   if (browser) await browser.close();

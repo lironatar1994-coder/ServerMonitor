@@ -68,7 +68,7 @@ const check = async (name, fn) => { try { await fn(); results.push({ name, ok: t
       await page.goto(shared); await page.locator('.page-insights h3').first().waitFor();
       assert.equal(new URL(page.url()).searchParams.get('from'), query.get('from'));
     });
-    for (const width of [1440,390]) await check(`page-panel-${width}`, async () => {
+    for (const width of [1440,390,320]) await check(`page-panel-${width}`, async () => {
       await page.setViewportSize({ width, height: 960 }); await ready(`/visitors/${id}${dates}`);
       const row = page.locator('.ranked-row__button').first(); const selected = await row.getAttribute('data-page-path');
       await row.focus(); await page.keyboard.press('Enter'); await page.locator('.page-insights h3').first().waitFor();

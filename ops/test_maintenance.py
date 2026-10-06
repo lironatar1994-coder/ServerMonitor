@@ -151,7 +151,7 @@ class DeploymentRetention(unittest.TestCase):
             root = Path(folder)
             copies = []
             for i in range(6):
-                copy = root / f'Seder.previous-20261004-11000{i}-abcdef12'
+                copy = root / f'Seder.previous-20261004-11000{5-i}-abcdef12'
                 (copy / 'node_modules').mkdir(parents=True)
                 (copy / 'file').write_text('deployment')
                 os.utime(copy, (time.time() - (i+2)*86400,) * 2)
@@ -170,6 +170,26 @@ class DeploymentRetention(unittest.TestCase):
             self.assertFalse(copies[3].exists())
             self.assertTrue(unknown.exists())
             for i in (0,1,2,4,5): self.assertTrue(copies[i].exists())
+
+    def test_release_dates_control_retention_when_renames_preserve_old_mtimes(self):
+        import os, time
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            copies = []
+            for i in range(4):
+                copy = root / f'Seder.previous-2026090{i+1}-110000-abcdef12'
+                copy.mkdir()
+                os.utime(copy, (time.time() - (i+2)*86400,) * 2)
+                copies.append(copy)
+            invalid = root / 'Seder.previous-20261999-000000-abcdef12'
+            invalid.mkdir()
+            os.utime(invalid, (time.time() - 20*86400,) * 2)
+            with patch.object(m, 'RETENTION_GROUPS', [(root, r'Seder\.previous-\d{8}-\d{6}-[0-9a-f]{8}', 3)]), patch.object(m, 'LIVE_COPY_ROOTS', []), patch.object(m, 'LEGACY_BACKUP_ROOT', root / 'absent'):
+                files, errors = m.prune_deployment_artifacts(set(), True)
+            self.assertEqual([x['path'] for x in files], [str(copies[0])])
+            self.assertFalse(errors)
+            self.assertTrue(invalid.exists())
+            for copy in copies[1:]: self.assertTrue(copy.exists())
 
     def test_legacy_backup_age_and_symlink_guard(self):
         import os, time

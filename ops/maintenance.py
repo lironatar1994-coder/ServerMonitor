@@ -206,6 +206,16 @@ def remove_candidate(path, boundary, apply):
             path.unlink()
     return item
 
+def deployment_order(path):
+    # Renaming a checkout preserves its old directory mtime; use the release name.
+    stamp = re.search(r'(?<!\d)(\d{8})(?:[-T](\d{6}))?(?:Z)?', path.name)
+    if not stamp:
+        return path.stat().st_mtime
+    try:
+        return dt.datetime.strptime(stamp[1] + (stamp[2] or '000000'), '%Y%m%d%H%M%S').replace(tzinfo=dt.timezone.utc).timestamp()
+    except ValueError:
+        return None
+
 def prune_deployment_artifacts(processes, apply):
     candidates, errors = [], []
     protected = set(processes)
@@ -219,8 +229,8 @@ def prune_deployment_artifacts(processes, apply):
         if not boundary.is_dir() or boundary.is_symlink():
             continue
         versions = sorted((p for p in boundary.iterdir() if re.fullmatch(pattern, p.name)
-                           and not p.is_symlink() and (p.is_file() or p.is_dir())),
-                          key=lambda p: p.stat().st_mtime, reverse=True)
+                           and not p.is_symlink() and (p.is_file() or p.is_dir()) and deployment_order(p) is not None),
+                          key=lambda p: (deployment_order(p), p.stat().st_mtime), reverse=True)
         for target in versions[keep:]:
             if target.stat().st_mtime >= time.time() - minimum_age or any(p == target or p.is_relative_to(target) for p in protected):
                 continue
