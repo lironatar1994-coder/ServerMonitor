@@ -9,7 +9,12 @@ const base = process.env.UI_REVIEW_BASE || 'http://127.0.0.1:5180/serve-monitor'
 const mint = "process.chdir('/root/ServerMonitor/backend');require(process.cwd()+'/node_modules/dotenv').config({quiet:true});const db=require(process.cwd()+'/database');process.stdout.write(require(process.cwd()+'/routes/auth').createSessionToken(db.prepare('SELECT id,username FROM users WHERE disabled=0 ORDER BY id LIMIT 1').get(),'5m'));db.close();";
 let token;
 try { token = execFileSync('ssh', ['-o', 'BatchMode=yes', 'root@vee-app.co.il', 'node -'], { input: mint, encoding: 'utf8' }).trim(); } catch { throw new Error('Could not create a short-lived review session'); }
-const luminance = hex => hex.match(/[a-f0-9]{2}/ig).map(h => parseInt(h,16)/255).map(c => c <= .04045 ? c/12.92 : ((c+.055)/1.055)**2.4).reduce((v,c,i) => v+c*[.2126,.7152,.0722][i],0);
+const luminance = hex => {
+  // Production CSS minification shortens #FFFFFF to #fff; both have identical luminance.
+  if (/^[a-f0-9]{3}$/i.test(hex)) hex = [...hex].map(c => c + c).join('');
+  assert.match(hex, /^[a-f0-9]{6}$/i, 'Expected an opaque hex color token');
+  return hex.match(/[a-f0-9]{2}/ig).map(h => parseInt(h,16)/255).map(c => c <= .04045 ? c/12.92 : ((c+.055)/1.055)**2.4).reduce((v,c,i) => v+c*[.2126,.7152,.0722][i],0);
+};
 const contrast = (a,b) => (Math.max(luminance(a),luminance(b))+.05)/(Math.min(luminance(a),luminance(b))+.05);
 (async () => {
   const results = [];
