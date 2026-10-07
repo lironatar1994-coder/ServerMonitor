@@ -83,7 +83,7 @@ const screens = specs.map(([file, title, category, viewport]) => {
   const note = category === 'workspace' ? 'סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.' : file.includes('recovery') ? 'סביבת בדיקה סינתטית. ערכי השחזור מוסתרים.' : undefined;
   return { file, title, category, viewport, path: `screenshots/${file}`, alt: `${title} — הממשק שיושם עם נתוני הדגמה סינתטיים`, ...(note ? { note } : {}), available, ...(available ? metadata(destination) : {}) };
 });
-screens.unshift({ file: 'vault-desktop.prompted.png', title: 'הכיוון המאושר', category: 'reference', viewport: 'desktop', path: 'vault-desktop.prompted.png', alt: 'תמונת קונספט: כספת בעברית עם רשימת פריטים ופאנל פרטים לצד ניווט כהה', note: 'מבנה רשימה ופרטים, פורצלן, סלייט ופטרול. הטקסט והסמלים נבנים בממשק עצמו; התמונה אינה עדות לפעולה או לאבטחה.', available: true, ...metadata(embeddedPng) });
+screens.unshift({ file: 'vault-desktop.prompted.png', title: 'הקונספט הראשוני שאושר', category: 'reference', viewport: 'desktop', path: 'vault-desktop.prompted.png', alt: 'קונספט ראשוני שאושר: כספת בעברית עם רשימת פריטים ופאנל פרטים לצד ניווט כהה', note: 'מבנה הרשימה והפרטים שאושר בתחילת העבודה. צילומי המימוש מציגים את הפלטה המעודכנת; הקונספט המקורי נשמר ללא שינוי ואינו עדות לפעולה או לאבטחה.', available: true, ...metadata(embeddedPng) });
 const data = { schema: 1, final: screens.filter(s => s.category !== 'reference').every(s => s.available), synthetic: true, prompt, screens };
 fs.writeFileSync(path.join(dir, 'gallery-data.js'), `window.MOCK_GALLERY = ${JSON.stringify(data, null, 2)};\n`);
 fs.writeFileSync(path.join(dir, 'gallery-manifest.json'), JSON.stringify(data, null, 2) + '\n');

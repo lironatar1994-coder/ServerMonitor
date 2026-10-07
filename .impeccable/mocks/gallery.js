@@ -13,7 +13,7 @@
   };
   function view(screen) {
     document.querySelector('#viewer-title').textContent = screen.title;
-    document.querySelector('#viewer-meta').textContent = screen.category === 'reference' ? 'תמונת קונספט · אינה צילום של המערכת' : 'הממשק שיושם · נתונים סינתטיים';
+    document.querySelector('#viewer-meta').textContent = screen.category === 'reference' ? 'קונספט ראשוני שאושר · נשמר ללא שינוי' : 'הממשק שיושם · נתונים סינתטיים';
     const img = document.querySelector('#viewer-image');
     img.src = screen.path;
     img.alt = screen.alt;
@@ -39,7 +39,7 @@
     }
     article.append(preview);
     const info = element('div', 'card-info');
-    info.append(element('span', 'kind', screen.category === 'reference' ? 'תמונת קונספט · כיוון מאושר' : `הממשק שיושם · ${types[screen.viewport]}`));
+    info.append(element('span', 'kind', screen.category === 'reference' ? 'קונספט ראשוני · מבנה מאושר' : `הממשק שיושם · ${types[screen.viewport]}`));
     const titleRow = element('div', 'card-title-row');
     titleRow.append(element('h2', '', screen.title));
     if (screen.width) titleRow.append(element('span', 'card-dimensions', `${screen.width} × ${screen.height}`));

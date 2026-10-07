@@ -6,12 +6,12 @@
   "screens": [
     {
       "file": "vault-desktop.prompted.png",
-      "title": "הכיוון המאושר",
+      "title": "הקונספט הראשוני שאושר",
       "category": "reference",
       "viewport": "desktop",
       "path": "vault-desktop.prompted.png",
-      "alt": "תמונת קונספט: כספת בעברית עם רשימת פריטים ופאנל פרטים לצד ניווט כהה",
-      "note": "מבנה רשימה ופרטים, פורצלן, סלייט ופטרול. הטקסט והסמלים נבנים בממשק עצמו; התמונה אינה עדות לפעולה או לאבטחה.",
+      "alt": "קונספט ראשוני שאושר: כספת בעברית עם רשימת פריטים ופאנל פרטים לצד ניווט כהה",
+      "note": "מבנה הרשימה והפרטים שאושר בתחילת העבודה. צילומי המימוש מציגים את הפלטה המעודכנת; הקונספט המקורי נשמר ללא שינוי ואינו עדות לפעולה או לאבטחה.",
       "available": true,
       "width": 1536,
       "height": 1024,
@@ -28,8 +28,8 @@
       "available": true,
       "width": 1440,
       "height": 1000,
-      "bytes": 93541,
-      "sha256": "adc67e38b05c6c2c1ec454163906d834dd1d900fba2f7744eebd1d4e020373a2"
+      "bytes": 95485,
+      "sha256": "189effa03f0a0d7399e0e22a7475ab56214c7a8d7ffac0fa2419e255b7fac9e8"
     },
     {
       "file": "vault-detail-1536.png",
@@ -41,8 +41,8 @@
       "available": true,
       "width": 1536,
       "height": 1024,
-      "bytes": 93811,
-      "sha256": "bbe8834ae0767945f61e6a71cc0ecc734062d70a63068394c0119500939862d3"
+      "bytes": 95903,
+      "sha256": "4611b1fac2f45d8b6522540a25160db4ee808ab72c03776d5a5e453bd5d868a0"
     },
     {
       "file": "vault-list-390.png",
@@ -54,8 +54,8 @@
       "available": true,
       "width": 390,
       "height": 1120,
-      "bytes": 51770,
-      "sha256": "94999a32edc7f98755b2130fb495035d0faec8366b8e67c80839405c60231b12"
+      "bytes": 52004,
+      "sha256": "e2610aa9f2d7e08b8f67ef59fe83ba2154c4b196b7959f59a8cac1e361982d10"
     },
     {
       "file": "vault-detail-390.png",
@@ -67,8 +67,8 @@
       "available": true,
       "width": 390,
       "height": 1120,
-      "bytes": 37633,
-      "sha256": "1a94870b28694fcf2e8382aaf17fb6a76f7223a650efcfeb484e4b4de6fd0cc8"
+      "bytes": 38261,
+      "sha256": "55c6972153c9e87ca89248e2ff233f9f083019edfa80fb2c0d6d4a311104e555"
     },
     {
       "file": "vault-edit-1440.png",
@@ -80,8 +80,8 @@
       "available": true,
       "width": 1440,
       "height": 1000,
-      "bytes": 95008,
-      "sha256": "3f1dd9099527363ed017e4a1a6e9a820ec53e0c402fb945ebcf437f45e286fa9"
+      "bytes": 96735,
+      "sha256": "fe0d7e7aab0e0706e2769046cb006aa2c1419ebc11bcfae505da88f9e136d528"
     },
     {
       "file": "vault-edit-390.png",
@@ -92,9 +92,9 @@
       "alt": "כספת — עריכת פריט בנייד — הממשק שיושם עם נתוני הדגמה סינתטיים",
       "available": true,
       "width": 390,
-      "height": 1165,
-      "bytes": 41465,
-      "sha256": "9693232b44da425282b224345ff4ee94a8f53c629fbae60dae94ff1be89559d5"
+      "height": 1166,
+      "bytes": 42051,
+      "sha256": "3e53d68e977bb91cd7966c09df4bc20395bc4ea26b3fd5eb3e6021298d42326a"
     },
     {
       "file": "vault-team-1440.png",
@@ -106,8 +106,8 @@
       "available": true,
       "width": 1440,
       "height": 1000,
-      "bytes": 45534,
-      "sha256": "4cb86f23165f16aea8d58e1b4cc2fb2c08c7fd8ea96d4e984bdb0d84d1ce6c8d"
+      "bytes": 47664,
+      "sha256": "0f4c2605d5b1981d72a42cd74a1fc46f2275c3bfe9d1f10f4b480f8afa999bc7"
     },
     {
       "file": "vault-locked-1440.png",
@@ -119,8 +119,8 @@
       "available": true,
       "width": 1440,
       "height": 1000,
-      "bytes": 41465,
-      "sha256": "959a33c637e0283d7e768452f1161607f43deeb194497dec871b8248c22d4665"
+      "bytes": 43766,
+      "sha256": "cca4068ee44f3aea825b044513eb9e937340ded6b25b07af656f5bb1abf8151f"
     },
     {
       "file": "password-upgrade-1440.png",
@@ -132,8 +132,8 @@
       "available": true,
       "width": 1440,
       "height": 1000,
-      "bytes": 19740,
-      "sha256": "fd707c45a1e2d4b195914caecbd0de21d17f6d0c5d098fa065bfffcdc622a781"
+      "bytes": 19711,
+      "sha256": "9fbc6ee7689b95e31c255970cd96d25a99b28aa07b357a27e05a59a955270fdd"
     },
     {
       "file": "login-1440.png",
@@ -145,8 +145,8 @@
       "available": true,
       "width": 1440,
       "height": 1000,
-      "bytes": 17973,
-      "sha256": "9454bedcf811f16ab1e296db88ace3a84458462184efd5f35bd49b6493c47445"
+      "bytes": 17920,
+      "sha256": "c23c5671a639c101fdcd53ee17dac580933f21594b9c0a99c30a9bbaa7b585e0"
     },
     {
       "file": "password-upgrade-320.png",
@@ -158,8 +158,8 @@
       "available": true,
       "width": 320,
       "height": 1000,
-      "bytes": 15316,
-      "sha256": "d6226c3650ee23ae05c6f6474c1b67c1138d84d711823b7d1ecd67f3c77caac6"
+      "bytes": 15453,
+      "sha256": "161299148599124deaa39173f5300a4ae980d4cd762803cf1f3a67bdddb91cd5"
     },
     {
       "file": "mfa-1440.png",
@@ -171,8 +171,8 @@
       "available": true,
       "width": 1440,
       "height": 1000,
-      "bytes": 14891,
-      "sha256": "3c03d6f86f481bd89078e58ef9d474bb5fd49c9ac9bab3f6c1d08d51baf57ef2"
+      "bytes": 14861,
+      "sha256": "14d9b33f08f365ab8d6f252e34ece0b60d0487105df75c45635cba5faff95331"
     },
     {
       "file": "vault-recovery-1440.png",
@@ -185,8 +185,8 @@
       "available": true,
       "width": 1440,
       "height": 1000,
-      "bytes": 41770,
-      "sha256": "aee2524fcd491bacd975694de97921d66b9f61b996f56e9209b067d4b96aab35"
+      "bytes": 44483,
+      "sha256": "0a4f896fd6bb7137a95eae33a21caa5d0da606e3308602e532375b41ba4b8bc2"
     },
     {
       "file": "vault-edit-footer-390.png",
@@ -198,8 +198,8 @@
       "available": true,
       "width": 390,
       "height": 1000,
-      "bytes": 35679,
-      "sha256": "e2223bb80135544400faf3123611a00c036fd4f874c9b3d58e4711fabb774771"
+      "bytes": 36280,
+      "sha256": "652a68e113b5c9561206314443a9c961c7cf54234667beb4bdcbea1090bef3bb"
     },
     {
       "file": "visitors-1440.png",
@@ -211,9 +211,9 @@
       "note": "סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.",
       "available": true,
       "width": 1440,
-      "height": 2195,
-      "bytes": 154931,
-      "sha256": "b1cef22161262ebbd0f4463399494513b792354621880c74e69a99d91d06ae3c"
+      "height": 2295,
+      "bytes": 192580,
+      "sha256": "166fb169e1174ab899a22095bfceb6838fb4e0974ec28453efb3a47e2f3610b4"
     },
     {
       "file": "clients-1440.png",
@@ -225,9 +225,9 @@
       "note": "סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.",
       "available": true,
       "width": 1440,
-      "height": 1097,
-      "bytes": 65576,
-      "sha256": "a680b649406a7c8d1743ad8760e38956f62c1ee2690e2a417a7a6596e07275a3"
+      "height": 1077,
+      "bytes": 64811,
+      "sha256": "51549258481e9b2957c668d534d11d0d1d31fc72764017383ea0207b71544a44"
     },
     {
       "file": "infrastructure-1440.png",
@@ -239,9 +239,9 @@
       "note": "סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.",
       "available": true,
       "width": 1440,
-      "height": 2823,
-      "bytes": 209032,
-      "sha256": "802ee603e80453e67196e411906ad1a197bdfb09f6cdd8a8851b8057a1da6dc7"
+      "height": 2767,
+      "bytes": 181514,
+      "sha256": "1b30c795def95ca874e5ecf2dd58c33cc01db1650b40b28531882e9c9aaf2a62"
     },
     {
       "file": "services-1440.png",
@@ -253,9 +253,9 @@
       "note": "סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.",
       "available": true,
       "width": 1440,
-      "height": 2172,
-      "bytes": 226926,
-      "sha256": "50413c2ce16c191031c946611cf1cd19700814120d60422e20d63d13a9c1b547"
+      "height": 2241,
+      "bytes": 226063,
+      "sha256": "66afa514154a969205ef95341f4319862d5b367e4b388f13040479e7fa69e574"
     },
     {
       "file": "settings-1440.png",
@@ -268,8 +268,8 @@
       "available": true,
       "width": 1440,
       "height": 1000,
-      "bytes": 36917,
-      "sha256": "9d671b116f0d51307a700b6931e051f2f1d820b7bbd7f92e59b6d897f45828c7"
+      "bytes": 39154,
+      "sha256": "3813be7ba01e4c4fcfd88175cbe81257b80845619847543f304794872355227d"
     },
     {
       "file": "visitors-390.png",
@@ -281,9 +281,9 @@
       "note": "סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.",
       "available": true,
       "width": 390,
-      "height": 3039,
-      "bytes": 137551,
-      "sha256": "137bed00e3dc06908ded2e25e96cac25f2f7b41107c24f702dc613d2f86e4eb0"
+      "height": 3444,
+      "bytes": 162348,
+      "sha256": "e3a643229135b34d0029709b9161e12d2ec0949dbc31b8e047e26c834c9e3fa6"
     },
     {
       "file": "clients-390.png",
@@ -295,9 +295,9 @@
       "note": "סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.",
       "available": true,
       "width": 390,
-      "height": 1307,
-      "bytes": 46828,
-      "sha256": "c9fc52ca6ab9d9e15352598c8cc24fce5419c201611667d6d332f816f7ba8c21"
+      "height": 1319,
+      "bytes": 47356,
+      "sha256": "3cd4907ff36baf34cd97622298dbf2d91b78d738b2737f613a16dca90e797a1c"
     },
     {
       "file": "infrastructure-390.png",
@@ -309,9 +309,9 @@
       "note": "סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.",
       "available": true,
       "width": 390,
-      "height": 4208,
-      "bytes": 202555,
-      "sha256": "09d31288e6c65b0a45f4569e5c2d07b367306638eaa023529ae24d48b6ec615c"
+      "height": 3362,
+      "bytes": 157769,
+      "sha256": "ce396bf34c5a6d4b5bbc7a70704e8c015846c31a04803b01510981830564794c"
     },
     {
       "file": "services-390.png",
@@ -323,9 +323,9 @@
       "note": "סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.",
       "available": true,
       "width": 390,
-      "height": 2362,
-      "bytes": 152324,
-      "sha256": "bfb621dd74dd46950272f6c33118c4d87ae367ebc9874571159a8c1a5bc69083"
+      "height": 2441,
+      "bytes": 150140,
+      "sha256": "be1532d93ee229e32b14ed938504f4a769f333f00d1aca44fc9fc1d4ed7589b9"
     },
     {
       "file": "settings-390.png",
@@ -338,8 +338,8 @@
       "available": true,
       "width": 390,
       "height": 1120,
-      "bytes": 24753,
-      "sha256": "dbac01bb9ecdf48b732f420864d34170e7301c55d664226e83f30cb7f28d24bf"
+      "bytes": 24789,
+      "sha256": "64900e92e3b6d34806e23f915cd29dbb52f4393c2a79da4aa3b5ed0485d23af7"
     },
     {
       "file": "vault-list-768.png",
@@ -351,8 +351,8 @@
       "available": true,
       "width": 768,
       "height": 1120,
-      "bytes": 56288,
-      "sha256": "108f8764ae0a1a6b836bbad572ef183063ad6367a0a8f49a90e7cffaf2f27820"
+      "bytes": 56529,
+      "sha256": "67aae9f74b82560f306504ac0ea9cf4793843010fca34087d2a68cb40a214e63"
     },
     {
       "file": "vault-detail-768.png",
@@ -364,8 +364,8 @@
       "available": true,
       "width": 768,
       "height": 1120,
-      "bytes": 40134,
-      "sha256": "e3e8416b69c9d62db7d13d3e95b00515641ffb033b1a78cb65489be28cd622e1"
+      "bytes": 40731,
+      "sha256": "af63bc2ffe1ca971a043af0a47524ab56703a677d802f15a8a17335b5fb169b3"
     },
     {
       "file": "vault-list-320.png",
@@ -377,8 +377,8 @@
       "available": true,
       "width": 320,
       "height": 1120,
-      "bytes": 49594,
-      "sha256": "e40a37d81e29d35e9e9d7d7cbab7b4352a4e5314c1a2cb1e84e8967f5700172f"
+      "bytes": 49718,
+      "sha256": "f545ca6b0d0c22c0285ddded83243a1f50dc996d24d1e0c5e58237cda4837817"
     },
     {
       "file": "vault-detail-320.png",
@@ -390,8 +390,8 @@
       "available": true,
       "width": 320,
       "height": 1120,
-      "bytes": 36891,
-      "sha256": "3c7dd78f28d78d4e818d9f50061d5eed07c1e1eb6d27cb8bbc0c057d536f962a"
+      "bytes": 37456,
+      "sha256": "57fdc575fcfdeef3044dcd57f336a31ca823da913d35d2ee3fcce9165a5ba466"
     },
     {
       "file": "visitors-320.png",
@@ -403,9 +403,9 @@
       "note": "סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.",
       "available": true,
       "width": 320,
-      "height": 3143,
-      "bytes": 128347,
-      "sha256": "680ef7b248a852db5d99cd18f348dab326a10fb0da5863a689bdc9b87ff03758"
+      "height": 3644,
+      "bytes": 156553,
+      "sha256": "c3ac5a803c48633a654e5daecbd28e47684580740d4e730bf75e1cb98f98424b"
     },
     {
       "file": "clients-320.png",
@@ -417,9 +417,9 @@
       "note": "סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.",
       "available": true,
       "width": 320,
-      "height": 1358,
-      "bytes": 46148,
-      "sha256": "67925777e31f3fd8156b66c0cf6a54ba9f98389e48079a1cbbea2dd4b1ad9445"
+      "height": 1371,
+      "bytes": 46699,
+      "sha256": "454670de41cc635408e88a2bf1a9b26cf2f245a67fa79049b27f93e9046ffcf9"
     },
     {
       "file": "infrastructure-320.png",
@@ -431,9 +431,9 @@
       "note": "סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.",
       "available": true,
       "width": 320,
-      "height": 4257,
-      "bytes": 199638,
-      "sha256": "41b07d038e7ec9fbfeb56f234598900661de607fc232fe0a9724efda90258ecd"
+      "height": 3358,
+      "bytes": 154292,
+      "sha256": "8e54f17a2268b23e8d6b708b7804f1f0cf72b78bf3f6f378399e4accc502cbcc"
     },
     {
       "file": "services-320.png",
@@ -445,9 +445,9 @@
       "note": "סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.",
       "available": true,
       "width": 320,
-      "height": 2358,
-      "bytes": 138726,
-      "sha256": "d0b60056acfe80c6fe1cfc9fe5d4458192a124c1cc83f4fa0daae1d4b5776119"
+      "height": 2438,
+      "bytes": 137037,
+      "sha256": "e81a7ee78af0240ab64eea5c7494e3cf3bcf0e182eb55cce45d6efa9e0f25320"
     },
     {
       "file": "settings-320.png",
@@ -460,8 +460,8 @@
       "available": true,
       "width": 320,
       "height": 1120,
-      "bytes": 23830,
-      "sha256": "fe2dc760b76c6e0fe1197e3bb9c6100dd4a8ad29d797d1b8595ca47afce14304"
+      "bytes": 23927,
+      "sha256": "76d0e9d3b721e5c174cf0e63ebd6dee6a4bf7f6cb370f13ddb747f09bb129d92"
     }
   ]
 }

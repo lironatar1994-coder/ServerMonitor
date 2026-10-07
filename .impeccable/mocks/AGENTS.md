@@ -15,6 +15,7 @@
 - Mockups illustrate product intent; semantic text, permissions, encryption, and responsive behavior are implemented in application code.
 - Preserve `vault-desktop.png` unchanged; embed the exact prompt from `vault-desktop.json` into `vault-desktop.prompted.png` and verify unchanged PNG image data.
 - Label generated concepts separately from implemented UI screenshots. Screenshots do not establish security or functional correctness.
+- Label the preserved generated image as the initial approved concept; current synthetic screenshots own evidence of the refined palette and controls. The concept is not a pixel-identical reference for later palette refinements.
 
 ## Work Guidance
 - Preserve each exact generation prompt and inspect Hebrew and visual hierarchy.

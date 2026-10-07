@@ -21,7 +21,7 @@ const contrast = (a,b) => (Math.max(luminance(a),luminance(b))+.05)/(Math.min(lu
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   try {
     const page = await browser.newPage({ userAgent: 'ServerMonitor-Audit-Bot/1.0' });
-    await page.goto(base + '/login'); await page.context().addCookies([{ name: '__Host-monitor', value: token, url: new URL(base).origin, httpOnly: true, secure: true, sameSite: 'Strict' }]);
+    await page.goto(base + '/login'); if(new URL(base).protocol==='https:') await page.context().addCookies([{ name: '__Host-monitor', value: token, url: new URL(base).origin, httpOnly: true, secure: true, sameSite: 'Strict' }]); else await page.route(new URL(base).origin+'/serve-monitor/api/**',route=>route.fallback({headers:{...route.request().headers(),Authorization:'Bearer '+token}}));
     const apps = await page.evaluate(async () => (await fetch('/serve-monitor/api/apps', { credentials: 'same-origin' })).json());
     const id = apps.find(a => a.name === 'LA webs').id;
     for (const width of [1440,390,320]) {

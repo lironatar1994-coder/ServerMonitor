@@ -2,21 +2,21 @@
 name: Server Monitor
 description: A compact Hebrew RTL workspace for website activity, client work, team credentials and server operations.
 colors:
-  accent: "#126B78"
-  accent-hover: "#0C5360"
+  accent: "#0F6372"
+  accent-hover: "#084C59"
   on-accent: "#FFFFFF"
-  selected: "#E8F4F5"
-  row-hover: "#F0F8F9"
-  background: "#F2F5F9"
+  selected: "#E7F1F3"
+  row-hover: "#F1F7F8"
+  background: "#F5F7FA"
   surface: "#FFFFFF"
-  recessed: "#EAF0F6"
-  text: "#1D2B3D"
-  muted: "#536479"
-  line: "#D7E0EA"
-  line-strong: "#93A4B8"
-  navigation: "#192638"
-  navigation-muted: "#B9C6D6"
-  navigation-active: "#263D4D"
+  recessed: "#EEF2F6"
+  text: "#18283A"
+  muted: "#556578"
+  line: "#DCE3EB"
+  line-strong: "#8FA2B6"
+  navigation: "#172638"
+  navigation-muted: "#BDD0DC"
+  navigation-active: "#23404D"
   navigation-accent: "#8AD8DF"
   healthy: "#24734F"
   healthy-surface: "#EDF7F1"
@@ -50,13 +50,13 @@ typography:
     lineHeight: 1.55
   headline:
     fontFamily: "Heebo, sans-serif"
-    fontSize: "1.5rem"
+    fontSize: "1.45rem"
     fontWeight: 700
-    lineHeight: 1.45
+    lineHeight: 1.5
     letterSpacing: "normal"
   title:
     fontFamily: "Heebo, sans-serif"
-    fontSize: "1rem"
+    fontSize: "0.96rem"
     fontWeight: 600
     lineHeight: 1.5
   metric:
@@ -67,8 +67,8 @@ typography:
     letterSpacing: "normal"
   label:
     fontFamily: "Heebo, sans-serif"
-    fontSize: "0.84rem"
-    fontWeight: 400
+    fontSize: "0.8rem"
+    fontWeight: 500
     lineHeight: 1.4
   field-label:
     fontFamily: "Heebo, sans-serif"
@@ -82,12 +82,13 @@ typography:
     lineHeight: 1.55
 rounded:
   control: "8px"
+  navigation: "7px"
   chip: "6px"
   panel: "12px"
 spacing:
   compact: "0.5rem"
   regular: "1rem"
-  panel: "1.2rem"
+  panel: "1rem"
   section: "1.25rem"
   page: "clamp(1rem, 2.1vw, 2rem)"
 components:
@@ -117,7 +118,7 @@ components:
   nav-selected:
     backgroundColor: "{colors.navigation-active}"
     textColor: "#EDF9FA"
-    rounded: "{rounded.control}"
+    rounded: "{rounded.navigation}"
     padding: "0.65rem 0.8rem"
   chip-healthy:
     backgroundColor: "{colors.healthy-surface}"
@@ -145,7 +146,7 @@ components:
 
 **Creative North Star: "חדר בקרה חד וברור"**
 
-A compact fleet console makes website activity, client work, shared credentials and server attention easy to scan. Porcelain canvas, white data surfaces, slate navigation and petrol actions put aligned numbers and useful controls first. Short Hebrew nouns, contextual icons and explanations on demand keep the interface practical for a daily check.
+A compact daily workbench makes website activity, client work, shared credentials and server attention easy to scan. Porcelain canvas, white data surfaces, slate navigation and petrol actions put aligned numbers and useful controls first. Domain context, measured summaries and short contextual actions support a daily check; longer explanations open on demand.
 
 Website activity, client follow-up, the team vault, services, settings and authentication share the light system. Infrastructure uses graphite surfaces with the same components, density and interaction grammar. The vault has one desktop list/detail workspace and separate mobile views; its approved [desktop composition](.impeccable/mocks/vault-desktop.png) and [approval record](.impeccable/mocks/vault-desktop.json) establish spatial direction, while semantic Hebrew and functional controls follow the implementation.
 
@@ -154,11 +155,11 @@ Website activity, client follow-up, the team vault, services, settings and authe
 - Hebrew RTL, self-hosted Heebo and aligned tabular numbers.
 - White summaries, tables and plots with subtle boundaries and gently rounded panels.
 - Stable slate navigation, petrol actions and functional green, amber and red states.
-- Compact comparison rows, measured activity bars, a responsive credential list/detail and explanations on demand.
+- A domain-aware site ledger, measured activity bars, catalog search and responsive credential list/detail.
 
 Implementation authority follows the CSS cascade in [main.jsx](frontend/src/main.jsx): [base geometry](frontend/src/index.css), [theme](frontend/src/theme.css), then [workspace typography and shell](frontend/src/workspace.css). [AppShell](frontend/src/components/AppShell.jsx), [AnalyticsParts](frontend/src/components/AnalyticsParts.jsx), [Vault](frontend/src/pages/Vault.jsx) and [vault styles](frontend/src/vault/vault.css) define the built structures. [.impeccable/design.json](.impeccable/design.json) extends this record with previews, breakpoints, shadows and narrative. Email remains a separate presentation contract owned by [its template](backend/emailReportTemplate.js).
 
-Reference provenance: [the HTML FORM](frontend/index.html) records seed `c08480f4`; the original seed-tool output and pre-build hero checkpoint are unavailable. A final composition-sized capture is retrospective evidence, not that checkpoint. This record makes no visual-review pass claim.
+Reference provenance: [the HTML FORM](frontend/index.html) and the local refresh records `.impeccable/review/workspace-refresh-seed.txt` and `workspace-direction.json` corroborate seed `9188e6ed`, candidate 3, a compact daily workbench selected under the user's delegated expert brief. This refresh is code-led: the QUALITY BAR image fetch failed and no new image composition was approved. The separate approved vault topology retains seed `c08480f4`; its original seed-tool output and pre-build hero checkpoint remain unavailable. Retrospective screenshots do not establish that checkpoint or a review pass.
 
 ## Colors
 
@@ -188,10 +189,10 @@ Petrol provides a single action accent against cool porcelain and white; slate a
 
 ### Hierarchy
 
-- **Headline:** a compact bold page title; reduce it to 1.3rem at the 900px navigation breakpoint. Headers begin without a negative top margin.
+- **Headline:** a compact bold page title; reduce it to 1.3rem at 760px. Headers begin without a negative top margin.
 - **Title:** medium-bold panel headings with a quiet supporting action or hint. Vault detail headings use 1.3rem, reducing to 1.15rem at 480px.
-- **Metric:** medium-bold summary values reduce to 1.7rem at 480px. Page-insight metrics retain their compact 1.3rem role.
-- **Body and label:** normal-weight readable Hebrew; field labels and actions use medium weight. Quiet timestamps and secondary labels generally use 0.7–0.84rem. Keep zero letter spacing on Hebrew headings and metrics.
+- **Metric:** medium-bold summary values keep the metric role across widths; page-insight metrics retain their compact 1.3rem role.
+- **Body and label:** normal-weight readable Hebrew; summary labels, field labels and actions use medium weight. Quiet timestamps and secondary labels generally use 0.7–0.84rem. Keep zero letter spacing on Hebrew headings and metrics.
 - **Mixed direction:** isolate complete dates, paths, byte values and RAM/Swap/PID/CPU fragments with `bdi` or explicit LTR direction. Keep names wrapping within their column.
 
 **The One Family Rule.** Build hierarchy with size, weight and alignment. Keep titles compact and omit display type and page eyebrows.
@@ -200,11 +201,11 @@ Petrol provides a single action accent against cool porcelain and white; slate a
 
 - The right desktop rail is 15rem expanded and 4.5rem collapsed. Destinations sit under `סביבת עבודה` and `תפעול`; settings and the signed-in member remain at the bottom. Collapsed destinations retain accessible names. The page retains `min(100%, 92rem)` width, centered with the page spacing token; the later 100rem maximum does not widen it.
 - At 900px and below, a fixed slate header and five-item bottom bar replace the rail: `אתרים`, `לקוחות`, `כספת`, `שרת`, `עוד`. More opens services/settings in a native modal. Respect safe areas, content clearance and the 58px mobile navigation targets.
-- The compact page header and period controls lead into a summary and the data. Shared panels use a 1.25rem section rhythm, a 58px minimum title row and the panel padding token. Related breakdowns use in-panel underline toggles.
-- At 760px and below, page padding becomes 0.85rem. At 480px, panel padding becomes 0.85rem and summary values reduce. Visitor summaries retain three aligned columns; infrastructure and four-metric client summaries use two. At 380px, page padding becomes 0.65rem.
+- The compact page header and period controls lead into a summary and the site ledger. Shared panels use 1rem separation, a 58px minimum title row and the panel padding token; general grids retain a 1.25rem gap. Related breakdowns use in-panel underline toggles.
+- At 760px and below, page padding becomes 0.85rem and summary cell padding tightens. Visitor summaries retain three aligned columns; infrastructure and four-metric client summaries use two. At 380px, page padding becomes 0.65rem. Panel padding and summary type retain their final shared values.
 - The vault desktop grid places its 290–360px list on the right and flexible detail on the left, with a 1.15rem gap. At 1200px the list is 300px; at 1000px and below, list and selected detail occupy separate views. Returning restores list scroll and focus; opening an entry focuses its heading. Keep usernames, passwords and exact URLs isolated LTR within the RTL layout.
 - Settings uses a content column capped at 56rem below `חשבון`, `אבטחה`, `צוות`, `התראות` underline tabs. Authentication uses the same restrained surface and field grammar.
-- Site rows share one column header for identity, three metrics and change. On mobile, three numeric columns remain aligned, change moves below identity and the chevron remains visible. Do not repeat metric icons in headers or rows. Client tables use the same alignment grammar, with concise inquiry/task headings.
+- Site rows share one column header for identity, three metrics and change. Each row shows its public domain/path beneath the name and a separate 44px external-link control. On mobile, three numeric columns remain aligned, change moves below identity and the external action sits below the metrics within a 100px minimum row. Client tables use the same alignment grammar, with concise inquiry/task headings.
 - Page rankings open a useful adjacent drill-down on desktop. On mobile the detail is a full-screen, focus-trapped dialog with inert background, a visible close control and no enclosing panel radius.
 - Controls wrap, names break within their column and grids collapse before the content becomes cramped. Verify desktop, 390px and 320px screens without page-level horizontal overflow.
 
@@ -244,6 +245,10 @@ Slate navigation stays stable across workspaces. Selected destinations have a da
 
 Period controls use a white bounded segment group with an explicit petrol fill on selection. Content toggles use an underline and `aria-pressed`, grouping related data in one panel rather than creating separate screens or cards. The mobile More button exposes its expanded state; its native dialog contains services/settings and a named close action.
 
+QuickSwitch opens from the rail, mobile header or Ctrl/Cmd+K. Its native modal uses a focused search field, keyboard-selected results and a bounded scroll area; Arrow keys select, Enter opens and Escape closes. Match only workspace names and the monitoring app/domain catalog, never decrypted vault data. Website jumps retain explicit displayed dates; a catalog failure remains visible while workspace destinations stay available.
+
+Legacy `/dashboard` and `/sites` retain query context into `/visitors`; `/server` and `/system-stats` open infrastructure. `/app/:id` resolves through the catalog to website analytics or service operations. These are continuity paths, not additional navigation destinations.
+
 ### Team vault
 
 The `/vault` destination contains a searchable right-hand credential list and a left-hand detail surface. List rows combine a plain initial, title, username and environment, with pale petrol selection and an optional functional favorite icon. Filters and search remain inside the list; the selected entry owns its copy, reveal, edit and explicit site-opening controls.
@@ -260,7 +265,7 @@ Empty, loading, failed and missing measurement states remain distinct. Missing v
 
 ### Comparison rows, bars and plots
 
-Website comparison comes before the chart and supplies local search/sort. The visits bar encodes measured sessions relative to the maximum across all sites in the selected period; filtering and sorting do not change that scale. Zero has no fill, and numbers remain primary and accessible.
+Website comparison comes before the chart and supplies local name/domain search, retained sort and all/activity/attention filters. Unknown website availability remains unverified. Separate the dated analytics row link from its explicitly named public-site action, which opens an HTTP(S) URL without supplying credentials. The visits bar encodes measured sessions relative to the maximum across all sites in the selected period; filtering and sorting do not change that scale. Zero has no fill, and numbers remain primary and accessible.
 
 Charts use a white surface, petrol current series and muted dashed preceding-period series with short labels. No line animation. Shared signed changes stay neutral, show `אין קודמים` for zero baselines and retain unavailable comparisons. Low samples use a named warning icon.
 
@@ -275,6 +280,12 @@ Service lists keep the name, runtime/URL and concise status aligned. Operational
 Keep `מבקרים משוערים` explicit; `ביקורים` and `צפיות` retain their full measured meaning in accessible names and shared hints. Measurement diagnostics, source gaps and longer evidence open on demand. Browser signals and server candidates remain visually distinct measurements.
 
 A page drill-down shows friendly names, recorded next pages and later contact/outbound actions, with low samples visible. The row is one keyboard-operable control and closing restores focus. Exact dates and page context survive navigation and authentication.
+
+### Operational attention
+
+Infrastructure and services use read-only operational issues from `/apps/operational-health`. The attention panel shows up to three issues before an expandable remainder, with concise title/detail, optional diagnostics and a link to the relevant service. Server, browser/measurement and recorded-backup checks show their own source timestamps and written states; missing or stale evidence stays unverified.
+
+Service counts, available/attention filters and row labels share one readiness calculation; rows needing a check sort before available rows. Use `זמין` / `זמינים` for availability. A running messaging process does not establish an active connection: process availability, connection readiness and source-fetch failure remain visibly distinct. Failed connection-source loading shows an unverified connection and a retry action in the list/detail flow. Operational actions remain separately named and require a native confirmation with cancel as the safe initial focus, focus containment and restoration to the trigger.
 
 ### Email
 

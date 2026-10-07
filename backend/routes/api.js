@@ -262,6 +262,11 @@ router.use((req, res, next) => {
 });
 
 // Get Server General Stats
+router.get('/operational-health', async (req, res, next) => {
+    try { res.json(await require('../operationalHealth').operationalHealth(db, getPm2Snapshot())); }
+    catch (error) { next(error); }
+});
+
 router.get('/server-stats', async (req, res) => {
     const cpuLoad = os.loadavg()[0]; // 1 min average
     const cpuSnapshot = getCpuSnapshot();

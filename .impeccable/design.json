@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-07T18:30:39Z",
+  "generatedAt": "2026-10-07T20:19:03Z",
   "title": "Design System: Server Monitor",
   "extensions": {
     "colorMeta": {
@@ -8,28 +8,28 @@
         "role": "primary",
         "displayName": "Petrol",
         "tonalRamp": [
-          "oklch(15.00% 0.07925 210.22)",
-          "oklch(26.43% 0.07925 210.22)",
-          "oklch(37.86% 0.07925 210.22)",
-          "oklch(49.29% 0.07925 210.22)",
-          "oklch(60.71% 0.07925 210.22)",
-          "oklch(72.14% 0.07925 210.22)",
-          "oklch(83.57% 0.07925 210.22)",
-          "oklch(95.00% 0.07925 210.22)"
+          "oklch(15.00% 0.07656 213.54)",
+          "oklch(26.43% 0.07656 213.54)",
+          "oklch(37.86% 0.07656 213.54)",
+          "oklch(49.29% 0.07656 213.54)",
+          "oklch(60.71% 0.07656 213.54)",
+          "oklch(72.14% 0.07656 213.54)",
+          "oklch(83.57% 0.07656 213.54)",
+          "oklch(95.00% 0.07656 213.54)"
         ]
       },
       "accent-hover": {
         "role": "semantic",
         "displayName": "Deep Petrol",
         "tonalRamp": [
-          "oklch(15.00% 0.06748 213.81)",
-          "oklch(26.43% 0.06748 213.81)",
-          "oklch(37.86% 0.06748 213.81)",
-          "oklch(49.29% 0.06748 213.81)",
-          "oklch(60.71% 0.06748 213.81)",
-          "oklch(72.14% 0.06748 213.81)",
-          "oklch(83.57% 0.06748 213.81)",
-          "oklch(95.00% 0.06748 213.81)"
+          "oklch(15.00% 0.06474 214.93)",
+          "oklch(26.43% 0.06474 214.93)",
+          "oklch(37.86% 0.06474 214.93)",
+          "oklch(49.29% 0.06474 214.93)",
+          "oklch(60.71% 0.06474 214.93)",
+          "oklch(72.14% 0.06474 214.93)",
+          "oklch(83.57% 0.06474 214.93)",
+          "oklch(95.00% 0.06474 214.93)"
         ]
       },
       "on-accent": {
@@ -50,42 +50,42 @@
         "role": "semantic",
         "displayName": "Petrol Selection Wash",
         "tonalRamp": [
-          "oklch(15.00% 0.01279 202.92)",
-          "oklch(26.43% 0.01279 202.92)",
-          "oklch(37.86% 0.01279 202.92)",
-          "oklch(49.29% 0.01279 202.92)",
-          "oklch(60.71% 0.01279 202.92)",
-          "oklch(72.14% 0.01279 202.92)",
-          "oklch(83.57% 0.01279 202.92)",
-          "oklch(95.00% 0.01279 202.92)"
+          "oklch(15.00% 0.01099 211.04)",
+          "oklch(26.43% 0.01099 211.04)",
+          "oklch(37.86% 0.01099 211.04)",
+          "oklch(49.29% 0.01099 211.04)",
+          "oklch(60.71% 0.01099 211.04)",
+          "oklch(72.14% 0.01099 211.04)",
+          "oklch(83.57% 0.01099 211.04)",
+          "oklch(95.00% 0.01099 211.04)"
         ]
       },
       "row-hover": {
         "role": "semantic",
         "displayName": "Petrol Row Wash",
         "tonalRamp": [
-          "oklch(15.00% 0.00859 205.90)",
-          "oklch(26.43% 0.00859 205.90)",
-          "oklch(37.86% 0.00859 205.90)",
-          "oklch(49.29% 0.00859 205.90)",
-          "oklch(60.71% 0.00859 205.90)",
-          "oklch(72.14% 0.00859 205.90)",
-          "oklch(83.57% 0.00859 205.90)",
-          "oklch(95.00% 0.00859 205.90)"
+          "oklch(15.00% 0.00652 208.78)",
+          "oklch(26.43% 0.00652 208.78)",
+          "oklch(37.86% 0.00652 208.78)",
+          "oklch(49.29% 0.00652 208.78)",
+          "oklch(60.71% 0.00652 208.78)",
+          "oklch(72.14% 0.00652 208.78)",
+          "oklch(83.57% 0.00652 208.78)",
+          "oklch(95.00% 0.00652 208.78)"
         ]
       },
       "background": {
         "role": "neutral",
         "displayName": "Porcelain",
         "tonalRamp": [
-          "oklch(15.00% 0.00624 255.47)",
-          "oklch(26.43% 0.00624 255.47)",
-          "oklch(37.86% 0.00624 255.47)",
-          "oklch(49.29% 0.00624 255.47)",
-          "oklch(60.71% 0.00624 255.47)",
-          "oklch(72.14% 0.00624 255.47)",
-          "oklch(83.57% 0.00624 255.47)",
-          "oklch(95.00% 0.00624 255.47)"
+          "oklch(15.00% 0.00453 258.32)",
+          "oklch(26.43% 0.00453 258.32)",
+          "oklch(37.86% 0.00453 258.32)",
+          "oklch(49.29% 0.00453 258.32)",
+          "oklch(60.71% 0.00453 258.32)",
+          "oklch(72.14% 0.00453 258.32)",
+          "oklch(83.57% 0.00453 258.32)",
+          "oklch(95.00% 0.00453 258.32)"
         ]
       },
       "surface": {
@@ -106,112 +106,112 @@
         "role": "neutral",
         "displayName": "Cool Recess",
         "tonalRamp": [
-          "oklch(15.00% 0.01032 247.93)",
-          "oklch(26.43% 0.01032 247.93)",
-          "oklch(37.86% 0.01032 247.93)",
-          "oklch(49.29% 0.01032 247.93)",
-          "oklch(60.71% 0.01032 247.93)",
-          "oklch(72.14% 0.01032 247.93)",
-          "oklch(83.57% 0.01032 247.93)",
-          "oklch(95.00% 0.01032 247.93)"
+          "oklch(15.00% 0.00687 247.90)",
+          "oklch(26.43% 0.00687 247.90)",
+          "oklch(37.86% 0.00687 247.90)",
+          "oklch(49.29% 0.00687 247.90)",
+          "oklch(60.71% 0.00687 247.90)",
+          "oklch(72.14% 0.00687 247.90)",
+          "oklch(83.57% 0.00687 247.90)",
+          "oklch(95.00% 0.00687 247.90)"
         ]
       },
       "text": {
         "role": "neutral",
         "displayName": "Ink",
         "tonalRamp": [
-          "oklch(15.00% 0.03841 255.06)",
-          "oklch(26.43% 0.03841 255.06)",
-          "oklch(37.86% 0.03841 255.06)",
-          "oklch(49.29% 0.03841 255.06)",
-          "oklch(60.71% 0.03841 255.06)",
-          "oklch(72.14% 0.03841 255.06)",
-          "oklch(83.57% 0.03841 255.06)",
-          "oklch(95.00% 0.03841 255.06)"
+          "oklch(15.00% 0.04005 252.19)",
+          "oklch(26.43% 0.04005 252.19)",
+          "oklch(37.86% 0.04005 252.19)",
+          "oklch(49.29% 0.04005 252.19)",
+          "oklch(60.71% 0.04005 252.19)",
+          "oklch(72.14% 0.04005 252.19)",
+          "oklch(83.57% 0.04005 252.19)",
+          "oklch(95.00% 0.04005 252.19)"
         ]
       },
       "muted": {
         "role": "neutral",
         "displayName": "Slate Text",
         "tonalRamp": [
-          "oklch(15.00% 0.03961 253.91)",
-          "oklch(26.43% 0.03961 253.91)",
-          "oklch(37.86% 0.03961 253.91)",
-          "oklch(49.29% 0.03961 253.91)",
-          "oklch(60.71% 0.03961 253.91)",
-          "oklch(72.14% 0.03961 253.91)",
-          "oklch(83.57% 0.03961 253.91)",
-          "oklch(95.00% 0.03961 253.91)"
+          "oklch(15.00% 0.03618 252.91)",
+          "oklch(26.43% 0.03618 252.91)",
+          "oklch(37.86% 0.03618 252.91)",
+          "oklch(49.29% 0.03618 252.91)",
+          "oklch(60.71% 0.03618 252.91)",
+          "oklch(72.14% 0.03618 252.91)",
+          "oklch(83.57% 0.03618 252.91)",
+          "oklch(95.00% 0.03618 252.91)"
         ]
       },
       "line": {
         "role": "neutral",
         "displayName": "Subtle Boundary",
         "tonalRamp": [
-          "oklch(15.00% 0.01679 250.85)",
-          "oklch(26.43% 0.01679 250.85)",
-          "oklch(37.86% 0.01679 250.85)",
-          "oklch(49.29% 0.01679 250.85)",
-          "oklch(60.71% 0.01679 250.85)",
-          "oklch(72.14% 0.01679 250.85)",
-          "oklch(83.57% 0.01679 250.85)",
-          "oklch(95.00% 0.01679 250.85)"
+          "oklch(15.00% 0.01326 251.57)",
+          "oklch(26.43% 0.01326 251.57)",
+          "oklch(37.86% 0.01326 251.57)",
+          "oklch(49.29% 0.01326 251.57)",
+          "oklch(60.71% 0.01326 251.57)",
+          "oklch(72.14% 0.01326 251.57)",
+          "oklch(83.57% 0.01326 251.57)",
+          "oklch(95.00% 0.01326 251.57)"
         ]
       },
       "line-strong": {
         "role": "neutral",
         "displayName": "Control Boundary",
         "tonalRamp": [
-          "oklch(15.00% 0.03500 252.55)",
-          "oklch(26.43% 0.03500 252.55)",
-          "oklch(37.86% 0.03500 252.55)",
-          "oklch(49.29% 0.03500 252.55)",
-          "oklch(60.71% 0.03500 252.55)",
-          "oklch(72.14% 0.03500 252.55)",
-          "oklch(83.57% 0.03500 252.55)",
-          "oklch(95.00% 0.03500 252.55)"
+          "oklch(15.00% 0.03636 249.70)",
+          "oklch(26.43% 0.03636 249.70)",
+          "oklch(37.86% 0.03636 249.70)",
+          "oklch(49.29% 0.03636 249.70)",
+          "oklch(60.71% 0.03636 249.70)",
+          "oklch(72.14% 0.03636 249.70)",
+          "oklch(83.57% 0.03636 249.70)",
+          "oklch(95.00% 0.03636 249.70)"
         ]
       },
       "navigation": {
         "role": "neutral",
         "displayName": "Navigation Slate",
         "tonalRamp": [
-          "oklch(15.00% 0.03842 256.66)",
-          "oklch(26.43% 0.03842 256.66)",
-          "oklch(37.86% 0.03842 256.66)",
-          "oklch(49.29% 0.03842 256.66)",
-          "oklch(60.71% 0.03842 256.66)",
-          "oklch(72.14% 0.03842 256.66)",
-          "oklch(83.57% 0.03842 256.66)",
-          "oklch(95.00% 0.03842 256.66)"
+          "oklch(15.00% 0.03966 253.64)",
+          "oklch(26.43% 0.03966 253.64)",
+          "oklch(37.86% 0.03966 253.64)",
+          "oklch(49.29% 0.03966 253.64)",
+          "oklch(60.71% 0.03966 253.64)",
+          "oklch(72.14% 0.03966 253.64)",
+          "oklch(83.57% 0.03966 253.64)",
+          "oklch(95.00% 0.03966 253.64)"
         ]
       },
       "navigation-muted": {
         "role": "neutral",
         "displayName": "Navigation Text",
         "tonalRamp": [
-          "oklch(15.00% 0.02665 253.59)",
-          "oklch(26.43% 0.02665 253.59)",
-          "oklch(37.86% 0.02665 253.59)",
-          "oklch(49.29% 0.02665 253.59)",
-          "oklch(60.71% 0.02665 253.59)",
-          "oklch(72.14% 0.02665 253.59)",
-          "oklch(83.57% 0.02665 253.59)",
-          "oklch(95.00% 0.02665 253.59)"
+          "oklch(15.00% 0.02655 235.41)",
+          "oklch(26.43% 0.02655 235.41)",
+          "oklch(37.86% 0.02655 235.41)",
+          "oklch(49.29% 0.02655 235.41)",
+          "oklch(60.71% 0.02655 235.41)",
+          "oklch(72.14% 0.02655 235.41)",
+          "oklch(83.57% 0.02655 235.41)",
+          "oklch(95.00% 0.02655 235.41)"
         ]
       },
       "navigation-active": {
         "role": "neutral",
         "displayName": "Selected Navigation",
         "tonalRamp": [
-          "oklch(15.00% 0.04023 239.78)",
-          "oklch(26.43% 0.04023 239.78)",
-          "oklch(37.86% 0.04023 239.78)",
-          "oklch(49.29% 0.04023 239.78)",
-          "oklch(60.71% 0.04023 239.78)",
-          "oklch(72.14% 0.04023 239.78)",
-          "oklch(83.57% 0.04023 239.78)",
-          "oklch(95.00% 0.04023 239.78)"
+          "oklch(15.00% 0.04154 228.59)",
+          "oklch(26.43% 0.04154 228.59)",
+          "oklch(37.86% 0.04154 228.59)",
+          "oklch(49.29% 0.04154 228.59)",
+          "oklch(60.71% 0.04154 228.59)",
+          "oklch(72.14% 0.04154 228.59)",
+          "oklch(83.57% 0.04154 228.59)",
+          "oklch(95.00% 0.04154 228.59)"
         ]
       },
       "navigation-accent": {
@@ -572,19 +572,19 @@
       },
       "headline": {
         "displayName": "Compact Page Title",
-        "purpose": "Bold page titles; 1.3rem at 900px and below, with normal Hebrew letter spacing."
+        "purpose": "Bold 1.45rem page titles; 1.3rem at 760px and below, with normal Hebrew letter spacing."
       },
       "title": {
         "displayName": "Panel Title",
-        "purpose": "Medium-bold 1rem panel headings with a quiet action or hint."
+        "purpose": "Medium-bold .96rem panel headings with a quiet action or hint."
       },
       "metric": {
         "displayName": "Tabular Summary Value",
-        "purpose": "Medium-bold 2rem values; 1.7rem at 480px and below. Page-insight values remain 1.3rem."
+        "purpose": "Medium-bold 2rem summary values across widths. Page-insight values remain 1.3rem."
       },
       "label": {
         "displayName": "Quiet Metric Label",
-        "purpose": "Normal-weight summary labels; supporting timestamps and labels use a compact range."
+        "purpose": "Medium-weight .8rem summary labels; secondary source timestamps stay quiet and compact."
       },
       "field-label": {
         "displayName": "Visible Field Label",
@@ -598,22 +598,22 @@
     "shadows": [
       {
         "name": "popover",
-        "value": "0 12px 36px #19263830",
+        "value": "0 12px 36px #17263830",
         "purpose": "Date and site menus above the current workspace."
       },
       {
         "name": "chart-tooltip",
-        "value": "0 8px 24px #19263830",
+        "value": "0 8px 24px #17263830",
         "purpose": "A floating data point tooltip."
       },
       {
         "name": "dialog",
-        "value": "0 20px 60px #19263840",
+        "value": "0 20px 60px #17263840",
         "purpose": "Confirmation and service dialogs."
       },
       {
         "name": "drawer",
-        "value": "-12px 0 40px #19263830",
+        "value": "-12px 0 40px #17263830",
         "purpose": "The structural edge of a blocking drawer."
       }
     ],
@@ -674,7 +674,7 @@
       "refersTo": "button-primary",
       "description": "Named action with shared control corners, a 44px target and visible keyboard focus.",
       "html": "<button dir=\"rtl\" class=\"ds-button-primary\">שמירה</button>",
-      "css": ".ds-button-primary{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:44px;padding:.5rem .95rem;border:1px solid var(--accent,#126B78);border-radius:var(--radius,8px);background:var(--accent,#126B78);color:var(--on-accent,#FFFFFF);font-size:.9rem;font-weight:500;cursor:pointer;transition:background .14s ease,border-color .14s ease;}.ds-button-primary:hover{background:var(--accent-hover,#0C5360);color:var(--on-accent,#FFFFFF);border-color:var(--accent-hover,#0C5360);}.ds-button-primary:focus-visible{outline:2px solid var(--accent,#126B78);outline-offset:3px;}.ds-button-primary:disabled{opacity:.5;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none;}}"
+      "css": ".ds-button-primary{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:44px;padding:.5rem .95rem;border:1px solid var(--accent,#0F6372);border-radius:var(--radius,8px);background:var(--accent,#0F6372);color:var(--on-accent,#FFFFFF);font-size:.9rem;font-weight:500;cursor:pointer;transition:background .14s ease,border-color .14s ease;}.ds-button-primary:hover{background:var(--accent-hover,#084C59);color:var(--on-accent,#FFFFFF);border-color:var(--accent-hover,#084C59);}.ds-button-primary:focus-visible{outline:2px solid var(--accent,#0F6372);outline-offset:3px;}.ds-button-primary:disabled{opacity:.5;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none;}}"
     },
     {
       "name": "Secondary Button",
@@ -682,7 +682,7 @@
       "refersTo": "button-secondary",
       "description": "Named action with shared control corners, a 44px target and visible keyboard focus.",
       "html": "<button dir=\"rtl\" class=\"ds-button-secondary\">ביטול</button>",
-      "css": ".ds-button-secondary{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:44px;padding:.5rem .95rem;border:1px solid var(--line-strong,#93A4B8);border-radius:var(--radius,8px);background:var(--paper-light,#FFFFFF);color:var(--ink,#1D2B3D);font-size:.9rem;font-weight:500;cursor:pointer;transition:background .14s ease,border-color .14s ease;}.ds-button-secondary:hover{background:var(--paper-deep,#EAF0F6);color:var(--ink,#1D2B3D);border-color:var(--line-strong,#93A4B8);}.ds-button-secondary:focus-visible{outline:2px solid var(--accent,#126B78);outline-offset:3px;}.ds-button-secondary:disabled{opacity:.5;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-secondary{transition:none;}}"
+      "css": ".ds-button-secondary{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:44px;padding:.5rem .95rem;border:1px solid var(--line-strong,#8FA2B6);border-radius:var(--radius,8px);background:var(--paper-light,#FFFFFF);color:var(--ink,#18283A);font-size:.9rem;font-weight:500;cursor:pointer;transition:background .14s ease,border-color .14s ease;}.ds-button-secondary:hover{background:var(--paper-deep,#EEF2F6);color:var(--ink,#18283A);border-color:var(--line-strong,#8FA2B6);}.ds-button-secondary:focus-visible{outline:2px solid var(--accent,#0F6372);outline-offset:3px;}.ds-button-secondary:disabled{opacity:.5;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-secondary{transition:none;}}"
     },
     {
       "name": "Destructive Button",
@@ -690,7 +690,7 @@
       "refersTo": "button-danger",
       "description": "Named action with shared control corners, a 44px target and visible keyboard focus.",
       "html": "<button dir=\"rtl\" class=\"ds-button-danger\">מחיקה</button>",
-      "css": ".ds-button-danger{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:44px;padding:.5rem .95rem;border:1px solid var(--vermilion,#B13443);border-radius:var(--radius,8px);background:var(--vermilion,#B13443);color:#FFFFFF;font-size:.9rem;font-weight:500;cursor:pointer;transition:background .14s ease,border-color .14s ease;}.ds-button-danger:hover{background:var(--vermilion,#B13443);color:#FFFFFF;border-color:var(--vermilion,#B13443);}.ds-button-danger:focus-visible{outline:2px solid var(--accent,#126B78);outline-offset:3px;}.ds-button-danger:disabled{opacity:.5;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-danger{transition:none;}}"
+      "css": ".ds-button-danger{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:44px;padding:.5rem .95rem;border:1px solid var(--vermilion,#B13443);border-radius:var(--radius,8px);background:var(--vermilion,#B13443);color:#FFFFFF;font-size:.9rem;font-weight:500;cursor:pointer;transition:background .14s ease,border-color .14s ease;}.ds-button-danger:hover{background:var(--vermilion,#B13443);color:#FFFFFF;border-color:var(--vermilion,#B13443);}.ds-button-danger:focus-visible{outline:2px solid var(--accent,#0F6372);outline-offset:3px;}.ds-button-danger:disabled{opacity:.5;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-danger{transition:none;}}"
     },
     {
       "name": "Labeled Field",
@@ -698,15 +698,15 @@
       "refersTo": "input",
       "description": "Visible medium-weight Hebrew label, 48px minimum field and strong neutral boundary.",
       "html": "<label class=\"ds-field\" dir=\"rtl\">שם האתר<input dir=\"auto\" placeholder=\"שם האתר\" /></label>",
-      "css": ".ds-field{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:grid;gap:.4rem;color:var(--ink,#1D2B3D);font-size:.88rem;font-weight:500;}.ds-field input{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;min-width:0;min-height:48px;padding:.5rem .65rem;border:1px solid var(--line-strong,#93A4B8);border-radius:var(--radius,8px);background:var(--paper-light,#FFFFFF);color:var(--ink,#1D2B3D);font-size:1rem;caret-color:var(--accent,#126B78);}.ds-field input:focus-visible{outline:2px solid var(--accent,#126B78);outline-offset:3px;border-color:var(--accent,#126B78);}"
+      "css": ".ds-field{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:grid;gap:.4rem;color:var(--ink,#18283A);font-size:.88rem;font-weight:500;}.ds-field input{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;min-width:0;min-height:48px;padding:.5rem .65rem;border:1px solid var(--line-strong,#8FA2B6);border-radius:var(--radius,8px);background:var(--paper-light,#FFFFFF);color:var(--ink,#18283A);font-size:1rem;caret-color:var(--accent,#0F6372);}.ds-field input:focus-visible{outline:2px solid var(--accent,#0F6372);outline-offset:3px;border-color:var(--accent,#0F6372);}"
     },
     {
       "name": "Workspace Navigation",
       "kind": "nav",
       "refersTo": "nav-selected",
-      "description": "Slate desktop workspace/operations groups; at 900px, five mobile destinations put services/settings behind More. This static preview shows navigation appearance.",
-      "html": "<nav class=\"ds-nav\" dir=\"rtl\" aria-label=\"ניווט ראשי\"><span class=\"ds-nav-section\">סביבת עבודה</span><a href=\"#visitors\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20\"/></svg><span>אתרים</span></a><a href=\"#clients\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect width=\"20\" height=\"14\" x=\"2\" y=\"7\" rx=\"2\"/><path d=\"M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16\"/></svg><span>לקוחות</span></a><a href=\"#vault\" aria-current=\"page\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"16\" cy=\"8\" r=\"5\"/><path d=\"m12.5 11.5-9 9H1v-2.5l9-9M16 8h.01\"/></svg><span>כספת</span></a><span class=\"ds-nav-section ds-nav-operations\">תפעול</span><a href=\"#infrastructure\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"7\" rx=\"2\"/><rect x=\"3\" y=\"14\" width=\"18\" height=\"7\" rx=\"2\"/><path d=\"M7 6.5h.01M7 17.5h.01\"/></svg><span>שרת ומשאבים</span></a><a href=\"#services\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-8.4 8.4a2.1 2.1 0 0 1-3-3l8.4-8.4a6 6 0 0 1 7.9-7.9z\"/></svg><span>שירותים</span></a><a href=\"#settings\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8\"/><path d=\"M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z\"/></svg><span>הגדרות</span></a></nav><nav class=\"ds-mobile-nav\" dir=\"rtl\" aria-label=\"ניווט נייד\"><a href=\"#visitors\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20\"/></svg><span>אתרים</span></a><a href=\"#clients\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect width=\"20\" height=\"14\" x=\"2\" y=\"7\" rx=\"2\"/><path d=\"M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16\"/></svg><span>לקוחות</span></a><a href=\"#vault\" aria-current=\"page\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"16\" cy=\"8\" r=\"5\"/><path d=\"m12.5 11.5-9 9H1v-2.5l9-9M16 8h.01\"/></svg><span>כספת</span></a><a href=\"#infrastructure\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"7\" rx=\"2\"/><rect x=\"3\" y=\"14\" width=\"18\" height=\"7\" rx=\"2\"/><path d=\"M7 6.5h.01M7 17.5h.01\"/></svg><span>שרת</span></a><button type=\"button\" aria-expanded=\"false\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"5\" cy=\"12\" r=\"1\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"19\" cy=\"12\" r=\"1\"/></svg><span>עוד</span></button></nav>",
-      "css": ".ds-nav,.ds-mobile-nav{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;background:var(--rail-bg,#192638);}.ds-nav{display:grid;gap:.35rem;width:15rem;max-width:100%;padding:1.3rem .9rem;}.ds-nav-section{color:var(--rail-muted,#B9C6D6);padding:0 .75rem .5rem;font-size:.75rem;}.ds-nav-operations{margin-block-start:1.25rem;}.ds-nav a,.ds-mobile-nav a,.ds-mobile-nav button{display:flex;align-items:center;gap:.8rem;min-height:48px;padding:.65rem .8rem;border:0;border-radius:var(--radius,8px);color:var(--rail-muted,#B9C6D6);background:transparent;font:500 .95rem var(--sans,Heebo,sans-serif);text-decoration:none;cursor:pointer;}.ds-nav a:hover,.ds-mobile-nav a:hover,.ds-mobile-nav button:hover{background:#25364B;color:#FFFFFF;}.ds-nav a[aria-current],.ds-mobile-nav a[aria-current]{background:var(--rail-active,#263D4D);color:#EDF9FA;font-weight:700;}.ds-nav a[aria-current] svg,.ds-mobile-nav a[aria-current] svg{color:var(--rail-accent,#8AD8DF);}.ds-nav a:focus-visible,.ds-mobile-nav :focus-visible{outline:2px solid var(--rail-accent,#8AD8DF);outline-offset:3px;}.ds-mobile-nav{display:none;}@media(max-width:900px){.ds-nav{display:none;}.ds-mobile-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:.3rem;}.ds-mobile-nav a,.ds-mobile-nav button{flex-direction:column;justify-content:center;gap:.2rem;padding:.45rem .2rem;min-height:58px;font-size:.7rem;border-radius:0;}.ds-mobile-nav svg{width:20px;height:20px;}}"
+      "description": "Slate workspace/operations groups and catalog-only QuickSwitch from Ctrl/Cmd+K, rail or mobile header. At 900px, five destinations put services/settings behind More.",
+      "html": "<nav class=\"ds-nav\" dir=\"rtl\" aria-label=\"ניווט ראשי\"><button class=\"ds-nav-search\" type=\"button\" aria-label=\"חיפוש וניווט\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg><span>חיפוש וניווט</span><kbd dir=\"ltr\">Ctrl K</kbd></button><span class=\"ds-nav-section\">סביבת עבודה</span><a href=\"#visitors\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20\"/></svg><span>אתרים</span></a><a href=\"#clients\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect width=\"20\" height=\"14\" x=\"2\" y=\"7\" rx=\"2\"/><path d=\"M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16\"/></svg><span>לקוחות</span></a><a href=\"#vault\" aria-current=\"page\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"16\" cy=\"8\" r=\"5\"/><path d=\"m12.5 11.5-9 9H1v-2.5l9-9M16 8h.01\"/></svg><span>כספת</span></a><span class=\"ds-nav-section ds-nav-operations\">תפעול</span><a href=\"#infrastructure\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"7\" rx=\"2\"/><rect x=\"3\" y=\"14\" width=\"18\" height=\"7\" rx=\"2\"/><path d=\"M7 6.5h.01M7 17.5h.01\"/></svg><span>שרת ומשאבים</span></a><a href=\"#services\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-8.4 8.4a2.1 2.1 0 0 1-3-3l8.4-8.4a6 6 0 0 1 7.9-7.9z\"/></svg><span>שירותים</span></a><a href=\"#settings\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8\"/><path d=\"M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z\"/></svg><span>הגדרות</span></a></nav><nav class=\"ds-mobile-nav\" dir=\"rtl\" aria-label=\"ניווט נייד\"><a href=\"#visitors\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20\"/></svg><span>אתרים</span></a><a href=\"#clients\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect width=\"20\" height=\"14\" x=\"2\" y=\"7\" rx=\"2\"/><path d=\"M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16\"/></svg><span>לקוחות</span></a><a href=\"#vault\" aria-current=\"page\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"16\" cy=\"8\" r=\"5\"/><path d=\"m12.5 11.5-9 9H1v-2.5l9-9M16 8h.01\"/></svg><span>כספת</span></a><a href=\"#infrastructure\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"7\" rx=\"2\"/><rect x=\"3\" y=\"14\" width=\"18\" height=\"7\" rx=\"2\"/><path d=\"M7 6.5h.01M7 17.5h.01\"/></svg><span>שרת</span></a><button type=\"button\" aria-expanded=\"false\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"5\" cy=\"12\" r=\"1\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"19\" cy=\"12\" r=\"1\"/></svg><span>עוד</span></button></nav>",
+      "css": ".ds-nav,.ds-mobile-nav{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;background:var(--rail-bg,#172638);}.ds-nav{display:grid;gap:.35rem;width:15rem;max-width:100%;padding:1.1rem .85rem;}.ds-nav-section{color:var(--rail-muted,#BDD0DC);padding:0 .75rem .5rem;font-size:.72rem;}.ds-nav-operations{margin-block-start:1.25rem;}.ds-nav a,.ds-mobile-nav a,.ds-mobile-nav button{display:flex;align-items:center;gap:.8rem;min-height:48px;padding:.65rem .8rem;border:0;border-radius:7px;color:var(--rail-muted,#BDD0DC);background:transparent;font:500 .95rem var(--sans,Heebo,sans-serif);text-decoration:none;cursor:pointer;}.ds-nav a:hover,.ds-mobile-nav a:hover,.ds-mobile-nav button:hover{background:#25364B;color:#FFFFFF;}.ds-nav a[aria-current],.ds-mobile-nav a[aria-current]{background:var(--rail-active,#23404D);color:#EDF9FA;font-weight:700;}.ds-nav a[aria-current] svg,.ds-mobile-nav a[aria-current] svg{color:var(--rail-accent,#8AD8DF);}.ds-nav a:focus-visible,.ds-mobile-nav :focus-visible{outline:2px solid var(--rail-accent,#8AD8DF);outline-offset:3px;}.ds-mobile-nav{display:none;}@media(max-width:900px){.ds-nav{display:none;}.ds-mobile-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:.3rem;}.ds-mobile-nav a,.ds-mobile-nav button{flex-direction:column;justify-content:center;gap:.2rem;padding:.45rem .2rem;min-height:58px;font-size:.7rem;border-radius:0;}.ds-mobile-nav svg{width:20px;height:20px;}}.ds-nav-search{display:flex;align-items:center;gap:.65rem;min-height:44px;width:100%;padding:.5rem .7rem;border:1px solid #496071;border-radius:8px;color:#DBE7EF;background:transparent;font:inherit;font-size:.85rem;text-align:start;cursor:pointer;}.ds-nav-search:hover{background:var(--rail-active,#23404D);}.ds-nav-search:focus-visible{outline:2px solid var(--rail-accent,#8AD8DF);outline-offset:3px;}.ds-nav-search kbd{margin-inline-start:auto;font:inherit;font-size:.7rem;color:var(--rail-muted,#BDD0DC);}"
     },
     {
       "name": "Written Health State",
@@ -714,7 +714,7 @@
       "refersTo": "chip-healthy",
       "description": "Compact operational health with a written state; never a decorative badge or a traffic trend.",
       "html": "<span class=\"ds-health\" dir=\"rtl\">פעיל</span>",
-      "css": ".ds-health{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;padding:.2rem .5rem;border-radius:6px;background:var(--healthy-surface,#EDF7F1);color:var(--healthy,#24734F);font-size:.72rem;font-weight:700;white-space:nowrap;}"
+      "css": ".ds-health{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;padding:.2rem .5rem;border-radius:6px;background:var(--healthy-surface,#EDF7F1);color:var(--healthy,#24734F);font-size:.76rem;font-weight:500;white-space:nowrap;}"
     },
     {
       "name": "Data Panel",
@@ -722,39 +722,38 @@
       "refersTo": "panel",
       "description": "A single subtle boundary around a dataset, with the same structure in graphite infrastructure.",
       "html": "<div class=\"ds-panels\" dir=\"rtl\"><section class=\"ds-panel\"><header><h2>פעילות</h2></header><div class=\"ds-panel-body\">נתונים מופיעים כאן</div></section><section class=\"ds-panel ds-panel-graphite\"><header><h2>צריכת משאבים</h2></header><div class=\"ds-panel-body\">RAM · Swap</div></section></div>",
-      "css": ".ds-panels{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:grid;gap:1.25rem;}.ds-panel{background:var(--paper-light,#FFFFFF);color:var(--ink,#1D2B3D);border:1px solid var(--line,#D7E0EA);border-radius:var(--panel-radius,12px);box-shadow:none;overflow:hidden;}.ds-panel header{display:flex;align-items:center;min-height:58px;padding:.8rem 1.2rem;border-bottom:1px solid var(--line,#D7E0EA);}.ds-panel h2{margin:0;font-size:1rem;line-height:1.5;font-weight:600;}.ds-panel-body{padding:1.2rem;font-size:1rem;color:var(--ink-muted,#536479);}.ds-panel-graphite{--paper-light:#1A2939;--ink:#EDF3FA;--ink-muted:#B2C0D0;--line:#354B60;}@media(max-width:480px){.ds-panel header,.ds-panel-body{padding:.85rem;}}"
+      "css": ".ds-panels{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:grid;gap:1rem;}.ds-panel{background:var(--paper-light,#FFFFFF);color:var(--ink,#18283A);border:1px solid var(--line,#DCE3EB);border-radius:var(--panel-radius,12px);box-shadow:none;overflow:hidden;}.ds-panel header{display:flex;align-items:center;min-height:58px;padding:.75rem 1rem;border-bottom:1px solid var(--line,#DCE3EB);}.ds-panel h2{margin:0;font-size:.96rem;line-height:1.5;font-weight:600;}.ds-panel-body{padding:1rem;font-size:1rem;color:var(--ink-muted,#556578);}.ds-panel-graphite{--paper-light:#1A2939;--ink:#EDF3FA;--ink-muted:#B2C0D0;--line:#354B60;}"
     },
     {
-      "name": "Summary Strip",
+      "name": "QuickSwitch",
       "kind": "custom",
-      "refersTo": "summary",
-      "description": "White primary values and aligned separators; placeholders avoid copying live measurements.",
-      "html": "<section class=\"ds-summary\" dir=\"rtl\" aria-label=\"מדדים מרכזיים\"><article><span>מבקרים משוערים</span><strong>—</strong></article><article><span>ביקורים</span><strong>—</strong></article><article><span>צפיות</span><strong>—</strong></article></section>",
-      "css": ".ds-summary{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--paper-light,#FFFFFF);color:var(--ink,#1D2B3D);border:1px solid var(--line,#D7E0EA);border-radius:var(--panel-radius,12px);}.ds-summary article{min-width:0;display:flex;flex-direction:column;gap:.5rem;padding:1.05rem 1.3rem;border-inline-end:1px solid var(--line,#D7E0EA);}.ds-summary article:last-child{border-inline-end:0;}.ds-summary span{color:var(--ink-muted,#536479);font-size:.84rem;line-height:1.4;font-weight:400;}.ds-summary strong{font-size:2rem;font-weight:600;line-height:1.15;letter-spacing:0;}@media(max-width:760px){.ds-summary article{gap:.35rem;}.ds-summary span{min-height:2.1rem;}}@media(max-width:480px){.ds-summary article{padding:.8rem .65rem;}.ds-summary strong{font-size:1.7rem;}}"
+      "description": "Synthetic catalog search appearance: native-modal geometry, selected keyboard result and distinct catalog loading/failure feedback. Ctrl/Cmd+K, arrow-key/Enter selection and dated website navigation are implemented by QuickSwitch.jsx.",
+      "html": "<section class=\"ds-quick\" dir=\"rtl\" aria-label=\"חיפוש וניווט\"><label class=\"ds-quick-search\">חיפוש מסך, אתר או שירות<input placeholder=\"חיפוש מסך, אתר או שירות\" aria-label=\"חיפוש מסך, אתר או שירות\" /></label><div class=\"ds-quick-results\"><button class=\"ds-quick-selected\"><span><b>אתר לדוגמה</b><small dir=\"ltr\">example.test</small></span></button><button><span><b>שרת ומשאבים</b><small>סביבת עבודה</small></span></button></div><footer><span><kbd>Enter</kbd> לפתיחה</span><span><kbd>Esc</kbd> לסגירה</span></footer></section>",
+      "css": ".ds-quick{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;width:min(640px,calc(100% - 24px));border:1px solid var(--line,#DCE3EB);border-radius:12px;color:var(--ink,#18283A);background:var(--paper-light,#FFFFFF);overflow:hidden;}.ds-quick-search{display:grid;gap:.4rem;padding:.7rem 1rem;border-block-end:1px solid var(--line,#DCE3EB);font-size:.84rem;color:var(--ink-muted,#556578);}.ds-quick-search input{width:100%;min-width:0;min-height:48px;border:0;background:transparent;color:var(--ink,#18283A);font:inherit;font-size:1rem;padding:.4rem;}.ds-quick-results{max-height:55dvh;overflow-y:auto;padding:.4rem;}.ds-quick-results button{display:flex;align-items:center;gap:.8rem;width:100%;min-height:58px;padding:.6rem .8rem;color:var(--ink,#18283A);background:transparent;border:0;border-radius:7px;font:inherit;text-align:start;cursor:pointer;}.ds-quick-results button.ds-quick-selected{background:var(--selected,#E7F1F3);}.ds-quick-results button:hover{background:var(--row-hover,#F1F7F8);}.ds-quick-results span{display:grid;gap:.2rem;min-width:0;}.ds-quick-results b{font-size:.94rem;font-weight:500;}.ds-quick-results small{font-size:.77rem;color:var(--ink-muted,#556578);overflow-wrap:anywhere;}.ds-quick footer{display:flex;justify-content:space-between;gap:.7rem;padding:.75rem 1rem;border-block-start:1px solid var(--line,#DCE3EB);font-size:.75rem;color:var(--ink-muted,#556578);}.ds-quick kbd{font:inherit;font-weight:500;}.ds-quick :focus-visible{outline:2px solid var(--accent,#0F6372);outline-offset:3px;}@media(max-width:760px){.ds-quick-search{padding-inline:.6rem;}.ds-quick-search input{font-size:.95rem;}}"
     },
     {
       "name": "Vault List and Detail",
       "kind": "custom",
       "description": "Synthetic selected credential appearance. The production vault has a right list/left detail above 1000px and separate list/detail views below it; runtime copy/reveal behavior remains in Vault.jsx.",
       "html": "<div class=\"ds-vault\" dir=\"rtl\"><section class=\"ds-vault-list\" aria-label=\"פרטי גישה\"><label class=\"ds-vault-search\">חיפוש<input placeholder=\"אפליקציה, משתמש או כתובת\" /></label><button class=\"ds-vault-row\" aria-pressed=\"true\"><span class=\"ds-vault-initial\">D</span><span><b>Demo app</b><small dir=\"ltr\">demo@example.test</small></span><small>ייצור</small></button></section><section class=\"ds-vault-detail\"><h2 dir=\"ltr\">Demo app</h2><div class=\"ds-vault-value\"><label>שם משתמש</label><div><bdi dir=\"ltr\">demo@example.test</bdi><button aria-label=\"העתקת שם משתמש\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\"/><path d=\"M4 16H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1\"/></svg></button></div></div><div class=\"ds-vault-value\"><label>סיסמה</label><div><bdi dir=\"ltr\">••••••••••••</bdi><button aria-label=\"הצגת סיסמה\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg></button><button aria-label=\"העתקת סיסמה\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\"/><path d=\"M4 16H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1\"/></svg></button></div></div><a class=\"ds-vault-open\" href=\"https://example.test\" target=\"_blank\" rel=\"noopener noreferrer\">פתיחת אתר</a><small>נתוני הדגמה</small></section></div>",
-      "css": ".ds-vault{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:grid;grid-template-columns:minmax(290px,360px) minmax(0,1fr);gap:1.15rem;color:var(--ink,#1D2B3D);}.ds-vault-list,.ds-vault-detail{min-width:0;border:1px solid var(--line,#D7E0EA);border-radius:var(--panel-radius,12px);background:var(--paper-light,#FFFFFF);overflow:hidden;}.ds-vault-search{display:grid;gap:.4rem;padding:1rem;color:var(--ink-muted,#536479);font-size:.84rem;border-block-end:1px solid var(--line,#D7E0EA);}.ds-vault-search input{font:inherit;min-width:0;min-height:44px;color:var(--ink,#1D2B3D);background:transparent;border:0;}.ds-vault-row{display:flex;width:100%;gap:.8rem;align-items:center;text-align:start;padding:1rem;border:0;background:var(--selected,#E8F4F5);color:inherit;font:inherit;cursor:pointer;}.ds-vault-row:hover{background:var(--row-hover,#F0F8F9);}.ds-vault-row>span:nth-child(2){display:grid;gap:.2rem;flex:1;min-width:0;}.ds-vault-row b{font-size:.98rem;overflow-wrap:anywhere;}.ds-vault-row small,.ds-vault-detail>small{font-size:.8rem;color:var(--ink-muted,#536479);overflow-wrap:anywhere;}.ds-vault-initial{display:grid;place-items:center;width:40px;height:40px;flex-shrink:0;border:1px solid var(--line,#D7E0EA);border-radius:10px;background:var(--paper-light,#FFFFFF);color:var(--accent,#126B78);font-weight:600;}.ds-vault-detail{display:grid;align-content:start;gap:1.35rem;padding:1.5rem;}.ds-vault-detail h2{margin:0;text-align:start;font-size:1.3rem;line-height:1.5;}.ds-vault-value>label{display:block;font-size:.84rem;color:var(--ink-muted,#536479);margin-block-end:.4rem;}.ds-vault-value>div{display:flex;align-items:center;gap:.25rem;min-height:52px;padding:.2rem .65rem;border:1px solid var(--line,#D7E0EA);border-radius:8px;background:var(--paper,#F2F5F9);}.ds-vault-value bdi{min-width:0;flex:1;overflow-wrap:anywhere;}.ds-vault-value button{display:grid;place-items:center;min-width:44px;width:44px;height:44px;border:0;border-radius:8px;background:transparent;color:var(--ink-muted,#536479);cursor:pointer;}.ds-vault-value button:hover{background:var(--paper-deep,#EAF0F6);color:var(--ink,#1D2B3D);}.ds-vault-open{display:inline-flex;align-items:center;justify-self:start;min-height:44px;padding-inline:.95rem;border-radius:8px;background:var(--accent,#126B78);color:var(--on-accent,#FFFFFF);font-size:.9rem;font-weight:500;text-decoration:none;}.ds-vault-open:hover{background:var(--accent-hover,#0C5360);}.ds-vault :focus-visible{outline:2px solid var(--accent,#126B78);outline-offset:3px;}@media(max-width:1200px){.ds-vault{grid-template-columns:300px minmax(0,1fr);}.ds-vault-detail{padding:1.15rem;}}@media(max-width:1000px){.ds-vault{grid-template-columns:1fr;}.ds-vault-list{display:none;}.ds-vault-detail{min-height:65dvh;}}@media(max-width:480px){.ds-vault-detail{padding:1rem;}.ds-vault-detail h2{font-size:1.15rem;}.ds-vault-value bdi{font-size:.95rem;}}"
+      "css": ".ds-vault{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;display:grid;grid-template-columns:minmax(290px,360px) minmax(0,1fr);gap:1.15rem;color:var(--ink,#18283A);}.ds-vault-list,.ds-vault-detail{min-width:0;border:1px solid var(--line,#DCE3EB);border-radius:var(--panel-radius,12px);background:var(--paper-light,#FFFFFF);overflow:hidden;}.ds-vault-search{display:grid;gap:.4rem;padding:1rem;color:var(--ink-muted,#556578);font-size:.84rem;border-block-end:1px solid var(--line,#DCE3EB);}.ds-vault-search input{font:inherit;min-width:0;min-height:44px;color:var(--ink,#18283A);background:transparent;border:0;}.ds-vault-row{display:flex;width:100%;gap:.8rem;align-items:center;text-align:start;padding:1rem;border:0;background:var(--selected,#E7F1F3);color:inherit;font:inherit;cursor:pointer;}.ds-vault-row:hover{background:var(--row-hover,#F1F7F8);}.ds-vault-row>span:nth-child(2){display:grid;gap:.2rem;flex:1;min-width:0;}.ds-vault-row b{font-size:.98rem;overflow-wrap:anywhere;}.ds-vault-row small,.ds-vault-detail>small{font-size:.8rem;color:var(--ink-muted,#556578);overflow-wrap:anywhere;}.ds-vault-initial{display:grid;place-items:center;width:40px;height:40px;flex-shrink:0;border:1px solid var(--line,#DCE3EB);border-radius:10px;background:var(--paper-light,#FFFFFF);color:var(--accent,#0F6372);font-weight:600;}.ds-vault-detail{display:grid;align-content:start;gap:1.35rem;padding:1.5rem;}.ds-vault-detail h2{margin:0;text-align:start;font-size:1.3rem;line-height:1.5;}.ds-vault-value>label{display:block;font-size:.84rem;color:var(--ink-muted,#556578);margin-block-end:.4rem;}.ds-vault-value>div{display:flex;align-items:center;gap:.25rem;min-height:52px;padding:.2rem .65rem;border:1px solid var(--line,#DCE3EB);border-radius:8px;background:var(--paper,#F5F7FA);}.ds-vault-value bdi{min-width:0;flex:1;overflow-wrap:anywhere;}.ds-vault-value button{display:grid;place-items:center;min-width:44px;width:44px;height:44px;border:0;border-radius:8px;background:transparent;color:var(--ink-muted,#556578);cursor:pointer;}.ds-vault-value button:hover{background:var(--paper-deep,#EEF2F6);color:var(--ink,#18283A);}.ds-vault-open{display:inline-flex;align-items:center;justify-self:start;min-height:44px;padding-inline:.95rem;border-radius:8px;background:var(--accent,#0F6372);color:var(--on-accent,#FFFFFF);font-size:.9rem;font-weight:500;text-decoration:none;}.ds-vault-open:hover{background:var(--accent-hover,#084C59);}.ds-vault :focus-visible{outline:2px solid var(--accent,#0F6372);outline-offset:3px;}@media(max-width:1200px){.ds-vault{grid-template-columns:300px minmax(0,1fr);}.ds-vault-detail{padding:1.15rem;}}@media(max-width:1000px){.ds-vault{grid-template-columns:1fr;}.ds-vault-list{display:none;}.ds-vault-detail{min-height:65dvh;}}@media(max-width:480px){.ds-vault-detail{padding:1rem;}.ds-vault-detail h2{font-size:1.15rem;}.ds-vault-value bdi{font-size:.95rem;}}"
     },
     {
       "name": "Site Comparison",
       "kind": "custom",
-      "description": "A generic zero-data example with one aligned header, neutral change and a zero-fill measured activity bar.",
-      "html": "<div class=\"ds-comparison\" dir=\"rtl\"><div class=\"ds-comparison-head\" aria-hidden=\"true\"><span>אתר</span><span>אומדן</span><span>ביקורים</span><span>צפיות</span><span class=\"ds-comparison-change\">שינוי</span><span></span></div><a class=\"ds-comparison-row\" href=\"#example\" aria-label=\"אתר לדוגמה, אומדן 0, ביקורים 0, צפיות 0, אין קודמים\"><b class=\"ds-comparison-name\">אתר לדוגמה</b><strong>0</strong><span class=\"ds-comparison-activity\"><strong>0</strong><i aria-hidden=\"true\"><em></em></i></span><strong>0</strong><span class=\"ds-comparison-change\">אין קודמים</span><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" aria-hidden=\"true\"><path d=\"m15 18-6-6 6-6\"/></svg></a></div>",
-      "css": ".ds-comparison{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;border:1px solid var(--line,#D7E0EA);border-radius:var(--panel-radius,12px);background:var(--paper-light,#FFFFFF);color:var(--ink,#1D2B3D);overflow:hidden;}.ds-comparison-head,.ds-comparison-row{display:grid;grid-template-columns:minmax(9rem,1.65fr) repeat(3,minmax(4rem,.8fr)) minmax(7rem,1fr) 1rem;align-items:center;gap:.7rem;padding-inline:1.1rem;}.ds-comparison-head{padding-block:.65rem;background:var(--paper-deep,#EAF0F6);color:var(--ink-muted,#536479);font-size:.73rem;border-bottom:1px solid var(--line,#D7E0EA);}.ds-comparison-row{min-height:56px;padding-block:.7rem;color:inherit;text-decoration:none;}.ds-comparison-row:hover{background:var(--row-hover,#F0F8F9);}.ds-comparison-row:focus-visible{outline:2px solid var(--accent,#126B78);outline-offset:3px;}.ds-comparison-name{font-size:.9rem;overflow-wrap:anywhere;}.ds-comparison-row strong{font-size:1.12rem;}.ds-comparison-activity{display:grid;gap:.3rem;justify-items:start;}.ds-comparison-activity i{display:block;width:3.5rem;max-width:100%;height:4px;background:var(--line,#D7E0EA);border-radius:2px;overflow:hidden;}.ds-comparison-activity em{display:block;width:0;height:100%;background:var(--accent,#126B78);}.ds-comparison-change{font-size:.74rem;color:var(--ink-muted,#536479);}.ds-comparison-row>svg{color:var(--ink-muted,#536479);}@media(max-width:760px){.ds-comparison-head,.ds-comparison-row{grid-template-columns:minmax(0,1fr) repeat(3,2.85rem) .6rem;gap:.3rem;padding-inline:.7rem;}.ds-comparison-head{font-size:.67rem;}.ds-comparison-head>span:not(:first-child){text-align:center;}.ds-comparison-head .ds-comparison-change{display:none;}.ds-comparison-row{min-height:72px;row-gap:.3rem;}.ds-comparison-name{grid-column:1;grid-row:1;font-size:.8rem;line-height:1.5;}.ds-comparison-row>strong,.ds-comparison-activity{grid-row:1/3;text-align:center;justify-self:center;}.ds-comparison-row>strong:nth-child(2){grid-column:2;}.ds-comparison-activity{grid-column:3;justify-items:center;}.ds-comparison-row>strong:nth-child(4){grid-column:4;}.ds-comparison-row strong{font-size:1.05rem;}.ds-comparison-activity i{width:2rem;height:3px;}.ds-comparison-row .ds-comparison-change{grid-column:1;grid-row:2;font-size:.68rem;}.ds-comparison-row>svg{grid-column:5;grid-row:1/3;width:13px;}}@media(max-width:380px){.ds-comparison-head,.ds-comparison-row{grid-template-columns:minmax(0,1fr) repeat(3,2.55rem) .6rem;gap:.2rem;padding-inline:.55rem;}.ds-comparison-head{font-size:.64rem;}.ds-comparison-name{font-size:.76rem;}} .ds-comparison-head{font-size:.78rem;}.ds-comparison-row{min-height:67px;padding-block:.9rem;}.ds-comparison-name{font-size:1rem;font-weight:600;}.ds-comparison-row strong{font-size:1.15rem;font-weight:600;}@media(max-width:760px){.ds-comparison-row{min-height:72px;}}@media(max-width:480px){.ds-comparison-row{padding-inline:.85rem;}.ds-comparison-name{font-size:.95rem;}}"
+      "description": "Synthetic zero-data ledger row with domain context, a dated-detail affordance, a separate public-site link, neutral change and zero-fill measured activity. The production ledger has all/activity/attention filters and explicit unknown availability.",
+      "html": "<div class=\"ds-comparison\" dir=\"rtl\"><div class=\"ds-comparison-head\" aria-hidden=\"true\"><span>אתר</span><span>אומדן</span><span>ביקורים</span><span>צפיות</span><span class=\"ds-comparison-change\">שינוי</span><span></span></div><div class=\"ds-comparison-entry\"><a class=\"ds-comparison-row\" href=\"#example\" aria-label=\"אתר לדוגמה, אומדן 0, ביקורים 0, צפיות 0, אין קודמים\"><span class=\"ds-comparison-name\"><b>אתר לדוגמה</b><small dir=\"ltr\">example.test</small></span><strong>0</strong><span class=\"ds-comparison-activity\"><strong>0</strong><i aria-hidden=\"true\"><em></em></i></span><strong>0</strong><span class=\"ds-comparison-change\">אין קודמים</span><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" aria-hidden=\"true\"><path d=\"m15 18-6-6 6-6\"/></svg></a><a class=\"ds-site-open\" href=\"https://example.test\" target=\"_blank\" rel=\"noopener noreferrer\" aria-label=\"פתיחת אתר לדוגמה באתר חדש\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" aria-hidden=\"true\"><path d=\"M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6\"/></svg></a></div></div>",
+      "css": ".ds-comparison{font-family:var(--sans,Heebo,sans-serif);font-variant-numeric:tabular-nums;border:1px solid var(--line,#DCE3EB);border-radius:var(--panel-radius,12px);background:var(--paper-light,#FFFFFF);color:var(--ink,#18283A);overflow:hidden;}.ds-comparison-head,.ds-comparison-row{display:grid;grid-template-columns:minmax(9rem,1.65fr) repeat(3,minmax(4rem,.8fr)) minmax(7rem,1fr) 1rem;align-items:center;gap:.7rem;padding-inline:1.1rem;}.ds-comparison-head{padding-block:.65rem;background:var(--paper-deep,#EEF2F6);color:var(--ink-muted,#556578);font-size:.73rem;border-bottom:1px solid var(--line,#DCE3EB);}.ds-comparison-row{min-height:56px;padding-block:.7rem;color:inherit;text-decoration:none;}.ds-comparison-row:hover{background:var(--row-hover,#F1F7F8);}.ds-comparison-row:focus-visible{outline:2px solid var(--accent,#0F6372);outline-offset:3px;}.ds-comparison-name{font-size:.9rem;overflow-wrap:anywhere;}.ds-comparison-row strong{font-size:1.12rem;}.ds-comparison-activity{display:grid;gap:.3rem;justify-items:start;}.ds-comparison-activity i{display:block;width:3.5rem;max-width:100%;height:4px;background:var(--line,#DCE3EB);border-radius:2px;overflow:hidden;}.ds-comparison-activity em{display:block;width:0;height:100%;background:var(--accent,#0F6372);}.ds-comparison-change{font-size:.74rem;color:var(--ink-muted,#556578);}.ds-comparison-row>svg{color:var(--ink-muted,#556578);}@media(max-width:760px){.ds-comparison-head,.ds-comparison-row{grid-template-columns:minmax(0,1fr) repeat(3,2.85rem) .6rem;gap:.3rem;padding-inline:.7rem;}.ds-comparison-head{font-size:.67rem;}.ds-comparison-head>span:not(:first-child){text-align:center;}.ds-comparison-head .ds-comparison-change{display:none;}.ds-comparison-row{min-height:72px;row-gap:.3rem;}.ds-comparison-name{grid-column:1;grid-row:1;font-size:.8rem;line-height:1.5;}.ds-comparison-row>strong,.ds-comparison-activity{grid-row:1/3;text-align:center;justify-self:center;}.ds-comparison-row>strong:nth-child(2){grid-column:2;}.ds-comparison-activity{grid-column:3;justify-items:center;}.ds-comparison-row>strong:nth-child(4){grid-column:4;}.ds-comparison-row strong{font-size:1.05rem;}.ds-comparison-activity i{width:2rem;height:3px;}.ds-comparison-row .ds-comparison-change{grid-column:1;grid-row:2;font-size:.68rem;}.ds-comparison-row>svg{grid-column:5;grid-row:1/3;width:13px;}}@media(max-width:380px){.ds-comparison-head,.ds-comparison-row{grid-template-columns:minmax(0,1fr) repeat(3,2.55rem) .6rem;gap:.2rem;padding-inline:.55rem;}.ds-comparison-head{font-size:.64rem;}.ds-comparison-name{font-size:.76rem;}} .ds-comparison-head{font-size:.78rem;}.ds-comparison-row{min-height:67px;padding-block:.9rem;}.ds-comparison-name{font-size:1rem;font-weight:600;}.ds-comparison-row strong{font-size:1.15rem;font-weight:600;}@media(max-width:760px){.ds-comparison-row{min-height:72px;}}@media(max-width:480px){.ds-comparison-row{padding-inline:.85rem;}.ds-comparison-name{font-size:.95rem;}}.ds-comparison-head{padding-inline-end:calc(1rem + 48px);}.ds-comparison-entry{display:grid;grid-template-columns:minmax(0,1fr) 48px;align-items:center;}.ds-comparison-row{min-height:76px;padding:.75rem 1rem;}.ds-comparison-name{display:grid;min-width:0;gap:.15rem;}.ds-comparison-name b,.ds-comparison-name small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.ds-comparison-name small{font-size:.74rem;font-weight:400;color:var(--ink-muted,#556578);}.ds-comparison-row strong{font-size:1.05rem;}.ds-comparison-activity i{width:3.8rem;height:4px;}.ds-site-open{display:grid;place-items:center;width:44px;min-width:44px;height:44px;border:0;border-radius:8px;color:var(--ink-muted,#556578);background:transparent;}.ds-site-open:hover{color:var(--accent,#0F6372);background:var(--selected,#E7F1F3);}.ds-site-open:focus-visible{outline:2px solid var(--accent,#0F6372);outline-offset:3px;}@media(max-width:760px){.ds-comparison-entry{display:block;position:relative;}.ds-comparison-row{padding-inline:.85rem;min-height:100px;}.ds-comparison-name small{max-width:8.5rem;font-size:.7rem;}.ds-site-open{position:absolute;inset-inline-end:.6rem;bottom:.3rem;}.ds-comparison-change{padding-inline-end:46px;}.ds-comparison-head{padding-inline-end:.85rem;}}"
     }
   ],
   "narrative": {
     "northStar": "חדר בקרה חד וברור",
-    "overview": "A compact fleet console makes website activity, client work, shared credentials and server attention easy to scan. Porcelain canvas, white data surfaces, slate navigation and petrol actions put aligned numbers and useful controls first. Short Hebrew nouns, contextual icons and explanations on demand keep the interface practical for a daily check.\n\nWebsite activity, client follow-up, the team vault, services, settings and authentication share the light system. Infrastructure uses graphite surfaces with the same components, density and interaction grammar. The vault has one desktop list/detail workspace and separate mobile views; its approved [desktop composition](.impeccable/mocks/vault-desktop.png) and [approval record](.impeccable/mocks/vault-desktop.json) establish spatial direction, while semantic Hebrew and functional controls follow the implementation.",
+    "overview": "A compact daily workbench makes website activity, client work, shared credentials and server attention easy to scan. Porcelain canvas, white data surfaces, slate navigation and petrol actions put aligned numbers and useful controls first. Domain context, measured summaries and short contextual actions support a daily check; longer explanations open on demand.\n\nWebsite activity, client follow-up, the team vault, services, settings and authentication share the light system. Infrastructure uses graphite surfaces with the same components, density and interaction grammar. The vault has one desktop list/detail workspace and separate mobile views; its approved [desktop composition](.impeccable/mocks/vault-desktop.png) and [approval record](.impeccable/mocks/vault-desktop.json) establish spatial direction, while semantic Hebrew and functional controls follow the implementation.",
     "keyCharacteristics": [
       "Hebrew RTL, self-hosted Heebo and aligned tabular numbers.",
       "White summaries, tables and plots with subtle boundaries and gently rounded panels.",
       "Stable slate navigation, petrol actions and functional green, amber and red states.",
-      "Compact comparison rows, measured activity bars, a responsive credential list/detail and explanations on demand."
+      "A domain-aware site ledger, measured activity bars, catalog search and responsive credential list/detail."
     ],
     "rules": [],
     "dos": [

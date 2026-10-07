@@ -15,13 +15,13 @@
     ],
     "format": "png",
     "transparency": false,
-    "deviations": "Generated Hebrew and colored app badges are conceptual artifacts. The application uses corrected Hebrew and restrained semantic icons.",
+    "deviations": "Initial approved conceptual layout, preserved unchanged. Generated Hebrew and colored app badges are conceptual artifacts. Current synthetic UI captures show corrected Hebrew, restrained semantic icons, refined porcelain #F5F7FA and petrol #0F6372; palette refinements do not claim pixel identity with the initial concept.",
     "qa_status": "accepted"
   },
   "semantic": [
     {
       "id": "workspace-shell",
-      "implementation": "RTL application shell with semantic navigation on the right, slate background, Heebo typography, compact page header, white content surfaces and porcelain canvas. Existing SVG icons carry accessible labels; active routes use restrained petrol. At narrow widths use responsive navigation with an explicit menu control.",
+      "implementation": "RTL application shell with semantic navigation on the right, slate background, Heebo typography, compact page header, white content surfaces and porcelain #F5F7FA canvas. Existing SVG icons carry accessible labels; active routes use restrained petrol #0F6372. Global quick navigation has a labeled desktop Ctrl+K control and compact mobile search icon; responsive navigation uses the existing mobile workspace controls.",
       "notes": "Keep infrastructure surfaces graphite. No background raster, generated app frame or nearby image assets.",
       "qa_status": "accepted"
     },
@@ -45,7 +45,7 @@
     },
     {
       "id": "workspace-data-views",
-      "implementation": "Use the shared shell, Heebo, white data surfaces and compact controls across visitor, client, infrastructure, service and settings pages. Tables, measured charts, status controls and hints are semantic components, CSS and SVG rather than screenshots.",
+      "implementation": "Use the shared shell, Heebo, white data surfaces and compact controls across visitor, client, infrastructure, service and settings pages. Tables, measured charts, operational status controls and hints are semantic components, CSS and SVG rather than screenshots. Keep loading, empty, failure and stale states factual and rendered by semantic controls.",
       "notes": "Preserve measured/candidate terminology and workspace boundaries. Gallery files are review material, not production asset dependencies.",
       "qa_status": "accepted"
     }
@@ -68,7 +68,7 @@
     "prompt_roundtrip": "passed",
     "original_image_data": "unchanged",
     "scope": "Visual assets and local gallery only; application functionality/security verification belongs to parent",
-    "visual_result": "Accepted for asset fidelity: final desktop edit recaptured and inspected; neutral semantic controls, RTL list/detail composition, Heebo and palette preserved.",
+    "visual_result": "Accepted for asset fidelity: 33 current synthetic captures recopied and hashed; desktop vault detail, mobile vault detail and mobile gallery inspected. RTL list/detail composition, Heebo, neutral semantic controls and refined porcelain/petrol remain coherent. Initial concept and exact embedded prompt remain unchanged and are labeled separately from current implementation.",
     "limitations": [
       "Synthetic workspace captures retain missing metrics and empty states; they are not production health evidence.",
       "Recovery screenshot contains the source capture mask over the synthetic recovery value.",

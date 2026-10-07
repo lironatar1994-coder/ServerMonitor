@@ -10,10 +10,12 @@ import {
   KeyRound,
   MoreHorizontal,
   X,
+  Search,
 } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Modal from "./Modal";
+import QuickSwitch from "./QuickSwitch";
 import { apiFetch } from "../lib/api";
 import {
   getSessionSnapshot,
@@ -49,7 +51,8 @@ export default function AppShell() {
   const [collapsed, setCollapsed] = useState(
       () => localStorage.getItem("vee-monitor.rail-collapsed") === "1",
     ),
-    [more, setMore] = useState(false);
+    [more, setMore] = useState(false),
+    [switching, setSwitching] = useState(false);
   const user = useSyncExternalStore(subscribeSession, getSessionSnapshot),
     navigate = useNavigate(),
     location = useLocation(),
@@ -113,6 +116,20 @@ export default function AppShell() {
     document.addEventListener("keydown", close);
     return () => document.removeEventListener("keydown", close);
   }, [more]);
+  useEffect(() => {
+    const shortcut = (event) => {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === "k" &&
+        !document.querySelector("dialog[open]")
+      ) {
+        event.preventDefault();
+        setSwitching(true);
+      }
+    };
+    window.addEventListener("keydown", shortcut);
+    return () => window.removeEventListener("keydown", shortcut);
+  }, []);
   const toggle = () =>
     setCollapsed((value) => {
       localStorage.setItem("vee-monitor.rail-collapsed", value ? "0" : "1");
@@ -140,6 +157,16 @@ export default function AppShell() {
             {collapsed ? <PanelRightOpen /> : <PanelRightClose />}
           </button>
         </div>
+        <button
+          className="rail-search"
+          onClick={() => setSwitching(true)}
+          aria-label="חיפוש וניווט"
+          title="חיפוש וניווט (Ctrl+K)"
+        >
+          <Search aria-hidden="true" />
+          <span>חיפוש מהיר</span>
+          <kbd dir="ltr">Ctrl K</kbd>
+        </button>
         <nav className="rail-nav">
           <span className="rail-section">סביבת עבודה</span>
           {main.map((item) => (
@@ -178,6 +205,13 @@ export default function AppShell() {
       </aside>
       <header className="mobile-header">
         <b>Server Monitor</b>
+        <button
+          className="mobile-search"
+          onClick={() => setSwitching(true)}
+          aria-label="חיפוש וניווט"
+        >
+          <Search />
+        </button>
         <button className="mobile-logout" onClick={logout} aria-label="התנתקות">
           <LogOut />
         </button>
@@ -206,6 +240,7 @@ export default function AppShell() {
           <span>עוד</span>
         </button>
       </nav>
+      {switching && <QuickSwitch onClose={() => setSwitching(false)} />}
       {more && (
         <Modal
           className="mobile-more"

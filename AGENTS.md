@@ -122,6 +122,8 @@ When the user requests a durable behavior change, record it here or in the relev
 - Internal team roles are owner, editor and reader. Monitoring is readable to members; server actions and client-workspace writes are owner-only. All vault members can decrypt the shared items; editors can change entries and owners manage membership, invites and key rotation.
 - Require MFA for human sessions, a separate vault passphrase, an offline recovery key, and automatic locking. Never send vault passphrases, decrypted entries or plaintext vault keys to the server. Do not send team invitations automatically.
 
+- Keep navigation and operational issues actionable, preserve exact date context when opening another site, and distinguish a running messaging process from a verified connection. Missing monitoring coverage must stay visible rather than being implied healthy by existing registered-app checks.
+
 ## Child DOX Index
 
 - `ops/AGENTS.md` - Verified backups, safe cleanup, resource health, and one maintenance scheduler.

@@ -27,6 +27,11 @@
 
 ## Local Contracts
 
+- `operationalHealth.js` and authenticated GET `/apps/operational-health` expose a sanitized read-only attention view: recent host/browser/backup snapshots, report timestamps, active custom systemd apps missing from the catalog, legacy alert-queue counts and Seder connection readiness. This view does not create catalog records, change backup policy, send messages or restart services.
+- Read bounded JSON files (64 KiB), query the legacy message store read-only for aggregate pending counts only, and never expose recipients, message contents, QR codes or pairing data. Custom-unit discovery is limited to 100 names in `/etc/systemd/system`, cached 60 seconds and bounded to three seconds; unavailable discovery is explicit.
+- Operational source freshness is 30 minutes for host health, seven hours for browser checks, 36 hours for documented backups and three minutes for messaging readiness. Keep failures and missing sources visible; prioritize delivery/connection/coverage warnings ahead of routine maintenance. Source-specific checks passing never imply complete catalog or backup coverage.
+
+
 - `security.js`, `routes/sessions.js` and the `routes/auth.js` compatibility export own hashed opaque sessions, Argon2id login hashes, legacy bcrypt migration, mandatory TOTP and hashed one-use recovery codes. No default password or JWT fallback. Legacy login passwords shorter than 15 characters must be changed through a password-verified pending session before MFA; the update revokes other sessions. Bootstrap only through an explicit `MONITOR_BOOTSTRAP_PASSWORD` of at least 15 characters.
 - Production uses `NODE_ENV=production`, exact `MONITOR_ORIGIN=https://monitor.vee-app.co.il`, a Secure/HttpOnly/SameSite=Strict host-only cookie and CSRF+Origin checks on mutations. Auth/vault APIs reject alias hosts; SPA aliases redirect to the canonical origin. Bind the API to loopback.
 - `AUTH_KEY_FILE` is a persistent root-only 32-byte key for TOTP secrets, never the vault encryption key. Never log auth/vault URLs, request bodies, tokens, passphrases or decrypted records.

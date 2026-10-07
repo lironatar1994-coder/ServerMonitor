@@ -22,7 +22,7 @@
 - Portfolio engagement sends bounded 15-second deltas, pauses while hidden or after 30 seconds without activity, and contains only named zones, coarse 12x12 click cells, scroll reach and durations. Never collect page text, form content or full outbound URLs.
 - The existing 15-minute health timer runs a browser check every six hours via `lawebs-browser-check.service`; deployment forces a check through `lawebs-maintenance browser`. No additional timer. systemd serializes concurrent starts and kills the complete process group after 180 seconds (10-second stop grace). Limit CPU to 75% of one core, memory high/max to 512/640 MB, swap to 128 MB, and use low CPU/I/O priority. Use a single headless browser, identify automated visits, confirm their exclusion in SQLite and never send contact messages.
 - Write atomic root-only `browser-check.json`; the runner records failures even when the browser is killed before writing. Failed attempts wait the normal six hours before automatic retry. Results older than seven hours or failing checks produce dashboard alerts; zero traffic is not a failure.
-- The browser check creates only a five-minute opaque read-only monitor session for an existing active user. Never log or persist the token. Put it in a host-only HttpOnly review cookie; vault access and all writes remain forbidden. Playwright/Chromium is installed by deployment; no new scheduler is added.
+- The browser check creates only a five-minute opaque read-only monitor session for an existing active user. Never log or persist the token. Use a host-only HttpOnly review cookie over HTTPS. For a local HTTP Vite preview, inject the read-only monitor bearer only into the exact preview origin API requests in process memory; never persist it or attach it to external sites. Vault access and all writes remain forbidden. Playwright/Chromium is installed by deployment; no new scheduler is added.
 - Each full browser run navigates all canonical visitor sites from the live catalog and verifies a successful signed navigation receipt plus its automation exclusion in SQLite. Use one page at a time and skip images/fonts/media in this telemetry stage; reserve at most 55 seconds and stop it by 160 seconds overall, within the systemd limit.
 - Install browser system dependencies only when Chromium is missing, with `NEEDRESTART_MODE=l` and noninteractive package handling so dependency setup cannot restart unrelated production services.
 
@@ -47,6 +47,9 @@
 - Code rollback must remain on a build supporting opaque sessions and encrypted vault tables once users have enrolled. Do not roll back to JWT/default-password authentication or overwrite live vault rows with a stale backup. Disable `VAULT_ENABLED` to contain a vault incident while preserving encrypted data.
 
 ## Verification
+
+- UI review includes global keyboard search/date preservation, direct-site links, activity filters, legacy redirects, consistent service availability, connection-source failures/recovery and confirmation focus. Confirmation tests mock owner UI, abort service mutations and never submit an action. `UI_REVIEW_OPERATIONAL_FIXTURE` may supply a sanitized source-derived operational snapshot for a pre-deployment local UI review; final production checks must exercise the deployed endpoint. Label snapshot evidence as preview data.
+
 
 - `node ops/vault-review.cjs` starts a temporary synthetic database/server with no monitoring scheduler, exercises real login/MFA and ciphertext saves, copy/reveal/lock, and captures 1536/1440/768/390/320px layouts under ignored `.impeccable/review/vault`. Never aim this runner at production or capture real credentials.
 

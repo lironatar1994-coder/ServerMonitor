@@ -25,6 +25,13 @@
 
 ## Local Contracts
 
+- `QuickSwitch.jsx` owns global Ctrl/Cmd+K navigation, keyboard selection, app/domain matching and explicit-date preservation. Fetch only the monitoring catalog; never search decrypted vault content. Reuse the native modal and keep the shortcut inactive while another dialog is open.
+- The site ledger supports all/activity/attention filters and distinct detail versus direct-public-site links; opening a site never supplies stored credentials. Every repeated external link has a contextual accessible label and 44px target.
+- `OperationalStatus.jsx` owns server attention and source-check timestamps from `/apps/operational-health`. Keep these issues in infrastructure/services. A running messaging process and an actual connection are separate states; missing/stale sources stay unverified.
+- `lib/serviceState.js` aligns service availability counts, filters and row labels; put issues first. Failed operational checks keep connection readiness unverified and offer recovery. Service action confirmations use native `Modal` with cancellation focused first and focus restored to the trigger.
+- Legacy `/app/:id` opens website analytics or service operations according to the catalog, retaining query context. `/dashboard` and `/sites` alias `/visitors`; `/server` and `/system-stats` alias infrastructure. Authentication allowlists these internal destinations.
+
+
 - `pages/Vault.jsx` owns encrypted list/detail orchestration, on-demand secrets, 15-second reveal, worker termination, five-minute idle lock and one-minute hidden lock. Never persist plaintext, passphrases, keys or decrypted search indexes.
 - `lib/session.js` holds CSRF/profile state in memory; human credentials use HttpOnly cookies. Remove legacy localStorage tokens without reusing them. `SecurityStep` owns MFA enrollment/verification and one-use code saving; `Modal` owns native modal focus containment.
 - Human sessions expire after 30 idle minutes or 12 hours; logout broadcasts to other tabs. UI permissions mirror server checks and cannot replace them.

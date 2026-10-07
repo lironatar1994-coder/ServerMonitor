@@ -1,17 +1,17 @@
 /* Fleet console. This file owns surfaces, colour and density; index.css owns layout. */
 :root {
-  --paper: #F2F5F9;
+  --paper: #F5F7FA;
   --paper-light: #FFFFFF;
-  --paper-deep: #EAF0F6;
-  --ink: #1D2B3D;
-  --ink-muted: #536479;
-  --line: #D7E0EA;
-  --line-strong: #93A4B8;
-  --accent: #126B78;
-  --accent-hover: #0C5360;
+  --paper-deep: #EEF2F6;
+  --ink: #18283A;
+  --ink-muted: #556578;
+  --line: #DCE3EB;
+  --line-strong: #8FA2B6;
+  --accent: #0F6372;
+  --accent-hover: #084C59;
   --forest: var(--accent);
-  --selected: #E8F4F5;
-  --row-hover: #F0F8F9;
+  --selected: #E7F1F3;
+  --row-hover: #F1F7F8;
   --healthy: #24734F;
   --healthy-surface: #EDF7F1;
   --ochre: #875A13;
@@ -19,9 +19,9 @@
   --vermilion: #B13443;
   --danger-surface: #FBEFF1;
   --on-accent: #FFFFFF;
-  --rail-bg: #192638;
-  --rail-muted: #B9C6D6;
-  --rail-active: #263D4D;
+  --rail-bg: #172638;
+  --rail-muted: #BDD0DC;
+  --rail-active: #23404D;
   --rail-accent: #8AD8DF;
   --radius: 8px;
   --panel-radius: 12px;
@@ -140,7 +140,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, .search input
 .status-line.is-attention { color: var(--ochre); }
 .hint__trigger { color: var(--ink-muted); }
 .hint__bubble { color: var(--paper-light); background: var(--ink); font-size: .78rem; }
-.custom-range__panel, .site-switcher__menu { background: var(--paper-light); color: var(--ink); border: 0; border-radius: var(--panel-radius); box-shadow: 0 12px 36px #19263830; }
+.custom-range__panel, .site-switcher__menu { background: var(--paper-light); color: var(--ink); border: 0; border-radius: var(--panel-radius); box-shadow: 0 12px 36px #17263830; }
 .site-switcher__menu a:hover, .site-switcher__menu a[aria-current] { background: var(--selected); border-radius: var(--radius); }
 
 /* One aligned header names the columns; row values carry no repeated icons. */
@@ -166,7 +166,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, .search input
 .site-health svg { width: 15px; height: 15px; }
 .sample-warning { width: 14px; height: 14px; flex-basis: 14px; }
 .chart-legend { font-size: .76rem; gap: 1.25rem; margin-block-end: 1rem; }
-.chart-tooltip { color: var(--ink); background: var(--paper-light); border: 0; border-radius: var(--radius); box-shadow: 0 8px 24px #19263830; }
+.chart-tooltip { color: var(--ink); background: var(--paper-light); border: 0; border-radius: var(--radius); box-shadow: 0 8px 24px #17263830; }
 .data-table th { background: var(--paper-deep); color: var(--ink-muted); padding-block: .75rem; }
 .data-table td { padding-block: .75rem; }
 .data-table tbody tr:hover, .ranked-row__button:hover, .ranked-row__button[aria-expanded=true] { background: var(--row-hover); }
@@ -197,9 +197,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, .search input
 .service-list i.is-online, .service-status-list i.is-online { background: var(--healthy); box-shadow: none; }
 .service-list i.is-offline, .service-status-list i.is-offline { background: var(--vermilion); box-shadow: none; }
 .spec-list div { min-height: 48px; }
-.dialog, .add-service-dialog { border: 0; border-radius: var(--panel-radius); box-shadow: 0 20px 60px #19263840; }
-.dialog-backdrop, .drawer-backdrop { background: #19263899; }
-.drawer { box-shadow: -12px 0 40px #19263830; }
+.dialog, .add-service-dialog { border: 0; border-radius: var(--panel-radius); box-shadow: 0 20px 60px #17263840; }
+.dialog-backdrop, .drawer-backdrop { background: #17263899; }
+.drawer { box-shadow: -12px 0 40px #17263830; }
 
 /* Operations use the same controls with a deliberately darker canvas. */
 .shell--infrastructure { background: #111B29; }
@@ -217,7 +217,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, .search input
 .page--infrastructure .stat__value { color: var(--ink); }
 .page--infrastructure .stat--ochre .stat__value { color: var(--ochre); }
 .page--infrastructure .stat--vermilion .stat__value { color: var(--vermilion); }
-.page--infrastructure .hint__bubble { background: #EDF3FA; color: #1D2B3D; }
+.page--infrastructure .hint__bubble { background: #EDF3FA; color: #18283A; }
 .page--infrastructure .service-status-list i.is-online { background: var(--healthy); }
 .panel--terminal .panel__body, .terminal-window, .whatsapp-log { background: #111B29; color: #C0CDDC; }
 .terminal-chrome { background: #1A2939; color: #B2C0D0; border-color: #354B60; letter-spacing: 0; }

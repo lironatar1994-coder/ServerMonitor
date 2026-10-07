@@ -1,14 +1,30 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, Cpu, HardDrive, MemoryStick, RefreshCw, TriangleAlert } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { apiFetch } from '../lib/api';
-import { DataState, Empty, Panel, PageHead, Stat, StatRow, Tabs } from '../components/AnalyticsParts';
-import { formatNumber, formatTime } from '../lib/format';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ChevronLeft,
+  Cpu,
+  HardDrive,
+  MemoryStick,
+  RefreshCw,
+  TriangleAlert,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { apiFetch } from "../lib/api";
+import OperationalStatus from "../components/OperationalStatus";
+import {
+  DataState,
+  Empty,
+  Panel,
+  PageHead,
+  Stat,
+  StatRow,
+  Tabs,
+} from "../components/AnalyticsParts";
+import { formatNumber, formatTime } from "../lib/format";
 
 const RESOURCE_TABS = [
-  { id: 'applications', label: 'זיכרון', icon: MemoryStick },
-  { id: 'storage', label: 'אחסון', icon: HardDrive },
-  { id: 'processes', label: 'תהליכים', icon: Cpu }
+  { id: "applications", label: "זיכרון", icon: MemoryStick },
+  { id: "storage", label: "אחסון", icon: HardDrive },
+  { id: "processes", label: "תהליכים", icon: Cpu },
 ];
 
 const formatBytes = (bytes) => {
@@ -19,38 +35,89 @@ const formatBytes = (bytes) => {
 };
 
 const toneFor = (percentage) => {
-  if (percentage >= 90) return 'vermilion';
-  if (percentage >= 75) return 'ochre';
-  return 'forest';
+  if (percentage >= 90) return "vermilion";
+  if (percentage >= 75) return "ochre";
+  return "forest";
 };
 
 const ResourceRows = ({ items, kind }) => {
   if (!items.length) return <Empty text="הפירוט זמין בשרת Linux" />;
-  const peak = Math.max(...items.map((item) => Number(kind === 'storage' ? item.bytes : item.footprint_bytes || item.rss_bytes) || 0), 1);
+  const peak = Math.max(
+    ...items.map(
+      (item) =>
+        Number(
+          kind === "storage"
+            ? item.bytes
+            : item.footprint_bytes || item.rss_bytes,
+        ) || 0,
+    ),
+    1,
+  );
 
   return (
     <ol className="resource-list">
       {items.map((item, index) => {
-        const bytes = Number(kind === 'storage' ? item.bytes : item.footprint_bytes || item.rss_bytes) || 0;
-        const displayedBytes = kind === 'applications' ? Number(item.memory_bytes) || 0 : bytes;
-        const isProcess = kind === 'processes';
-        const subtitle = kind === 'applications'
-          ? <>{formatNumber(item.process_count)} תהליכים · <bdi dir="ltr">{formatBytes(item.child_memory_bytes)}</bdi> בתהליכי־משנה</>
-          : kind === 'storage'
-            ? <><bdi dir="ltr">{formatBytes(item.dependency_bytes)}</bdi> תלויות · <bdi dir="ltr">{Number(item.dependency_percent || 0).toFixed(0)}%</bdi> מהפרויקט</>
-            : <><bdi>{item.owner || 'ללא שיוך'}</bdi> · <bdi dir="ltr">PID {item.pid}</bdi> · <bdi dir="ltr">CPU {Number(item.cpu || 0).toFixed(1)}%</bdi></>;
+        const bytes =
+          Number(
+            kind === "storage"
+              ? item.bytes
+              : item.footprint_bytes || item.rss_bytes,
+          ) || 0;
+        const displayedBytes =
+          kind === "applications" ? Number(item.memory_bytes) || 0 : bytes;
+        const isProcess = kind === "processes";
+        const subtitle =
+          kind === "applications" ? (
+            <>
+              {formatNumber(item.process_count)} תהליכים ·{" "}
+              <bdi dir="ltr">{formatBytes(item.child_memory_bytes)}</bdi>{" "}
+              בתהליכי־משנה
+            </>
+          ) : kind === "storage" ? (
+            <>
+              <bdi dir="ltr">{formatBytes(item.dependency_bytes)}</bdi> תלויות ·{" "}
+              <bdi dir="ltr">
+                {Number(item.dependency_percent || 0).toFixed(0)}%
+              </bdi>{" "}
+              מהפרויקט
+            </>
+          ) : (
+            <>
+              <bdi>{item.owner || "ללא שיוך"}</bdi> ·{" "}
+              <bdi dir="ltr">PID {item.pid}</bdi> ·{" "}
+              <bdi dir="ltr">CPU {Number(item.cpu || 0).toFixed(1)}%</bdi>
+            </>
+          );
         const label = isProcess ? item.command : item.name;
 
         return (
-          <li key={`${item.id || item.pid || label}-${index}`} style={{ '--resource-bar': `${(bytes / peak) * 100}%` }}>
+          <li
+            key={`${item.id || item.pid || label}-${index}`}
+            style={{ "--resource-bar": `${(bytes / peak) * 100}%` }}
+          >
             <span className="resource-list__identity">
-              <b dir={isProcess ? 'ltr' : undefined} title={label}>{label}</b>
+              <b dir={isProcess ? "ltr" : undefined} title={label}>
+                {label}
+              </b>
               <small>{subtitle}</small>
             </span>
             <span className="resource-list__value">
-              <strong><bdi dir="ltr">{formatBytes(displayedBytes)}</bdi></strong>
-              {kind === 'applications' && <small><bdi dir="ltr">Swap {formatBytes(item.swap_bytes)}</bdi> · <bdi dir="ltr">RAM {Number(item.memory_percent || 0).toFixed(1)}%</bdi></small>}
-              {kind === 'storage' && <small>{Number(item.disk_percent || 0).toFixed(1)}% מהדיסק</small>}
+              <strong>
+                <bdi dir="ltr">{formatBytes(displayedBytes)}</bdi>
+              </strong>
+              {kind === "applications" && (
+                <small>
+                  <bdi dir="ltr">Swap {formatBytes(item.swap_bytes)}</bdi> ·{" "}
+                  <bdi dir="ltr">
+                    RAM {Number(item.memory_percent || 0).toFixed(1)}%
+                  </bdi>
+                </small>
+              )}
+              {kind === "storage" && (
+                <small>
+                  {Number(item.disk_percent || 0).toFixed(1)}% מהדיסק
+                </small>
+              )}
             </span>
           </li>
         );
@@ -61,19 +128,36 @@ const ResourceRows = ({ items, kind }) => {
 
 const Infrastructure = () => {
   const [stats, setStats] = useState(null);
+  const [operations, setOperations] = useState(null);
   const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [updatedAt, setUpdatedAt] = useState(null);
-  const [resourceView, setResourceView] = useState('applications');
+  const [resourceView, setResourceView] = useState("applications");
 
   const fetchData = useCallback(async () => {
     try {
-      const [serverStats, appData] = await Promise.all([apiFetch('/apps/server-stats'), apiFetch('/apps')]);
+      const [serverStats, appData, health] = await Promise.all([
+        apiFetch("/apps/server-stats"),
+        apiFetch("/apps"),
+        apiFetch("/apps/operational-health").catch((error) => ({
+          status: "unknown",
+          issues: [
+            {
+              id: "load-failure",
+              title: "מצב בדיקות השרת לא נטען",
+              detail: error.message,
+              severity: "unknown",
+            },
+          ],
+          checks: {},
+        })),
+      ]);
+      setOperations(health);
       setStats(serverStats);
       setApps(appData);
       setUpdatedAt(new Date().toISOString());
-      setError('');
+      setError("");
     } catch (fetchError) {
       setError(fetchError.message);
     } finally {
@@ -84,7 +168,10 @@ const Infrastructure = () => {
   useEffect(() => {
     const initial = window.setTimeout(fetchData, 0);
     const interval = window.setInterval(fetchData, 15000);
-    return () => { window.clearTimeout(initial); window.clearInterval(interval); };
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+    };
   }, [fetchData]);
 
   const uptimeSeconds = Number(stats?.uptime) || 0;
@@ -98,53 +185,145 @@ const Infrastructure = () => {
   const cores = Number(stats?.cpu?.cores) || 0;
   const load = Number(stats?.cpu?.load) || 0;
   const loadPercent = cores ? Math.min((load / cores) * 100, 100) : 0;
-  const offline = apps.filter((app) => app.status !== 'online');
+  const offline = apps.filter((app) => app.status !== "online");
   const resources = stats?.resources;
   const applications = resources?.applications || [];
   const storage = resources?.storage;
   const topProcesses = resources?.top_memory_processes || [];
-  const storageItems = useMemo(() => [...(storage?.projects || []), ...(storage?.other || [])]
-    .sort((a, b) => Number(b.bytes) - Number(a.bytes)), [storage]);
+  const storageItems = useMemo(
+    () =>
+      [...(storage?.projects || []), ...(storage?.other || [])].sort(
+        (a, b) => Number(b.bytes) - Number(a.bytes),
+      ),
+    [storage],
+  );
   const largestApp = applications[0];
 
-  const selectedItems = resourceView === 'applications'
-    ? applications
-    : resourceView === 'storage'
-      ? storageItems
-      : topProcesses;
+  const selectedItems =
+    resourceView === "applications"
+      ? applications
+      : resourceView === "storage"
+        ? storageItems
+        : topProcesses;
 
   return (
     <div className="page page--infrastructure">
       <PageHead
-        title="שרת"
+        title="שרת ומשאבים"
         meta={<span>עודכן {formatTime(updatedAt)}</span>}
       >
-        <button type="button" className="icon-btn" onClick={fetchData} aria-label="רענון" title="רענון"><RefreshCw aria-hidden="true" /></button>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={fetchData}
+          aria-label="רענון"
+          title="רענון"
+        >
+          <RefreshCw aria-hidden="true" />
+        </button>
       </PageHead>
 
       <DataState loading={loading && !stats} error={error} onRetry={fetchData}>
         <StatRow label="משאבי שרת">
-          <Stat icon={MemoryStick} label="זיכרון זמין" value={formatBytes(stats?.ram?.available)} tone={toneFor(ram)} foot={`${ram.toFixed(0)}% בשימוש`} />
-          <Stat icon={Cpu} label="מעבד" value={load.toFixed(2)} tone={toneFor(loadPercent)} foot={`עומס דקה · ${formatNumber(cores)} ליבות`} />
-          <Stat icon={HardDrive} label="דיסק פנוי" value={stats?.disk ? formatBytes(stats.disk.available) : "—"} tone={toneFor(disk)} foot={`${disk.toFixed(0)}% בשימוש`} />
-          <Stat icon={TriangleAlert} label="לבדיקה" value={offline.length} tone={offline.length ? 'vermilion' : 'forest'} />
+          <Stat
+            icon={MemoryStick}
+            label="זיכרון זמין"
+            value={formatBytes(stats?.ram?.available)}
+            tone={toneFor(ram)}
+            foot={`${ram.toFixed(0)}% בשימוש`}
+          />
+          <Stat
+            icon={Cpu}
+            label="מעבד"
+            value={load.toFixed(2)}
+            tone={toneFor(loadPercent)}
+            foot={`עומס דקה · ${formatNumber(cores)} ליבות`}
+          />
+          <Stat
+            icon={HardDrive}
+            label="דיסק פנוי"
+            value={stats?.disk ? formatBytes(stats.disk.available) : "—"}
+            tone={toneFor(disk)}
+            foot={`${disk.toFixed(0)}% בשימוש`}
+          />
+          <Stat
+            icon={TriangleAlert}
+            label="לבדיקה"
+            value={operations ? operations.issues.length : offline.length}
+            tone={
+              operations?.issues.length || offline.length
+                ? "vermilion"
+                : "forest"
+            }
+          />
         </StatRow>
 
-        {offline.length > 0 && <Panel title="שירותים לבדיקה"><div className="attention-list">{offline.map(app => <Link key={app.id} to={`/services/${app.id}`}>{app.name} · {app.status === 'offline' ? 'לא פעיל' : 'מצב לא ידוע'}<ChevronLeft /></Link>)}</div></Panel>}
-        <details className="measurement-details"><summary>Swap וזמן פעילות</summary><StatRow>
-          <Stat label="Swap" value={`${swap.toFixed(0)}%`} tone={swap >= 75 ? 'ochre' : 'forest'} hint="Swap יכול להכיל דפים ישנים גם כשהשרת אינו תחת עומס פעיל" foot={<bdi dir="ltr">{formatBytes(swapUsed)} / {formatBytes(swapTotal)}</bdi>} />
-          <Stat label="זמן פעילות" value={`${uptimeDays}י ${uptimeHours}ש`} foot="מאז האתחול" />
-        </StatRow></details>
+        <OperationalStatus data={operations} />
+        <details className="measurement-details">
+          <summary>Swap וזמן פעילות</summary>
+          <StatRow>
+            <Stat
+              label="Swap"
+              value={`${swap.toFixed(0)}%`}
+              tone={swap >= 75 ? "ochre" : "forest"}
+              hint="Swap יכול להכיל דפים ישנים גם כשהשרת אינו תחת עומס פעיל"
+              foot={
+                <bdi dir="ltr">
+                  {formatBytes(swapUsed)} / {formatBytes(swapTotal)}
+                </bdi>
+              }
+            />
+            <Stat
+              label="זמן פעילות"
+              value={`${uptimeDays}י ${uptimeHours}ש`}
+              foot="מאז האתחול"
+            />
+          </StatRow>
+        </details>
         <Panel
           title="צריכת משאבים"
           hint="RAM ו-Swap נספרים לכל עץ התהליכים, כולל תהליכי־משנה של השירות. האחסון נסרק בעדיפות נמוכה ונשמר במטמון לחצי שעה."
-          action={<Tabs tabs={RESOURCE_TABS} value={resourceView} onChange={setResourceView} label="סוג פירוט משאבים" />}
+          action={
+            <Tabs
+              tabs={RESOURCE_TABS}
+              value={resourceView}
+              onChange={setResourceView}
+              label="סוג פירוט משאבים"
+            />
+          }
           bleed
         >
           <div className="resource-summary" aria-label="עיקרי צריכת המשאבים">
-            <span><small>מוביל בזיכרון</small><strong>{largestApp?.name || 'לא זמין'}</strong><b><bdi dir="ltr">RAM {formatBytes(largestApp?.memory_bytes)} + Swap {formatBytes(largestApp?.swap_bytes)}</bdi></b></span>
-            <span><small>תלויות</small><strong><bdi dir="ltr">{formatBytes(storage?.totals?.dependency_bytes)}</bdi></strong><b>{storage?.projects?.length || 0} פרויקטים</b></span>
-            <span><small>גיבויים ו-Rollback</small><strong><bdi dir="ltr">{formatBytes((Number(storage?.totals?.backup_bytes) || 0) + (Number(storage?.totals?.rollback_bytes) || 0))}</bdi></strong></span>
+            <span>
+              <small>מוביל בזיכרון</small>
+              <strong>{largestApp?.name || "לא זמין"}</strong>
+              <b>
+                <bdi dir="ltr">
+                  RAM {formatBytes(largestApp?.memory_bytes)} + Swap{" "}
+                  {formatBytes(largestApp?.swap_bytes)}
+                </bdi>
+              </b>
+            </span>
+            <span>
+              <small>תלויות</small>
+              <strong>
+                <bdi dir="ltr">
+                  {formatBytes(storage?.totals?.dependency_bytes)}
+                </bdi>
+              </strong>
+              <b>{storage?.projects?.length || 0} פרויקטים</b>
+            </span>
+            <span>
+              <small>גיבויים ו-Rollback</small>
+              <strong>
+                <bdi dir="ltr">
+                  {formatBytes(
+                    (Number(storage?.totals?.backup_bytes) || 0) +
+                      (Number(storage?.totals?.rollback_bytes) || 0),
+                  )}
+                </bdi>
+              </strong>
+            </span>
           </div>
           <ResourceRows items={selectedItems} kind={resourceView} />
         </Panel>
@@ -152,23 +331,44 @@ const Infrastructure = () => {
         <Panel title="שירותים" bleed>
           {apps.length ? (
             <ul className="service-status-list">
-              {[...apps].sort((a,b) => Number(a.status === 'online') - Number(b.status === 'online')).map((app) => (
-                <li key={app.id}>
-                  <Link to={`/services/${app.id}`}>
-                    <i className={app.status === 'online' ? 'is-online' : 'is-offline'} aria-hidden="true" />
-                    <span className="service-status-list__name">
-                      <b>{app.name}</b>
-                      <small dir="ltr">{app.pm2_name || app.systemd_unit}</small>
-                    </span>
-                    <span className={`chip ${app.status === 'online' ? 'is-online' : 'is-offline'}`}>
-                      {app.status === 'online' ? 'פעיל' : app.status === 'offline' ? 'לא פעיל' : 'לא ידוע'}
-                    </span>
-                    <ChevronLeft aria-hidden="true" />
-                  </Link>
-                </li>
-              ))}
+              {[...apps]
+                .sort(
+                  (a, b) =>
+                    Number(a.status === "online") -
+                    Number(b.status === "online"),
+                )
+                .map((app) => (
+                  <li key={app.id}>
+                    <Link to={`/services/${app.id}`}>
+                      <i
+                        className={
+                          app.status === "online" ? "is-online" : "is-offline"
+                        }
+                        aria-hidden="true"
+                      />
+                      <span className="service-status-list__name">
+                        <b>{app.name}</b>
+                        <small dir="ltr">
+                          {app.pm2_name || app.systemd_unit}
+                        </small>
+                      </span>
+                      <span
+                        className={`chip ${app.status === "online" ? "is-online" : "is-offline"}`}
+                      >
+                        {app.status === "online"
+                          ? "פעיל"
+                          : app.status === "offline"
+                            ? "לא פעיל"
+                            : "לא ידוע"}
+                      </span>
+                      <ChevronLeft aria-hidden="true" />
+                    </Link>
+                  </li>
+                ))}
             </ul>
-          ) : <Empty text="אין שירותים מוגדרים" />}
+          ) : (
+            <Empty text="אין שירותים מוגדרים" />
+          )}
         </Panel>
       </DataState>
     </div>

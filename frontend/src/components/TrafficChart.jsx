@@ -9,7 +9,7 @@ const metrics = [{ id: 'browser_signal_visitors', label: 'משוערים', icon:
 export default function TrafficChart({ data, previous, comparisonError }) {
   const [metric, setMetric] = useState(metrics[0].id);
   const rows = comparisonSeries(data?.series, previous?.series, data?.range, metric);
-  return <Panel title="פעילות" className="traffic-panel" hint="מבקרים משוערים או פתיחות עמודים שנמדדו, לפי מקטע זמן. חוסר מדידה אינו הוכחה שאין מבקרים." action={<Tabs tabs={metrics} value={metric} onChange={setMetric} label="מדד בגרף" />}>
+  return <Panel title="פעילות לאורך הזמן" className="traffic-panel" hint="מבקרים משוערים או פתיחות עמודים שנמדדו, לפי מקטע זמן. חוסר מדידה אינו הוכחה שאין מבקרים." action={<Tabs tabs={metrics} value={metric} onChange={setMetric} label="מדד בגרף" />}>
     <div className="chart-legend"><span><i aria-hidden="true" />נבחרה</span><span><i aria-hidden="true" />קודמת</span></div>
     {comparisonError && <p className="status-line is-attention" role="status">ההשוואה לא נטענה · {comparisonError}</p>}
     <div className="chart" role="img" aria-label={`${metrics.find(m => m.id === metric).label}: התקופה שנבחרה לעומת התקופה הקודמת`}>
