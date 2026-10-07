@@ -1,3 +1,5 @@
+import { getCsrf, setSession } from './session.js';
+
 export async function apiFetch(path, options = {}) {
   const { timeoutMs = 20000, ...requestOptions } = options;
   const controller = new AbortController();
@@ -6,20 +8,19 @@ export async function apiFetch(path, options = {}) {
   if (options.signal?.aborted) abort();
   options.signal?.addEventListener('abort', abort, { once: true });
   try {
-  const token = localStorage.getItem('token');
   const response = await fetch(`/serve-monitor/api${path}`, {
     ...requestOptions,
     signal: controller.signal,
+    credentials: 'same-origin',
     headers: {
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...options.headers,
-      Authorization: `Bearer ${token}`
+      'X-CSRF-Token': getCsrf()
     }
   });
 
-  if (response.status === 401 || response.status === 403) {
-    localStorage.removeItem('token');
-    window.dispatchEvent(new Event('auth-change'));
+  if (response.status === 401) {
+    setSession(null);
     const destination = window.location.pathname.replace(/^\/serve-monitor/, '') + window.location.search;
     window.location.assign(`${import.meta.env.BASE_URL}login?returnTo=${encodeURIComponent(destination)}`);
     throw new Error('ההתחברות פגה. יש להתחבר מחדש.');
@@ -29,7 +30,7 @@ export async function apiFetch(path, options = {}) {
     throw new Error(`השרת לא החזיר נתונים (${response.status}). נסו לרענן שוב.`);
   }
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || `הבקשה נכשלה (${response.status})`);
+  if (!response.ok) { const error = new Error(data.error || `הבקשה נכשלה (${response.status})`); error.status = response.status; error.code = data.code; throw error; }
   return data;
   } catch (error) {
     if (controller.signal.aborted) throw new Error('השרת לא השיב בזמן. נסו שוב.', { cause: error });

@@ -5,6 +5,7 @@ import { DataState, Empty, Hint, IconAction, PageHead, Panel, Stat, StatRow, Tab
 import { apiFetch } from '../lib/api';
 import { formatDateTime, formatNumber } from '../lib/format';
 import './client-growth.css';
+import { getSessionSnapshot } from '../lib/session';
 import { PROJECT_NAMES } from '../lib/analyticsLabels';
 
 const metrics = { contact_click: 'ביקורים עם לחיצת קשר', form_start: 'ביקורים עם התחלת טופס', form_submit: 'ביקורים עם ניסיון שליחה', lead_received: 'פניות שנקלטו ודווחו', won: 'פניות שסומנו כהצלחה', tool_completed: 'פעולות שהושלמו', file_downloaded: 'הורדות קובץ' };
@@ -91,6 +92,7 @@ export default function ClientGrowth() {
     return () => { clearTimeout(timer); clearInterval(interval); };
   }, [load]);
   const startEdit = (kind, value = {}) => {
+    if (getSessionSnapshot()?.role !== 'owner') { notify('הרשאת קריאה בלבד', true); return; }
     const defaults = { goals: { metric: 'lead_received', target: 0, active: 1, period_days: 30 }, leads: { status: 'new', owner: data?.profile?.owner || '' }, tasks: { status: 'planned', priority: 'normal', metric: 'contact_click', owner: data?.profile?.owner || '' }, campaigns: { landing_path: new URL(data.app.url).pathname } };
     setEdit({ kind, value: { ...defaults[kind], ...value } }); setFeedback(null);
   };
@@ -146,7 +148,7 @@ export default function ClientGrowth() {
           </Panel>}
           <StatRow><Stat label="ביקורים שנמדדו" value={m.sessions} hint="ביקורים אנונימיים במדידה החדשה בלבד; סינון אוטומציה אינו הוכחה לאדם. אין השלמה של היסטוריה שלא נמדדה." /><Stat label="ביקורים עם לחיצת קשר" value={m.contact_click} /><Stat label="פניות ממערכת המקור" value={m.confirmed} hint="רשומות שנשמרו במקור המחובר. אין שיוך אוטומטי לביקור הדפדפן." /><Stat label="פניות בדיווח ידני" value={m.manual} /></StatRow>
           <div className="growth-coverage"><span>מדידת פעולות: {data.coverage.first ? `מ־${formatDateTime(data.coverage.first)}` : 'ממתינים לאות ראשון'}</span><span>מקור פניות: {data.coverage.source ? data.coverage.source.status === 'ok' ? `סונכרן ${formatDateTime(data.coverage.source.last_success_at)}` : data.coverage.source.detail : 'ללא חיבור אוטומטי · אפשר לדווח ידנית'}</span></div>
-          <Panel title="מכשירים"><div className="growth-stages">{data.devices.map(d => <div key={d.device}><strong>{num(d.sessions)}</strong><span>{{ mobile: 'נייד', tablet: 'טאבלט', desktop: 'מחשב', unknown: 'לא ידוע' }[d.device]} · {num(d.contacts)} עם לחיצת קשר</span></div>)}{!data.devices.length && <Empty text="טרם נמדדו מכשירים" />}</div></Panel><Panel title="לבדיקה"><InsightList items={data.insights} onTask={fromInsight} busy={busy} /></Panel>
+          <Panel title="מכשירים"><div className="growth-stages">{data.devices.map(d => <div key={d.device}><strong>{num(d.sessions)}</strong><span>{{ mobile: 'נייד', tablet: 'טאבלט', desktop: 'מחשב', unknown: 'לא ידוע' }[d.device]} · {num(d.contacts)} עם לחיצת קשר</span></div>)}{!data.devices.length && <Empty text="טרם נמדדו מכשירים" />}</div></Panel><Panel title="לבדיקה"><InsightList items={data.insights} onTask={getSessionSnapshot()?.role === 'owner' ? fromInsight : undefined} busy={busy} /></Panel>
           {data.app.name === 'LA webs' ? <Panel title="פעולות בפרויקטים" hint="פעולות שנצפו בדפדפן בלבד. לחיצה אינה פנייה שנשלחה. נתוני המיקום מתחילים ממועד התקנת המדידה.">
             {(data.actions || []).map((row, i) => <div className="growth-item" key={i}><div><b>{actions[row.event_type]} · {row.label === 'whatsapp' ? 'WhatsApp' : row.label === 'phone' ? 'טלפון' : PROJECT_NAMES[row.project] || 'כללי'}</b><small>{placements[row.placement] || 'מיקום לא נמדד'} · {PROJECT_NAMES[row.project] || 'עמוד הבית'} · <span dir="ltr">{row.path}</span></small></div><span>{num(row.events)} פעולות · {num(row.sessions)} ביקורים</span></div>)}
             {!data.actions?.length && <Empty text="טרם נמדדו פעולות" />}
@@ -157,23 +159,23 @@ export default function ClientGrowth() {
         </>}
         {tab === 'goals' && <>
           <Panel title="מטרת האתר" action={<IconAction icon={Pencil} label="עריכת פרטי לקוח" onClick={() => startEdit('profile', data.profile)} />}><p>{data.profile.objective}</p><p className="muted">אחראי: {data.profile.owner || 'טרם הוגדר'} · זמן מענה רצוי: {data.profile.response_hours} שעות</p></Panel>
-          <Panel title="יעדים" action={<button className="btn" onClick={() => startEdit('goals')}><Plus />מטרה</button>}>
+          <Panel title="יעדים" action={getSessionSnapshot()?.role === 'owner' && <button className="btn" onClick={() => startEdit('goals')}><Plus />מטרה</button>}>
             {data.goals.map(g => <div className="growth-item" key={g.id}><div><strong>{g.title}</strong><small>{metrics[g.metric]} · {g.period_days} ימים אחרונים · {g.path || 'כל האתר'} · {g.active ? 'פעיל' : 'מושהה'}</small></div><b>{num(g.current)}{g.target ? ` / ${num(g.target)}` : ' · ללא יעד מספרי'}</b><IconAction icon={Pencil} label={`עריכת ${g.title}`} onClick={() => startEdit('goals', g)} /></div>)}
           </Panel>
         </>}
-        {tab === 'leads' && <Panel title="מעקב פניות" hint="רשימת העבודה כוללת גם פניות מחוץ לטווח המדידה. פרטי הקשר נמצאים באתר המקור. מצב הטיפול כאן פנימי ואינו מעדכן את מערכת המקור." action={<button className="btn" onClick={() => startEdit('leads')}><Plus />דיווח ידני</button>}>
+        {tab === 'leads' && <Panel title="מעקב פניות" hint="רשימת העבודה כוללת גם פניות מחוץ לטווח המדידה. פרטי הקשר נמצאים באתר המקור. מצב הטיפול כאן פנימי ואינו מעדכן את מערכת המקור." action={getSessionSnapshot()?.role === 'owner' && <button className="btn" onClick={() => startEdit('leads')}><Plus />דיווח ידני</button>}>
           <div className="growth-stages">{(data.outcomes || []).map(row => <div key={row.status}><strong>{num(row.total)}</strong><span>{leadStatuses[row.status]} · מהתקופה</span></div>)}</div>
           <div className="growth-coverage"><span>פניות מהתקופה שסומנו כהצלחה: {num(m.won)}</span><span>סכום מדווח עבורן: {num(m.revenue)} ₪</span><Hint text="סכומים שהוזנו ידנית; אין אימות תשלום או חישוב הכנסה אוטומטי." /></div><div className="growth-toolbar"><label>סינון מצב<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">כל הפניות</option>{options(leadStatuses).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label><span className="muted">{data.lead_total} פניות · מוצגות עד 500 אחרונות</span></div>
           {data.leads.filter(l => filter === 'all' || l.status === filter).sort((a,b) => Number(Boolean(isOverdue(b))) - Number(Boolean(isOverdue(a)))).map(l => <div className="growth-item" key={l.id}><div><strong>{l.reference}</strong><small>{origins[l.origin] || 'מקור מחובר'} · {formatDateTime(l.occurred_at)}</small><small>{l.owner || 'ללא אחראי'}{l.due_at ? ` · מעקב: ${formatDateTime(l.due_at)}` : ''}{l.source_status === 'notification_failed' ? ' · הודעת המייל במקור נכשלה' : ''}</small></div><span className="growth-status">{leadStatuses[l.status]}</span><IconAction icon={Pencil} label={`עריכת ${l.reference}`} onClick={() => startEdit('leads', l)} /></div>)}
           {!data.leads.filter(l => filter === 'all' || l.status === filter).length && <Empty text="אין פניות להצגה" />}
         </Panel>}
-        {tab === 'tasks' && <Panel title="משימות" action={<button className="btn" onClick={() => startEdit('tasks')}><Plus />משימה</button>}>
+        {tab === 'tasks' && <Panel title="משימות" action={getSessionSnapshot()?.role === 'owner' && <button className="btn" onClick={() => startEdit('tasks')}><Plus />משימה</button>}>
           {[...data.tasks].sort((a,b) => Number(['done','cancelled'].includes(a.status)) - Number(['done','cancelled'].includes(b.status)) || Date.parse(a.due_at || '9999-01-01') - Date.parse(b.due_at || '9999-01-01')).map(t => <article className="growth-task" key={t.id}><div className="growth-item"><div><strong>{t.title}</strong><small>{t.owner || 'ללא אחראי'} · {t.due_at ? formatDateTime(t.due_at) : 'ללא מועד'} · {t.priority === 'high' ? 'עדיפות גבוהה' : 'עדיפות רגילה'}</small></div><span className="growth-status">{taskStatuses[t.status]}</span><IconAction icon={Pencil} label={`עריכת ${t.title}`} onClick={() => startEdit('tasks', t)} /></div>
             {t.hypothesis && <p className="growth-note">{t.hypothesis}</p>}
             {t.impact && <div className="growth-impact">{t.impact.ready ? <><strong>{metrics[t.metric]}: {num(t.impact.before)} לפני ← {num(t.impact.after)} אחרי</strong><span>{t.impact.days} ימים בכל צד · ביקורים: {num(t.impact.sessions_before)} לפני / {num(t.impact.sessions_after)} אחרי{t.impact.confidence === 'low_sample' ? ' · מדגם קטן' : ''}</span><Hint text={t.impact.caveat} /></> : t.impact.reason}</div>}
           </article>)}{!data.tasks.length && <Empty text="אין משימות" />}
         </Panel>}
-        {tab === 'campaigns' && <Panel title="קמפיינים" hint="השיוך הוא למקור בתחילת הביקור. פניות ישויכו לקמפיין רק לאחר עדכון מפורש על בסיס מידע ידוע." action={<button className="btn" onClick={() => startEdit('campaigns')}><Plus />קמפיין</button>}>
+        {tab === 'campaigns' && <Panel title="קמפיינים" hint="השיוך הוא למקור בתחילת הביקור. פניות ישויכו לקמפיין רק לאחר עדכון מפורש על בסיס מידע ידוע." action={getSessionSnapshot()?.role === 'owner' && <button className="btn" onClick={() => startEdit('campaigns')}><Plus />קמפיין</button>}>
           {data.campaigns.map(c => <article className="growth-task" key={c.id}><div className="growth-item"><div><strong>{c.name}</strong><small>{c.source} · {c.medium}</small></div><span>{num(c.sessions)} ביקורים · {num(c.contacts)} עם קשר · {num(c.attributed_leads)} פניות משויכות</span><IconAction icon={Pencil} label={`עריכת ${c.name}`} onClick={() => startEdit('campaigns', c)} /></div><div className="growth-link"><a dir="ltr" href={c.url} target="_blank" rel="noopener noreferrer">{c.url}</a><IconAction icon={Copy} label={`העתקת קישור ${c.name}`} onClick={async () => { try { await navigator.clipboard.writeText(c.url); notify('הקישור הועתק'); } catch { notify('אפשר לסמן ולהעתיק את הקישור ידנית', true); } }} /></div>{c.cost !== null && <p className="muted">תקציב מדווח: {num(c.cost)} ₪ לכל הקמפיין. ההיקפים מעל מתייחסים לטווח שנבחר.</p>}</article>)}
           {!data.campaigns.length && <Empty text="אין קמפיינים" />}
         </Panel>}

@@ -1,7 +1,7 @@
 export function safeReturnPath(value) {
   if (typeof value !== 'string') return '/visitors';
   const path = value.split('?')[0];
-  return /^\/(?:visitors|services|clients)(?:\/\d+)?$/.test(path) || /^\/(?:infrastructure|settings)$/.test(path)
+  return /^\/(?:visitors|services|clients)(?:\/\d+)?$/.test(path) || /^\/(?:infrastructure|settings)$/.test(path) || /^\/vault(?:\/[a-f0-9-]{36})?$/.test(path)
     ? value : '/visitors';
 }
 

@@ -1,0 +1,85 @@
+{
+  "scope": "Approved team-vault and application redesign; semantic application UI only",
+  "produce": [],
+  "direct": [],
+  "shipped_rasters": [],
+  "review_reference": {
+    "id": "vault-desktop-concept",
+    "source_crop": "vault-desktop.png (whole approved concept, no crop)",
+    "output_path": "vault-desktop.prompted.png",
+    "strategy": "Pixel-identical review copy with exact source generation prompt embedded; original PNG remains unchanged",
+    "prompt_used": "Exact prompt in vault-desktop.json and vault-desktop.prompt.txt; embedded under impeccable:prompt",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "format": "png",
+    "transparency": false,
+    "deviations": "Generated Hebrew and colored app badges are conceptual artifacts. The application uses corrected Hebrew and restrained semantic icons.",
+    "qa_status": "accepted"
+  },
+  "semantic": [
+    {
+      "id": "workspace-shell",
+      "implementation": "RTL application shell with semantic navigation on the right, slate background, Heebo typography, compact page header, white content surfaces and porcelain canvas. Existing SVG icons carry accessible labels; active routes use restrained petrol. At narrow widths use responsive navigation with an explicit menu control.",
+      "notes": "Keep infrastructure surfaces graphite. No background raster, generated app frame or nearby image assets.",
+      "qa_status": "accepted"
+    },
+    {
+      "id": "vault-list-detail",
+      "implementation": "Desktop CSS grid places the compact list pane on the right and flexible detail pane on the left. Semantic selectable credential rows use names and secondary labels. CSS owns pale petrol selection, fine separators and rounded surfaces. Mobile shows one panel at a time with a labeled back control.",
+      "notes": "Use real Heebo text and neutral SVG icons, not generated text or colored app badges. No rasters are needed.",
+      "qa_status": "accepted"
+    },
+    {
+      "id": "vault-fields-actions",
+      "implementation": "Labeled semantic rows for username, masked password, LTR URL, environment and notes. Accessible copy, reveal, favorite, edit and lock icon buttons have visible keyboard focus and minimum touch targets. CSS owns petrol primary actions and fine-bordered secondary controls.",
+      "notes": "Isolate mixed-direction values. Correct title: כספת. Password state, clipboard behavior and external navigation require implementation tests; screenshots do not prove them.",
+      "qa_status": "accepted"
+    },
+    {
+      "id": "vault-edit-team-lock",
+      "implementation": "Semantic forms and dialogs for editing, team membership and permissions, and lock/unlock state. Use shared compact fields and buttons, adjacent errors and viewport-fitting mobile dialogs with keyboard navigation.",
+      "notes": "The desktop concept does not define these states; parent owns product/security behavior. Review screenshots use synthetic demo values only.",
+      "qa_status": "accepted"
+    },
+    {
+      "id": "workspace-data-views",
+      "implementation": "Use the shared shell, Heebo, white data surfaces and compact controls across visitor, client, infrastructure, service and settings pages. Tables, measured charts, status controls and hints are semantic components, CSS and SVG rather than screenshots.",
+      "notes": "Preserve measured/candidate terminology and workspace boundaries. Gallery files are review material, not production asset dependencies.",
+      "qa_status": "accepted"
+    }
+  ],
+  "execution_order": [
+    "Preserve the concept and exact prompt; embed into a pixel-identical review copy.",
+    "Build application visuals with semantic components and CSS/SVG.",
+    "After final synthetic screenshot confirmation, run node .impeccable/mocks/build-gallery.mjs --final-synthetic.",
+    "Inspect final desktop/mobile screenshots and gallery; report fidelity concerns."
+  ],
+  "review_verification": {
+    "synthetic_screenshots": 33,
+    "image_loads": 34,
+    "gallery_checks": 9,
+    "horizontal_bounds": [
+      1440,
+      390,
+      320
+    ],
+    "prompt_roundtrip": "passed",
+    "original_image_data": "unchanged",
+    "scope": "Visual assets and local gallery only; application functionality/security verification belongs to parent",
+    "visual_result": "Accepted for asset fidelity: final desktop edit recaptured and inspected; neutral semantic controls, RTL list/detail composition, Heebo and palette preserved.",
+    "limitations": [
+      "Synthetic workspace captures retain missing metrics and empty states; they are not production health evidence.",
+      "Recovery screenshot contains the source capture mask over the synthetic recovery value.",
+      "Application interaction, authorization and cryptographic behavior require separate parent verification."
+    ]
+  },
+  "blockers": [],
+  "assumptions": [
+    "No raster assets ship in the application.",
+    "Generated concept is a visual reference only.",
+    "Final screenshots follow the existing .impeccable/review/vault filenames.",
+    "Only synthetic demo data is eligible for this local gallery."
+  ]
+}

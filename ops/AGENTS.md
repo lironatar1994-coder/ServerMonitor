@@ -22,7 +22,7 @@
 - Portfolio engagement sends bounded 15-second deltas, pauses while hidden or after 30 seconds without activity, and contains only named zones, coarse 12x12 click cells, scroll reach and durations. Never collect page text, form content or full outbound URLs.
 - The existing 15-minute health timer runs a browser check every six hours via `lawebs-browser-check.service`; deployment forces a check through `lawebs-maintenance browser`. No additional timer. systemd serializes concurrent starts and kills the complete process group after 180 seconds (10-second stop grace). Limit CPU to 75% of one core, memory high/max to 512/640 MB, swap to 128 MB, and use low CPU/I/O priority. Use a single headless browser, identify automated visits, confirm their exclusion in SQLite and never send contact messages.
 - Write atomic root-only `browser-check.json`; the runner records failures even when the browser is killed before writing. Failed attempts wait the normal six hours before automatic retry. Results older than seven hours or failing checks produce dashboard alerts; zero traffic is not a failure.
-- The browser check creates only a five-minute JWT from the existing server-side authentication configuration and existing user. Never log or persist the token. Playwright/Chromium is installed by deployment; no new scheduler is added.
+- The browser check creates only a five-minute opaque read-only monitor session for an existing active user. Never log or persist the token. Put it in a host-only HttpOnly review cookie; vault access and all writes remain forbidden. Playwright/Chromium is installed by deployment; no new scheduler is added.
 - Each full browser run navigates all canonical visitor sites from the live catalog and verifies a successful signed navigation receipt plus its automation exclusion in SQLite. Use one page at a time and skip images/fonts/media in this telemetry stage; reserve at most 55 seconds and stop it by 160 seconds overall, within the systemd limit.
 - Install browser system dependencies only when Chromium is missing, with `NEEDRESTART_MODE=l` and noninteractive package handling so dependency setup cannot restart unrelated production services.
 
@@ -39,7 +39,17 @@
 - Keep Maavar exports encrypted; do not copy its plaintext document/database store into general backups.
 - Use explicit bounded roots, reject symlink escapes, expose a dry-run plan, and report failures truthfully.
 
+## Recovery and release
+
+- `deploy_linux.sh` creates/validates `/root/.server-monitor-auth-key` (32 bytes, mode 0600), keeps a separate verified copy under root-only `/root/server-monitor-key-backups/auth.key`, exports production/canonical-origin/vault settings and verifies through the existing bounded browser service.
+- SQLite snapshots contain encrypted vault data and wrapped keys. `maintenance.py` verifies/copies the authentication key separately; never include it in the general PC backup manifest. Disaster recovery also requires a protected offline copy of this server key and the user's separately stored vault recovery key.
+- Before restore, stop only `server-monitor`, preserve current database/WAL/key as a rollback set, restore the verified matching database and authentication key with owner-only permissions, run SQLite integrity_check, delete `auth_sessions`, then restart. Verify ordinary monitoring and let the owner unlock/recover in their own browser; operators never request the vault passphrase.
+- Code rollback must remain on a build supporting opaque sessions and encrypted vault tables once users have enrolled. Do not roll back to JWT/default-password authentication or overwrite live vault rows with a stale backup. Disable `VAULT_ENABLED` to contain a vault incident while preserving encrypted data.
+
 ## Verification
+
+- `node ops/vault-review.cjs` starts a temporary synthetic database/server with no monitoring scheduler, exercises real login/MFA and ciphertext saves, copy/reveal/lock, and captures 1536/1440/768/390/320px layouts under ignored `.impeccable/review/vault`. Never aim this runner at production or capture real credentials.
+
 - `node ops/accessibility-check.cjs` reads actual rendered light/dark tokens to verify text contrast (4.5:1), activity bar/track contrast (3:1) and visible 44px controls at desktop/390px/320px; `UI_REVIEW_CLIENT_ONLY=1` rechecks client detail.
 - `node ops/ui-review.cjs` checks desktop, 390px and 320px surfaces and page drill-downs, period/sort preservation, page URL/Back/focus and login return. Requires Vite remote mode on port 5180 (or `UI_REVIEW_BASE` for production), local Chrome, and production key-only SSH.
 - `UI_REVIEW_EXTRA_ONLY=1 node ops/ui-review.cjs` checks PDF Studio/Seder/Miryam/Libi analytics and WhatsApp/SSH templates at the same widths, without actions or message sends; mask terminals and manual-message fields in saved screenshots.

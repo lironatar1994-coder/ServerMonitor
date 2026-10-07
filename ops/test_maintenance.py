@@ -19,9 +19,20 @@ class Backups(unittest.TestCase):
         m.BACKUPS = m.STATE / 'backups'
         m.BACKUPS.mkdir(parents=True)
         m.ASSETS = {}
+        self.key_patches = [patch.object(m, 'AUTH_KEY', self.root / 'auth.key'), patch.object(m, 'AUTH_KEY_BACKUP', self.root / 'keys/auth.key')]
+        for item in self.key_patches: item.start()
 
     def tearDown(self):
+        for item in self.key_patches: item.stop()
         self.temp.cleanup()
+
+    def test_authentication_key_is_verified_separately_from_database_manifest(self):
+        m.DATABASES = {}
+        m.AUTH_KEY.write_bytes(b'x' * 32)
+        saved = Path(m.snapshot())
+        self.assertEqual(m.AUTH_KEY_BACKUP.read_bytes(), b'x' * 32)
+        self.assertEqual(m.AUTH_KEY_BACKUP.stat().st_mode & 0o777, 0o600)
+        self.assertNotIn('auth.key', json.loads((saved / 'manifest.json').read_text()))
 
     def test_live_wal_data_restores(self):
         source = self.root / 'source.sqlite'

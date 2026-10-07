@@ -90,15 +90,16 @@ test('source completion is not revenue and newly identified fixtures are exclude
     importRows(second.id, 'registrations', [{ ...row, name: 'בדיקת הרשמה' }]);
     assert.equal(db.prepare('SELECT archived FROM growth_leads WHERE id=?').get(lead.id).archived, 1);
 });
-test('HTTP workspace requires internal JWT, not the Manager Site integration key', async () => {
-    const express = require('express'), jwt = require('jsonwebtoken');
+test('HTTP workspace requires internal sessions, not the Manager Site integration key', async () => {
+    const express = require('express');
     const serverApp = express(); serverApp.use(express.json()); serverApp.use('/growth', require('../routes/clientGrowth'));
     const server = serverApp.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
     try {
         const url = `http://127.0.0.1:${server.address().port}/growth`;
         assert.equal((await fetch(url)).status, 401);
         assert.equal((await fetch(url, { headers: { 'x-manager-site-analytics-key': 'anything' } })).status, 401);
-        const token = jwt.sign({ id: 1, username: 'tester' }, process.env.JWT_SECRET || 'supersecret_monitor_key_123', { expiresIn: '1m' });
+        const userId = db.prepare("INSERT INTO users(username,password,role) VALUES ('http-tester','not-login-capable','reader')").run().lastInsertRowid;
+        const token = require('../routes/auth').createSessionToken({ id: Number(userId) });
         const headers = { Authorization: `Bearer ${token}` };
         assert.equal((await fetch(url, { headers })).status, 200);
         assert.equal((await fetch(`${url}/${app.id}?days=1000`, { headers })).status, 400);

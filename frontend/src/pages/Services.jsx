@@ -5,6 +5,7 @@ import AddAppModal from '../components/AddAppModal';
 import { DataState, Empty, Panel, PageHead, Tabs } from '../components/AnalyticsParts';
 import { apiFetch } from '../lib/api';
 import { formatDateTime } from '../lib/format';
+import { getSessionSnapshot } from '../lib/session';
 
 const FILTERS = [
   { id: 'all', label: 'הכול' },
@@ -43,9 +44,9 @@ const Services = () => {
   return (
     <div className="page page--services">
       <PageHead title="שירותים" meta={<span className="muted">{online} מתוך {apps.length} פעילים</span>}>
-        <button type="button" className="btn btn--primary" onClick={() => setAdding(true)}>
+        {getSessionSnapshot()?.role === 'owner' && <button type="button" className="btn btn--primary" onClick={() => setAdding(true)}>
           <Plus aria-hidden="true" /> הוספה
-        </button>
+        </button>}
       </PageHead>
 
       <DataState loading={loading} error={error} onRetry={fetchApps}>

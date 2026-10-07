@@ -7,10 +7,12 @@ import WhatsAppTemplate from '../components/app_templates/WhatsAppTemplate';
 import { DataState, Panel, PageHead } from '../components/AnalyticsParts';
 import { formatDateTime } from '../lib/format';
 import { apiFetch } from '../lib/api';
+import { getSessionSnapshot } from '../lib/session';
 
 const ACTION_LABEL = { start: 'הפעלה', stop: 'עצירה', restart: 'הפעלה מחדש' };
 
 const AppDetails = () => {
+  const owner = getSessionSnapshot()?.role === 'owner';
   const { id } = useParams();
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -64,8 +66,8 @@ const AppDetails = () => {
           >
           </PageHead>
 
-          {app.pm2_name === 'vee-whatsapp-worker' ? <WhatsAppTemplate app={app} />
-            : app.name === 'SSH Security' ? <SshSecurityTemplate app={app} />
+          {owner && app.pm2_name === 'vee-whatsapp-worker' ? <WhatsAppTemplate app={app} />
+            : owner && app.name === 'SSH Security' ? <SshSecurityTemplate app={app} />
               : (
                 <div className="grid grid--1-2">
                   <Panel title="מצב השירות">
@@ -81,12 +83,12 @@ const AppDetails = () => {
                     {Boolean(app.analytics_enabled && app.log_path) && <Link className="btn btn--wide" to={`/visitors/${app.id}`}>תמונת המבקרים</Link>}
                   </Panel>
 
-                  <Panel title="לוג חי" className="panel--terminal" bleed>
+                  {owner && <Panel title="לוג חי" className="panel--terminal" bleed>
                     <LiveTerminal appId={app.id} />
-                  </Panel>
+                  </Panel>}
                 </div>
               )}
-          <details className="measurement-details service-controls"><summary>פעולות ניהול השירות</summary>
+          {owner && <details className="measurement-details service-controls"><summary>פעולות ניהול השירות</summary>
             {(app.pm2_name || app.systemd_unit) && (
               <div className="btn-group">
                 {app.status === 'online'
@@ -97,7 +99,7 @@ const AppDetails = () => {
                 </button>
               </div>
             )}
-          </details>
+          </details>}
         </>}
       </DataState>
 

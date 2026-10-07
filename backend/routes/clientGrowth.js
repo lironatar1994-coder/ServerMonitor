@@ -3,6 +3,7 @@ const { authenticateToken } = require('./auth');
 const growth = require('../clientGrowth');
 const router = express.Router();
 router.use(authenticateToken);
+router.use((req,res,next) => !['GET','HEAD'].includes(req.method) && (req.user.role !== 'owner' || req.user.service) ? res.status(403).json({error:'נדרשת הרשאת בעלים.'}) : next());
 const handle = fn => (req, res) => {
     try { res.json(fn(req)); }
     catch (error) {

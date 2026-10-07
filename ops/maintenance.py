@@ -35,6 +35,8 @@ ASSETS = {
     'koral-uploads': Path('/opt/koralevents/shared/uploads'),
     'koral2-uploads': Path('/opt/koralevents2/shared/uploads'),
 }
+AUTH_KEY = Path('/root/.server-monitor-auth-key')
+AUTH_KEY_BACKUP = Path('/root/server-monitor-key-backups/auth.key')
 SERVICES = ['maavar', 'maavar-worker', 'nginx', 'ssh', 'pm2-root', 'koralevents', 'koralevents2', 'fail2ban']
 URLS = ['https://vee-app.co.il/maavar/api/health', 'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents2/api/health',
         'https://lawebs.co.il/Koralevents/api/health', 'https://vee-app.co.il/']
@@ -75,6 +77,22 @@ def snapshot():
     staging = BACKUPS / ('.partial-' + stamp)
     staging.mkdir(mode=0o700)
     try:
+        # Keep the TOTP encryption key out of general database/PC backup manifests.
+        if AUTH_KEY.exists():
+            if AUTH_KEY.is_symlink() or AUTH_KEY.stat().st_size != 32:
+                raise RuntimeError('Invalid ServerMonitor authentication key')
+            AUTH_KEY_BACKUP.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            if AUTH_KEY_BACKUP.parent.is_symlink() or AUTH_KEY_BACKUP.is_symlink():
+                raise RuntimeError('Unsafe authentication key backup path')
+            AUTH_KEY_BACKUP.parent.chmod(0o700)
+            with tempfile.NamedTemporaryFile(dir=AUTH_KEY_BACKUP.parent, delete=False) as key_copy:
+                temp_key = Path(key_copy.name)
+                key_copy.write(AUTH_KEY.read_bytes())
+            temp_key.chmod(0o600)
+            if sha256(temp_key) != sha256(AUTH_KEY):
+                temp_key.unlink()
+                raise RuntimeError('Authentication key backup verification failed')
+            temp_key.replace(AUTH_KEY_BACKUP)
         for name, source in DATABASES.items():
             if not Path(source).is_file():
                 raise RuntimeError(f'Missing required database: {source}')

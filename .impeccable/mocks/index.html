@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server Monitor — גלריית המערכת</title>
+<link rel="stylesheet" href="gallery.css">
+<script src="gallery-data.js" defer></script><script src="gallery.js" defer></script>
+</head>
+<body>
+<header class="masthead"><a class="brand" href="#main" dir="ltr">Server Monitor<span>DESIGN REVIEW</span></a><span class="demo-label"><i aria-hidden="true"></i>נתוני הדגמה בלבד</span></header>
+<main id="main">
+<section class="intro" aria-labelledby="page-title"><div><p class="eyebrow">כספת צוותית · עיצוב המערכת</p><h1 id="page-title">גלריית המערכת</h1><p class="description">כיוון העיצוב המאושר וצילומי הממשק שיושם, עם נתונים סינתטיים בלבד.</p></div><div class="summary"><strong id="screen-count">—</strong><span>צילומי מסך</span></div></section>
+<nav class="filters" aria-label="סינון צילומי מסך"><div class="filter-group" id="category-filter" aria-label="תחום"><button type="button" data-value="all" aria-pressed="true">הכול</button><button type="button" data-value="vault" aria-pressed="false">כספת</button><button type="button" data-value="workspace" aria-pressed="false">סביבת העבודה</button><button type="button" data-value="reference" aria-pressed="false">כיוון העיצוב</button></div><div class="filter-group viewport-filter" id="viewport-filter" aria-label="גודל מסך"><button type="button" data-value="all" aria-pressed="true">כל הגדלים</button><button type="button" data-value="desktop" aria-pressed="false">מחשב</button><button type="button" data-value="tablet" aria-pressed="false">טאבלט</button><button type="button" data-value="mobile" aria-pressed="false">נייד</button></div></nav>
+<div class="status-line" role="status" aria-live="polite"><span id="visible-count"></span><span id="capture-status"></span></div>
+<div id="gallery" class="gallery"></div><p id="empty-state" class="empty-state" hidden>אין צילומים בשילוב הסינון הזה.</p>
+<details class="provenance"><summary>מקור תמונת הכיוון</summary><p>תמונת קונספט שנוצרה ב־AI. היא ממחישה מבנה וצבעים; הטקסט וההתנהגות נקבעים במימוש. התמונה המקורית נשמרה, והעותק המוצג מכיל את פרומפט המקור במטא־נתונים.</p><div class="source-links"><a href="vault-desktop.png">התמונה המקורית</a><a href="vault-desktop.json">פרומפט מדויק</a><a href="assets-manifest.json">מפרט הנכסים</a></div><pre id="exact-prompt" dir="ltr"></pre></details>
+</main><footer>תיעוד מקומי לבדיקת עיצוב. צילומי המימוש מבוססים על סביבת הדגמה סינתטית; תמונת הקונספט אינה צילום של המערכת.</footer>
+<dialog id="image-viewer" aria-labelledby="viewer-title"><div class="viewer-toolbar"><div><h2 id="viewer-title"></h2><p id="viewer-meta"></p></div><div class="viewer-actions"><a id="viewer-original" target="_blank" rel="noopener">פתיחה מלאה ↗</a><button type="button" id="viewer-close" aria-label="סגירת התמונה">×</button></div></div><div class="viewer-content"><img id="viewer-image" alt=""></div></dialog>
+</body></html>

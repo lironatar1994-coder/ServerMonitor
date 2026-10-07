@@ -89,7 +89,7 @@ When the user requests a durable behavior change, record it here or in the relev
 - Keep click observations, verified source records, and manual business outcomes separate. Source adapters are read-only and must not copy customer contact details or message contents; existing native visitor trackers and CMS assets remain intact.
 
 - Keep website visitor monitoring and server/resource monitoring as separate product workspaces. The default dashboard must prioritize a clear cross-site visitor picture with both quick and deep views; infrastructure data belongs under `שרת ומשאבים`.
-- Design for a quick daily check: what changed, what needs attention, which site to open. Use the porcelain/white/slate/petrol system in `DESIGN.md`, Noto Sans Hebrew and tabular numbers throughout. Keep infrastructure graphite using the same primitives. No decorative animation, glass, new visual dependencies, or tracking/database changes made solely for visual design.
+- Design for a quick daily check: what changed, what needs attention, which site to open. Use the porcelain/white/slate/petrol system in `DESIGN.md`, self-hosted Heebo and tabular numbers throughout. Keep infrastructure graphite using the same primitives. No decorative animation, glass, new visual dependencies, or tracking/database changes made solely for visual design.
 - Keep `/visitors` labeled `אתרים` as the landing page, default to 24 hours only without a saved or linked period, and preserve exact dates through site switching and authentication. Website, client follow-up, and server operations remain separate workspaces.
 - Optimise every screen for scanning and doing, not for reading. Keep copy minimal, put numbers and controls above the fold on desktop and mobile alike, and move explanations into on-demand hints. Do not reintroduce oversized display headlines or marketing paragraphs.
 - Prefer short nouns and familiar action icons. Show numeric column labels once per list; use accessible icon controls for repeated edit/copy/site-switch actions. Keep source distinctions, failures and low-sample limitations available without repeating explanatory paragraphs.
@@ -117,6 +117,10 @@ When the user requests a durable behavior change, record it here or in the relev
 - Share the browser-signal secret only through `/root/.visitor-signal-key` (or matching server-only environment variables); never expose it through browser code or public build-time values such as `NEXT_PUBLIC_*` or `VITE_*`.
 - Keep static visitor-signal bridges POST-only and cap request bodies at 16 KB so bounded engagement batches fit without opening a general upload surface.
 - After every successful change to a production-backed application, run the relevant verification and deploy it to production in the same task; do not leave verified application changes local unless the user explicitly asks not to deploy.
+
+- Keep a built-in shared credential vault under `/vault`, with browser-only encryption, explicit URL links, local search and desktop list/detail navigation. Hebrew RTL and Heebo apply across the app; mobile uses separate list/detail views.
+- Internal team roles are owner, editor and reader. Monitoring is readable to members; server actions and client-workspace writes are owner-only. All vault members can decrypt the shared items; editors can change entries and owners manage membership, invites and key rotation.
+- Require MFA for human sessions, a separate vault passphrase, an offline recovery key, and automatic locking. Never send vault passphrases, decrypted entries or plaintext vault keys to the server. Do not send team invitations automatically.
 
 ## Child DOX Index
 

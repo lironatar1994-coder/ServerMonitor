@@ -1,102 +1,231 @@
-import { Activity, Globe2, LogOut, PanelRightClose, PanelRightOpen, ServerCog, Settings, Wrench, BriefcaseBusiness } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-
-const navigation = [
-  { to: '/visitors', label: 'אתרים', icon: Globe2 },
-  { to: '/clients', label: 'לקוחות', icon: BriefcaseBusiness },
-  { to: '/infrastructure', label: 'שרת', icon: ServerCog },
-  { to: '/services', label: 'שירותים', icon: Wrench },
-  { to: '/settings', label: 'הגדרות', icon: Settings }
+import {
+  Globe2,
+  LogOut,
+  PanelRightClose,
+  PanelRightOpen,
+  ServerCog,
+  Settings,
+  Wrench,
+  BriefcaseBusiness,
+  KeyRound,
+  MoreHorizontal,
+  X,
+} from "lucide-react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import Modal from "./Modal";
+import { apiFetch } from "../lib/api";
+import {
+  getSessionSnapshot,
+  subscribeSession,
+  setSession,
+} from "../lib/session";
+const main = [
+  { to: "/visitors", label: "אתרים", icon: Globe2 },
+  { to: "/clients", label: "לקוחות", icon: BriefcaseBusiness },
+  { to: "/vault", label: "כספת", icon: KeyRound },
 ];
-
-const RAIL_KEY = 'vee-monitor.rail-collapsed';
-
-const AppShell = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const infrastructureMode = location.pathname.startsWith('/infrastructure');
-  const [collapsed, setCollapsed] = useState(() => window.localStorage.getItem(RAIL_KEY) === '1');
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' });
-  }, [location.pathname]);
-
-  const toggleRail = () => setCollapsed((current) => {
-    const next = !current;
-    window.localStorage.setItem(RAIL_KEY, next ? '1' : '0');
-    return next;
-  });
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    window.dispatchEvent(new Event('auth-change'));
-    navigate('/login', { replace: true });
-  };
-
-
+const operations = [
+  { to: "/infrastructure", label: "שרת ומשאבים", icon: ServerCog },
+  { to: "/services", label: "שירותים", icon: Wrench },
+];
+const settings = { to: "/settings", label: "הגדרות", icon: Settings };
+const NavItem = ({ item, onClick }) => {
+  const Icon = item.icon;
   return (
-    <div className={`shell ${infrastructureMode ? 'shell--infrastructure' : ''} ${collapsed ? 'shell--collapsed' : ''}`}>
-      <a className="skip-link" href="#main-content">דלג לתוכן</a>
-
+    <NavLink
+      to={item.to}
+      onClick={onClick}
+      title={item.label}
+      aria-label={item.label}
+      className={({ isActive }) => `rail-link ${isActive ? "is-active" : ""}`}
+    >
+      <Icon aria-hidden="true" />
+      <span>{item.label}</span>
+    </NavLink>
+  );
+};
+export default function AppShell() {
+  const [collapsed, setCollapsed] = useState(
+      () => localStorage.getItem("vee-monitor.rail-collapsed") === "1",
+    ),
+    [more, setMore] = useState(false);
+  const user = useSyncExternalStore(subscribeSession, getSessionSnapshot),
+    navigate = useNavigate(),
+    location = useLocation(),
+    infrastructure = location.pathname.startsWith("/infrastructure");
+  const logout = async () => {
+    try {
+      await apiFetch("/auth/logout", { method: "POST", body: "{}" });
+    } finally {
+      setSession(null);
+      const channel = new BroadcastChannel("monitor-session");
+      channel.postMessage("logout");
+      channel.close();
+      navigate("/login", { replace: true });
+    }
+  };
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [location.pathname]);
+  useEffect(() => {
+    const channel = new BroadcastChannel("monitor-session");
+    channel.onmessage = (event) => {
+      if (event.data === "logout") setSession(null);
+      else if (event.data?.active) last = Math.max(last, event.data.active);
+    };
+    let last = Date.now();
+    const active = () => {
+      if (Date.now() - last >= 30 * 60000) {
+        apiFetch("/auth/logout", { method: "POST", body: "{}" }).catch(
+          () => {},
+        );
+        channel.postMessage("logout");
+        setSession(null);
+        return;
+      }
+      last = Date.now();
+      channel.postMessage({ active: last });
+    };
+    const timer = setInterval(() => {
+      if (Date.now() - last >= 30 * 60000) {
+        apiFetch("/auth/logout", { method: "POST", body: "{}" }).catch(
+          () => {},
+        );
+        channel.postMessage("logout");
+        setSession(null);
+      }
+    }, 15000);
+    window.addEventListener("pointerdown", active);
+    window.addEventListener("keydown", active);
+    return () => {
+      channel.close();
+      clearInterval(timer);
+      window.removeEventListener("pointerdown", active);
+      window.removeEventListener("keydown", active);
+    };
+  }, []);
+  useEffect(() => {
+    if (!more) return;
+    const close = (e) => {
+      if (e.key === "Escape") setMore(false);
+    };
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [more]);
+  const toggle = () =>
+    setCollapsed((value) => {
+      localStorage.setItem("vee-monitor.rail-collapsed", value ? "0" : "1");
+      return !value;
+    });
+  return (
+    <div
+      className={`shell ${infrastructure ? "shell--infrastructure" : ""} ${collapsed ? "shell--collapsed" : ""}`}
+      data-role={user?.role}
+    >
+      <a className="skip-link" href="#main-content">
+        דלג לתוכן
+      </a>
       <aside className="side-rail" aria-label="ניווט ראשי">
         <div className="rail-top">
-          <span className="brand-stamp" aria-hidden="true"><Activity /></span>
-          <span className="brand-name"><b>Server Monitor</b></span>
+          <span className="brand-name">
+            <b>Server Monitor</b>
+          </span>
           <button
-            type="button"
             className="rail-toggle"
-            onClick={toggleRail}
-            aria-label={collapsed ? 'הרחבת תפריט' : 'צמצום תפריט'}
-            title={collapsed ? 'הרחבת תפריט' : 'צמצום תפריט'}
+            type="button"
+            onClick={toggle}
+            aria-label={collapsed ? "הרחבת תפריט" : "צמצום תפריט"}
           >
-            {collapsed ? <PanelRightOpen aria-hidden="true" /> : <PanelRightClose aria-hidden="true" />}
+            {collapsed ? <PanelRightOpen /> : <PanelRightClose />}
           </button>
         </div>
-
         <nav className="rail-nav">
-          <span className="rail-section">מעקב</span>
-          {navigation.slice(0, 2).map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} title={label} aria-label={label} className={({ isActive }) => `rail-link ${isActive ? 'is-active' : ''}`}>
-              <Icon aria-hidden="true" /><span>{label}</span>
-            </NavLink>
+          <span className="rail-section">סביבת עבודה</span>
+          {main.map((item) => (
+            <NavItem key={item.to} item={item} />
           ))}
           <span className="rail-section rail-section--operations">תפעול</span>
-          {navigation.slice(2).map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} title={label} aria-label={label} className={({ isActive }) => `rail-link ${isActive ? 'is-active' : ''}`}>
-              <Icon aria-hidden="true" /><span>{label}</span>
-            </NavLink>
+          {operations.map((item) => (
+            <NavItem key={item.to} item={item} />
           ))}
         </nav>
-
         <div className="rail-foot">
-          <button type="button" className="rail-link rail-logout" onClick={handleLogout} title="התנתקות" aria-label="התנתקות">
-            <LogOut aria-hidden="true" /><span>התנתקות</span>
+          <NavItem item={settings} />
+          <div className="rail-user">
+            <span className="rail-avatar">{user?.username?.slice(0, 1)}</span>
+            <span>
+              <b>{user?.username}</b>
+              <small>
+                {user?.role === "owner"
+                  ? "בעלים"
+                  : user?.role === "editor"
+                    ? "עורך"
+                    : "קורא"}
+              </small>
+            </span>
+          </div>
+          <button
+            className="rail-link rail-logout"
+            type="button"
+            onClick={logout}
+            aria-label="התנתקות"
+          >
+            <LogOut />
+            <span>התנתקות</span>
           </button>
         </div>
       </aside>
-
       <header className="mobile-header">
-        <span className="brand-stamp" aria-hidden="true"><Activity /></span>
         <b>Server Monitor</b>
-        <button type="button" className="mobile-logout" onClick={handleLogout} aria-label="התנתקות">
-          <LogOut aria-hidden="true" />
+        <button className="mobile-logout" onClick={logout} aria-label="התנתקות">
+          <LogOut />
         </button>
       </header>
-
       <main id="main-content" className="workspace" tabIndex="-1">
         <Outlet />
       </main>
-
       <nav className="bottom-nav" aria-label="ניווט נייד">
-        {navigation.map(({ to, label, icon: Icon }) => (
-          <NavLink key={to} to={to} className={({ isActive }) => isActive ? 'is-active' : ''}>
-            <Icon aria-hidden="true" /><span>{label}</span>
-          </NavLink>
+        {[...main, { ...operations[0], label: "שרת" }].map((item) => (
+          <NavItem key={item.to} item={item} />
         ))}
+        <button
+          className={
+            more ||
+            ["/settings", "/services"].some((p) =>
+              location.pathname.startsWith(p),
+            )
+              ? "is-active"
+              : ""
+          }
+          onClick={() => setMore(!more)}
+          aria-expanded={more}
+          aria-controls="mobile-more"
+        >
+          <MoreHorizontal />
+          <span>עוד</span>
+        </button>
       </nav>
+      {more && (
+        <Modal
+          className="mobile-more"
+          label="עוד"
+          onClose={() => setMore(false)}
+        >
+          <div>
+            <h2>עוד</h2>
+            <button
+              className="icon-btn"
+              aria-label="סגירת תפריט"
+              onClick={() => setMore(false)}
+            >
+              <X />
+            </button>
+          </div>
+          <NavItem item={operations[1]} onClick={() => setMore(false)} />
+          <NavItem item={settings} onClick={() => setMore(false)} />
+        </Modal>
+      )}
     </div>
   );
-};
-
-export default AppShell;
+}

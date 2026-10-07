@@ -1,6 +1,6 @@
 ---
 name: Server Monitor
-description: A compact Hebrew RTL fleet console for daily website and server operations.
+description: A compact Hebrew RTL workspace for website activity, client work, team credentials and server operations.
 colors:
   accent: "#126B78"
   accent-hover: "#0C5360"
@@ -44,38 +44,42 @@ colors:
   infrastructure-danger-surface: "#452E39"
 typography:
   body:
-    fontFamily: "Noto Sans Hebrew, sans-serif"
+    fontFamily: "Heebo, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.55
   headline:
-    fontFamily: "Noto Sans Hebrew, sans-serif"
+    fontFamily: "Heebo, sans-serif"
     fontSize: "1.5rem"
     fontWeight: 700
     lineHeight: 1.45
-    letterSpacing: "-0.025em"
+    letterSpacing: "normal"
   title:
-    fontFamily: "Noto Sans Hebrew, sans-serif"
-    fontSize: "0.98rem"
-    fontWeight: 700
+    fontFamily: "Heebo, sans-serif"
+    fontSize: "1rem"
+    fontWeight: 600
     lineHeight: 1.5
   metric:
-    fontFamily: "Noto Sans Hebrew, sans-serif"
-    fontSize: "2.25rem"
-    fontWeight: 700
-    lineHeight: 1.15
-    letterSpacing: "-0.025em"
-  metric-secondary:
-    fontFamily: "Noto Sans Hebrew, sans-serif"
+    fontFamily: "Heebo, sans-serif"
     fontSize: "2rem"
-    fontWeight: 700
+    fontWeight: 600
     lineHeight: 1.15
-    letterSpacing: "-0.025em"
+    letterSpacing: "normal"
   label:
-    fontFamily: "Noto Sans Hebrew, sans-serif"
-    fontSize: "0.8rem"
+    fontFamily: "Heebo, sans-serif"
+    fontSize: "0.84rem"
     fontWeight: 400
     lineHeight: 1.4
+  field-label:
+    fontFamily: "Heebo, sans-serif"
+    fontSize: "0.88rem"
+    fontWeight: 500
+    lineHeight: 1.55
+  action:
+    fontFamily: "Heebo, sans-serif"
+    fontSize: "0.9rem"
+    fontWeight: 500
+    lineHeight: 1.55
 rounded:
   control: "8px"
   chip: "6px"
@@ -83,7 +87,7 @@ rounded:
 spacing:
   compact: "0.5rem"
   regular: "1rem"
-  panel: "1.1rem"
+  panel: "1.2rem"
   section: "1.25rem"
   page: "clamp(1rem, 2.1vw, 2rem)"
 components:
@@ -141,18 +145,20 @@ components:
 
 **Creative North Star: "חדר בקרה חד וברור"**
 
-A compact fleet console makes website activity and server attention easy to scan. Porcelain canvas, white data surfaces, slate navigation and petrol actions put aligned numbers and useful controls first. Short Hebrew nouns, contextual icons and explanations on demand keep the interface practical for a daily check.
+A compact fleet console makes website activity, client work, shared credentials and server attention easy to scan. Porcelain canvas, white data surfaces, slate navigation and petrol actions put aligned numbers and useful controls first. Short Hebrew nouns, contextual icons and explanations on demand keep the interface practical for a daily check.
 
-Website activity, client follow-up, services, settings and authentication share the light system. Infrastructure uses graphite surfaces with the same components, density and interaction grammar. The code-led concept is recorded in [the HTML brief](frontend/index.html) with seed `303d0dc4`; there is no separate approved image composition or generated visual asset.
+Website activity, client follow-up, the team vault, services, settings and authentication share the light system. Infrastructure uses graphite surfaces with the same components, density and interaction grammar. The vault has one desktop list/detail workspace and separate mobile views; its approved [desktop composition](.impeccable/mocks/vault-desktop.png) and [approval record](.impeccable/mocks/vault-desktop.json) establish spatial direction, while semantic Hebrew and functional controls follow the implementation.
 
 **Key Characteristics:**
 
-- Hebrew RTL, Noto Sans Hebrew and aligned tabular numbers.
+- Hebrew RTL, self-hosted Heebo and aligned tabular numbers.
 - White summaries, tables and plots with subtle boundaries and gently rounded panels.
 - Stable slate navigation, petrol actions and functional green, amber and red states.
-- Compact comparison rows, measured activity bars and explanations on demand.
+- Compact comparison rows, measured activity bars, a responsive credential list/detail and explanations on demand.
 
-Implementation authority is [the theme](frontend/src/theme.css), loaded after [the base geometry](frontend/src/index.css) in [main.jsx](frontend/src/main.jsx). [AppShell](frontend/src/components/AppShell.jsx) and [AnalyticsParts](frontend/src/components/AnalyticsParts.jsx) define the shared structures; route styles use their tokens. [.impeccable/design.json](.impeccable/design.json) extends this record with previews, breakpoints, shadows and narrative. Email remains a separate presentation contract owned by [its template](backend/emailReportTemplate.js).
+Implementation authority follows the CSS cascade in [main.jsx](frontend/src/main.jsx): [base geometry](frontend/src/index.css), [theme](frontend/src/theme.css), then [workspace typography and shell](frontend/src/workspace.css). [AppShell](frontend/src/components/AppShell.jsx), [AnalyticsParts](frontend/src/components/AnalyticsParts.jsx), [Vault](frontend/src/pages/Vault.jsx) and [vault styles](frontend/src/vault/vault.css) define the built structures. [.impeccable/design.json](.impeccable/design.json) extends this record with previews, breakpoints, shadows and narrative. Email remains a separate presentation contract owned by [its template](backend/emailReportTemplate.js).
+
+Reference provenance: [the HTML FORM](frontend/index.html) records seed `c08480f4`; the original seed-tool output and pre-build hero checkpoint are unavailable. A final composition-sized capture is retrospective evidence, not that checkpoint. This record makes no visual-review pass claim.
 
 ## Colors
 
@@ -178,24 +184,26 @@ Petrol provides a single action accent against cool porcelain and white; slate a
 
 ## Typography
 
-**Body and heading font:** locally hosted Noto Sans Hebrew with sans-serif fallback. The base `serif` and `mono` aliases resolve to this family. Font files cover regular, bold and extra-bold; tabular numbers apply throughout.
+**Body and heading font:** locally hosted Heebo with sans-serif fallback. The final `sans`, `serif` and `mono` aliases all resolve to Heebo. Local font files cover weights 400, 500, 600 and 700; tabular numbers apply throughout. Email retains its separate Noto Sans Hebrew/Arial stack.
 
 ### Hierarchy
 
-- **Headline:** a compact bold page title; reduce it to 1.25rem on mobile.
-- **Title:** bold panel headings with a quiet supporting action or hint.
-- **Metric:** bold primary summary values; secondary values use the smaller metric role. Summary values reduce to 1.75rem on mobile; page detail retains its compact inline values.
-- **Body and label:** normal-weight readable Hebrew. Secondary timestamps and comparison labels generally use 0.7–0.8rem; panel titles remain visually stronger.
+- **Headline:** a compact bold page title; reduce it to 1.3rem at the 900px navigation breakpoint. Headers begin without a negative top margin.
+- **Title:** medium-bold panel headings with a quiet supporting action or hint. Vault detail headings use 1.3rem, reducing to 1.15rem at 480px.
+- **Metric:** medium-bold summary values reduce to 1.7rem at 480px. Page-insight metrics retain their compact 1.3rem role.
+- **Body and label:** normal-weight readable Hebrew; field labels and actions use medium weight. Quiet timestamps and secondary labels generally use 0.7–0.84rem. Keep zero letter spacing on Hebrew headings and metrics.
 - **Mixed direction:** isolate complete dates, paths, byte values and RAM/Swap/PID/CPU fragments with `bdi` or explicit LTR direction. Keep names wrapping within their column.
 
 **The One Family Rule.** Build hierarchy with size, weight and alignment. Keep titles compact and omit display type and page eyebrows.
 
 ## Layout
 
-- The right desktop rail is 14.5rem expanded and 4.25rem collapsed. Its destinations are grouped under `מעקב` and `תפעול`; collapsed destinations retain accessible names. The content width remains `min(100%, 92rem)`, centered with the page spacing token.
-- At 900px and below, a fixed slate header and five-item bottom bar replace the rail. Respect safe areas and leave content clearance. Destinations are `אתרים`, `לקוחות`, `שרת`, `שירותים` and `הגדרות`.
-- The compact page header and period controls lead into a summary and the data. Shared panels use a 1.25rem section rhythm, with a compact title row and 1.1rem body padding. Related breakdowns use in-panel underline toggles.
-- At 760px and below, page padding becomes 0.85rem, panel body padding 0.85rem and panel headings 0.91rem. Visitor summaries retain three aligned columns; infrastructure and four-metric client summaries use two. At 380px and below, page padding becomes 0.65rem.
+- The right desktop rail is 15rem expanded and 4.5rem collapsed. Destinations sit under `סביבת עבודה` and `תפעול`; settings and the signed-in member remain at the bottom. Collapsed destinations retain accessible names. The page retains `min(100%, 92rem)` width, centered with the page spacing token; the later 100rem maximum does not widen it.
+- At 900px and below, a fixed slate header and five-item bottom bar replace the rail: `אתרים`, `לקוחות`, `כספת`, `שרת`, `עוד`. More opens services/settings in a native modal. Respect safe areas, content clearance and the 58px mobile navigation targets.
+- The compact page header and period controls lead into a summary and the data. Shared panels use a 1.25rem section rhythm, a 58px minimum title row and the panel padding token. Related breakdowns use in-panel underline toggles.
+- At 760px and below, page padding becomes 0.85rem. At 480px, panel padding becomes 0.85rem and summary values reduce. Visitor summaries retain three aligned columns; infrastructure and four-metric client summaries use two. At 380px, page padding becomes 0.65rem.
+- The vault desktop grid places its 290–360px list on the right and flexible detail on the left, with a 1.15rem gap. At 1200px the list is 300px; at 1000px and below, list and selected detail occupy separate views. Returning restores list scroll and focus; opening an entry focuses its heading. Keep usernames, passwords and exact URLs isolated LTR within the RTL layout.
+- Settings uses a content column capped at 56rem below `חשבון`, `אבטחה`, `צוות`, `התראות` underline tabs. Authentication uses the same restrained surface and field grammar.
 - Site rows share one column header for identity, three metrics and change. On mobile, three numeric columns remain aligned, change moves below identity and the chevron remains visible. Do not repeat metric icons in headers or rows. Client tables use the same alignment grammar, with concise inquiry/task headings.
 - Page rankings open a useful adjacent drill-down on desktop. On mobile the detail is a full-screen, focus-trapped dialog with inert background, a visible close control and no enclosing panel radius.
 - Controls wrap, names break within their column and grids collapse before the content becomes cramped. Verify desktop, 390px and 320px screens without page-level horizontal overflow.
@@ -228,13 +236,21 @@ Repeated edit, copy, refresh and site-switch actions use contextual accessible n
 
 Fields have visible labels, a white/local surface, a strong neutral border and control corners. Focus reinforces the border and shared outline. Search, sort and period controls stay beside the data they affect.
 
-Login is a centered white form on porcelain, at most 26rem wide, with a compact brand separator, 48px fields and a 48px petrol submit action. Password reveal remains a named icon control. Errors use the same failure treatment as the application.
+Login is a centered white form on porcelain, at most 26rem wide, with a compact brand separator, 48px fields and a 48px petrol submit action. Password reveal remains a named icon control in sign-in, invitation and legacy-password upgrade forms. MFA and recovery use the same labeled field and error grammar; the separate vault unlock is a bounded white form with a functional key/lock mark.
 
 ### Navigation and selection
 
 Slate navigation stays stable across workspaces. Selected destinations have a darker petrol-slate surface, light text and a pale petrol icon. A plain Server Monitor wordmark anchors it. Tracking and operations group labels serve wayfinding rather than page decoration.
 
-Period controls use a white bounded segment group with an explicit petrol fill on selection. Content toggles use an underline and `aria-pressed`, grouping related data in one panel rather than creating separate screens or cards.
+Period controls use a white bounded segment group with an explicit petrol fill on selection. Content toggles use an underline and `aria-pressed`, grouping related data in one panel rather than creating separate screens or cards. The mobile More button exposes its expanded state; its native dialog contains services/settings and a named close action.
+
+### Team vault
+
+The `/vault` destination contains a searchable right-hand credential list and a left-hand detail surface. List rows combine a plain initial, title, username and environment, with pale petrol selection and an optional functional favorite icon. Filters and search remain inside the list; the selected entry owns its copy, reveal, edit and explicit site-opening controls.
+
+Credential values use porcelain field rows, visible muted labels and 44px icon actions. Passwords begin masked, reveal temporarily, and copy through named controls; URLs stay explicit and open only on a deliberate action. Notes expand on demand. Selection, editing, empty, locked, revoked and failure states remain visibly distinct. Keep secret material out of examples, screenshots and design metadata; preview credentials must be synthetic.
+
+On narrower screens, the detail replaces the list and shows a named back control. Entry headings receive programmatic focus without scrolling, and returning restores the originating row. Owner team controls and invitations stay within the vault; settings links to that team view rather than creating another credential workspace.
 
 ### Panels and summaries
 

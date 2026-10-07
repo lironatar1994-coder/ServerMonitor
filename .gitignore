@@ -12,6 +12,7 @@ frontend/dist/
 *.db-wal
 *.db-shm
 adminspass.txt
+backend/.auth-key
 
 __pycache__/
 *.pyc

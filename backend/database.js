@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 
 const dbPath = process.env.MONITOR_DB_PATH || path.join(__dirname, 'monitor.db');
 const db = new Database(dbPath, {
-    verbose: process.env.DB_VERBOSE === 'true' ? console.log : undefined
+    verbose: process.env.NODE_ENV !== 'production' && process.env.DB_VERBOSE === 'true' ? console.log : undefined
 });
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -223,10 +223,11 @@ db.exec(`
 
 // Insert default admin if not exists
 const adminExists = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
-if (!adminExists) {
-    const hash = bcrypt.hashSync('admin123', 10);
+if (!adminExists && process.env.MONITOR_BOOTSTRAP_PASSWORD) {
+    if (process.env.MONITOR_BOOTSTRAP_PASSWORD.length < 15) throw new Error('MONITOR_BOOTSTRAP_PASSWORD must contain at least 15 characters');
+    const hash = bcrypt.hashSync(process.env.MONITOR_BOOTSTRAP_PASSWORD, 12);
     db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run('admin', hash);
-    console.log('Default admin user created (admin/admin123)');
+    console.log('Initial administrator created from explicit bootstrap configuration');
 }
 
 // Programmatic Migrations for schema updates

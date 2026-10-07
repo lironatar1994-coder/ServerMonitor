@@ -19,6 +19,8 @@ NGINX_LOG_CONFIG="/etc/nginx/conf.d/server-monitor-host-log.conf"
 SSH_HARDENING_CONFIG="/etc/ssh/sshd_config.d/00-server-monitor-hardening.conf"
 MANAGER_SITE_ANALYTICS_KEY_FILE="${MANAGER_SITE_ANALYTICS_KEY_FILE:-/root/.manager-site-analytics-key}"
 VISITOR_SIGNAL_KEY_FILE="${VISITOR_SIGNAL_KEY_FILE:-/root/.visitor-signal-key}"
+AUTH_KEY_FILE="${AUTH_KEY_FILE:-/root/.server-monitor-auth-key}"
+MONITOR_ORIGIN="https://monitor.vee-app.co.il"
 
 echo "[INFO] Starting Deployment..."
 cd "$APP_ROOT"
@@ -31,9 +33,23 @@ git reset --hard origin/main
 # 2. Runtime backup
 echo "[INFO] Backing up monitor database..."
 mkdir -p "$BACKUP_DIR"
+chmod 700 "$BACKUP_DIR"
+DEPLOY_UMASK="$(umask)"
+umask 077
+if [ ! -e "$AUTH_KEY_FILE" ]; then openssl rand 32 > "$AUTH_KEY_FILE"; fi
+test "$(wc -c < "$AUTH_KEY_FILE")" -eq 32 || { echo '[ERROR] Invalid authentication key file'; exit 1; }
+chmod 600 "$AUTH_KEY_FILE"
+# Authentication secret backup is separate from the ciphertext-only SQLite snapshots.
+install -d -m 0700 /root/server-monitor-key-backups
+install -m 0600 "$AUTH_KEY_FILE" /root/server-monitor-key-backups/auth.key
 if [ -f "$BACKEND_DIR/monitor.db" ]; then
   BACKUP_PATH="$BACKUP_DIR/monitor-$(date +%Y%m%d-%H%M%S).db"
   sqlite3 "$BACKEND_DIR/monitor.db" ".backup '$BACKUP_PATH'"
+  test "$(sqlite3 "$BACKUP_PATH" 'PRAGMA quick_check;')" = 'ok' || { echo '[ERROR] Database backup integrity check failed'; exit 1; }
+  chmod 600 "$BACKUP_PATH" "$BACKEND_DIR/monitor.db"
+  for SQLITE_SIDE in "$BACKEND_DIR/monitor.db-wal" "$BACKEND_DIR/monitor.db-shm"; do
+    if [ -f "$SQLITE_SIDE" ]; then chmod 600 "$SQLITE_SIDE"; fi
+  done
   find "$BACKUP_DIR" -maxdepth 1 -type f -name 'monitor-*.db' -mtime +"$BACKUP_RETENTION_DAYS" -delete
   mapfile -t BACKUP_FILES < <(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'monitor-*.db' -printf '%T@ %p\n' | sort -nr | cut -d' ' -f2-)
   if [ "${#BACKUP_FILES[@]}" -gt "$BACKUP_MAX_COUNT" ]; then
@@ -43,6 +59,7 @@ if [ -f "$BACKEND_DIR/monitor.db" ]; then
   fi
   echo "[INFO] Database backup created at $BACKUP_PATH"
 fi
+umask "$DEPLOY_UMASK"
 
 # 3. Host-aware Nginx access log
 echo "[INFO] Installing host-aware access logging..."
@@ -114,6 +131,9 @@ echo "[INFO] Starting PM2 process..."
 # We serve the frontend via Nginx or we can use the backend to serve it
 # In our architecture, we can just run the backend.
 export PORT="$BACKEND_PORT"
+export NODE_ENV=production
+export MONITOR_ORIGIN AUTH_KEY_FILE
+export VAULT_ENABLED=true
 export GEOIP_DB_PATH
 export MANAGER_SITE_ANALYTICS_KEY="$(tr -d '\r\n' < "$MANAGER_SITE_ANALYTICS_KEY_FILE")"
 export VISITOR_SIGNAL_KEY="$(tr -d '\r\n' < "$VISITOR_SIGNAL_KEY_FILE")"

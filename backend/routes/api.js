@@ -170,7 +170,7 @@ function getMemoryStats() {
     };
 }
 
-function enrichAppStatus(app) {
+function enrichAppStatus(app, includeSensitive = false) {
     if (app?.systemd_unit) {
         const unit = getSystemdSnapshot(db.prepare('SELECT systemd_unit FROM apps WHERE systemd_unit IS NOT NULL').all()).find((item) => item.systemd_unit === app.systemd_unit);
         const failedHealth = Boolean(app.health_url || app.health_port) && ['error', 'offline'].includes(app.status);
@@ -189,7 +189,7 @@ function enrichAppStatus(app) {
         memory: pm2Data.memory 
     };
 
-    if (app.pm2_name === 'vee-whatsapp-worker') {
+    if (includeSensitive && app.pm2_name === 'vee-whatsapp-worker') {
         try {
             if (fs.existsSync(WHATSAPP_STATUS_PATH)) {
                 enriched.whatsapp_status = whatsappRuntimeStatus(
@@ -255,6 +255,11 @@ function getTrafficHistory(appId, days) {
 }
 
 router.use(authenticateToken);
+router.use((req, res, next) => {
+    const sensitive = /\/(logs|whatsapp-status)$/.test(req.path);
+    if ((!['GET','HEAD'].includes(req.method) || sensitive) && (req.user.role !== 'owner' || req.user.service)) return res.status(403).json({ error: 'נדרשת הרשאת בעלים.' });
+    next();
+});
 
 // Get Server General Stats
 router.get('/server-stats', async (req, res) => {
@@ -287,7 +292,7 @@ router.get('/', (req, res) => {
         const trend = db.prepare('SELECT requests, timestamp FROM metrics WHERE app_id = ? ORDER BY timestamp DESC LIMIT 10').all(app.id);
         
         return {
-            ...enrichAppStatus(app),
+            ...enrichAppStatus(app, req.user.role === 'owner' && !req.user.service),
             metrics: latestMetrics || { visitors: 0, requests: 0, attacks: 0 },
             trend: trend.reverse()
         };
@@ -347,7 +352,7 @@ router.get('/:id', (req, res) => {
     const history = db.prepare('SELECT * FROM metrics WHERE app_id = ? ORDER BY timestamp DESC LIMIT 24').all(req.params.id);
     
     res.json({
-        ...enrichAppStatus(app),
+        ...enrichAppStatus(app, req.user.role === 'owner' && !req.user.service),
         history: history.reverse()
     });
 });
@@ -483,6 +488,7 @@ router.get('/:id/visitors', (req, res) => {
     
     // Check if the app is the WhatsApp Worker
     if (app.pm2_name === 'vee-whatsapp-worker') {
+        if(req.user.role !== 'owner' || req.user.service) return res.status(403).json({error:'נדרשת הרשאת בעלים.'});
         const veeDbPath = '/root/Vee/backend/database.sqlite';
         if (!fs.existsSync(veeDbPath)) {
             // Mock data for local development/fallback

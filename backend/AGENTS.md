@@ -9,10 +9,10 @@
 
 - `pageInsights.js` owns exact-page anonymous visit cohorts, ordered next-page transitions and subsequent observed actions. `trackingHealth.js` reads the bounded browser-check result for authenticated dashboards.
 
-- `growthSchema.js` owns idempotent growth tables and canonical client defaults. `clientGrowth.js` and `routes/clientGrowth.js` own JWT-only internal goals, workflow, evidence, campaigns, comparisons and draft reports. `growthSignals.js` validates anonymous action beacons; `growthSources.js` polls five allow-listed source stores read-only once per minute.
+- `growthSchema.js` owns idempotent growth tables and canonical client defaults. `clientGrowth.js` and `routes/clientGrowth.js` own authenticated internal goals, workflow, evidence, campaigns, comparisons and draft reports. `growthSignals.js` validates anonymous action beacons; `growthSources.js` polls five allow-listed source stores read-only once per minute.
 
 - `server.js` owns middleware, API mounting, frontend static serving, and process startup.
-- `database.js` owns schema creation, migrations, default users, and seed monitor records.
+- `database.js` owns schema creation, migrations, explicit bootstrap accounts, and seed monitor records.
 - `monitor.js` owns background health, PM2, log, metric, and alert collection.
 - `logParser.js` owns host-aware Nginx access-log filtering, visitor parsing, and heuristic bot classification.
 - `visitorAnalytics.js` owns cursor-based access-log ingestion, initial bounded backfill, GeoIP enrichment, and raw-event retention.
@@ -26,6 +26,17 @@
 - `monitor.db` is runtime state and must not be treated as a source schema definition.
 
 ## Local Contracts
+
+- `security.js`, `routes/sessions.js` and the `routes/auth.js` compatibility export own hashed opaque sessions, Argon2id login hashes, legacy bcrypt migration, mandatory TOTP and hashed one-use recovery codes. No default password or JWT fallback. Legacy login passwords shorter than 15 characters must be changed through a password-verified pending session before MFA; the update revokes other sessions. Bootstrap only through an explicit `MONITOR_BOOTSTRAP_PASSWORD` of at least 15 characters.
+- Production uses `NODE_ENV=production`, exact `MONITOR_ORIGIN=https://monitor.vee-app.co.il`, a Secure/HttpOnly/SameSite=Strict host-only cookie and CSRF+Origin checks on mutations. Auth/vault APIs reject alias hosts; SPA aliases redirect to the canonical origin. Bind the API to loopback.
+- `AUTH_KEY_FILE` is a persistent root-only 32-byte key for TOTP secrets, never the vault encryption key. Never log auth/vault URLs, request bodies, tokens, passphrases or decrypted records.
+- Monitoring automation receives a five-minute read-only `monitor` session. It cannot enter any vault route, mutate records, read logs or access message-worker data. Human bearer tokens are rejected. Owner checks protect infrastructure/service actions and client-workspace mutations.
+- `vault.js` owns the shared-vault schema and opaque envelopes; `routes/vault.js` is feature-gated by `VAULT_ENABLED=true`. Metadata and secrets are encrypted separately in the browser; the server sees opaque IDs, versions, epochs, account roles and audit event types only. Browser encryption protects stored blobs; delivered JavaScript and the unlocked device remain trust boundaries. Do not claim protection against a compromised application server or a completed independent security audit.
+- Grant access only after owner verification of the member public-key fingerprint. Invites are hashed, single-use, expire after 24 hours and are manually copied. MFA recency is five minutes for key/member/invite/rotation/permanent-delete changes. Prevent removal of the last active owner with a vault key.
+- Entry writes use optimistic content versions; rotation validates the full entry/member set and global revision in one SQLite transaction. Revocation deletes sessions/member envelopes and freezes writes until rotation. Keep a 1,000-entry/8 MiB ciphertext quota, 128 KiB ordinary requests and 16 MiB authenticated rotation requests.
+- Trash remains recoverable for 30 days; purge on vault requests, at most hourly. Audit contains event type, account ID, opaque item ID and timestamp, retained 90 days; a secret fetch is not proof of copy or reveal.
+- The app invokes the existing system PM2 executable; keep the unused npm `pm2` dependency absent.
+
 
 - Cross-site new/returning lookups use partial candidate IP/time indexes and a global time index; keep the 1/30/90-day overview under the browser-check latency budget. Dashboard HTML is not cacheable and missing asset chunks return 404.
 - Browser-check results become stale after seven hours, allowing the six-hour production cadence plus scheduling grace; failed results remain visible immediately.
@@ -101,6 +112,9 @@
 - Keep SQLite WAL and foreign keys enabled. Schema additions and retention behavior must remain safe for existing production databases.
 
 ## Verification
+
+- `test/vaultCrypto.test.js` exercises identity/recovery, wrong passwords, authenticated envelope tampering, recipient sharing, new-key isolation, fresh nonces and safe URLs. `test/vaultSecurity.test.js` verifies cookies/MFA/CSRF/origin, roles, service isolation, invites, conflicts, last owner, revocation, atomic rotation and a decryptable SQLite restore.
+
 
 - `test/pageInsights.test.js` verifies ordered visit attribution, site/automation isolation, separate lead outcomes, engagement delta aggregation and the indexed history lookup. `test/apiClient.test.js` verifies client timeouts and invalid-response handling.
 

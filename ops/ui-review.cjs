@@ -8,7 +8,7 @@ const { chromium } = require('../backend/node_modules/playwright');
 const root = path.resolve(__dirname, '..');
 const out = path.join(root, '.impeccable/review');
 fs.mkdirSync(out, { recursive: true });
-const mint = "process.chdir('/root/ServerMonitor/backend');require(process.cwd()+'/node_modules/dotenv').config({quiet:true});const db=require(process.cwd()+'/database');const a=require(process.cwd()+'/routes/auth');process.stdout.write(a.createSessionToken(db.prepare('SELECT id,username FROM users ORDER BY id LIMIT 1').get(),'5m'));db.close();";
+const mint = "process.chdir('/root/ServerMonitor/backend');require(process.cwd()+'/node_modules/dotenv').config({quiet:true});const db=require(process.cwd()+'/database');const a=require(process.cwd()+'/routes/auth');process.stdout.write(a.createSessionToken(db.prepare('SELECT id,username FROM users WHERE disabled=0 ORDER BY id LIMIT 1').get(),'5m'));db.close();";
 let token;
 try { token = execFileSync('ssh', ['-o', 'BatchMode=yes', 'root@vee-app.co.il', 'node -'], { input: mint, encoding: 'utf8' }).trim(); } catch { throw new Error('Could not create a short-lived review session'); }
 const base = process.env.UI_REVIEW_BASE || 'http://127.0.0.1:5180/serve-monitor';
@@ -21,8 +21,8 @@ const check = async (name, fn) => { try { await fn(); results.push({ name, ok: t
     const page = await context.newPage(); page.setDefaultTimeout(20000);
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     await page.goto(base + '/login');
-    await page.evaluate(t => localStorage.setItem('token', t), token);
-    const apps = await page.evaluate(async () => (await fetch('/serve-monitor/api/apps', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })).json());
+    await page.context().addCookies([{ name: '__Host-monitor', value: token, url: new URL(base).origin, httpOnly: true, secure: true, sameSite: 'Strict' }]);
+    const apps = await page.evaluate(async () => (await fetch('/serve-monitor/api/apps', { credentials: 'same-origin' })).json());
     const id = apps.find(a => a.name === 'LA webs').id;
     const ready = async route => { await page.goto(base + route); await page.locator('.page h1, .login h1').waitFor(); await page.locator('.skeleton-stack,.page-loader').first().waitFor({ state: 'hidden' }); await page.evaluate(() => document.fonts.ready); assert.equal(await page.locator('.error-state').count(), 0); };
     const routes = ['/visitors', `/visitors/${id}`, '/clients', `/clients/${id}`, '/infrastructure', '/services', `/services/${id}`, '/settings'];
@@ -94,7 +94,7 @@ const check = async (name, fn) => { try { await fn(); results.push({ name, ok: t
     });
     await check('loading-empty-failed-stale-long-name-states', async () => {
       await page.setViewportSize({ width: 320, height: 960 });
-      const sample = await page.evaluate(async () => (await fetch('/serve-monitor/api/visitor-analytics/overview', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })).json());
+      const sample = await page.evaluate(async () => (await fetch('/serve-monitor/api/visitor-analytics/overview', { credentials: 'same-origin' })).json());
       let scenario = 'loading';
       await page.route('**/api/visitor-analytics/overview?*', async route => {
         if (scenario === 'loading') return;
@@ -115,13 +115,13 @@ const check = async (name, fn) => { try { await fn(); results.push({ name, ok: t
       await page.unroute('**/api/visitor-analytics/overview?*');
     });
     await check('login-destination', async () => {
-      await page.evaluate(() => localStorage.removeItem('token'));
+      await page.context().clearCookies();
       const target = `/visitors/${id}${dates}&view=pages&page=%2F`;
       await page.goto(base + target); await page.getByRole('button', { name: 'כניסה', exact: true }).waitFor();
       assert.equal(new URL(page.url()).searchParams.get('returnTo'), target);
       for (const width of [1440,390,320]) { await page.setViewportSize({ width, height: 960 }); assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)); await page.screenshot({ path: path.join(out, `${width}-login.png`), fullPage: true }); }
       // Simulate only the successful auth response; no password or production write.
-      await page.route('**/api/auth/login', r => r.fulfill({ json: { token } }));
+      await page.route('**/api/auth/login', async r => { await page.context().addCookies([{name:'__Host-monitor',value:token,url:new URL(base).origin,httpOnly:true,secure:true,sameSite:'Strict'}]); await r.fulfill({json:{next:'ready',csrf:'review-fixture',user:{id:1,username:'review',role:'reader'}}}); });
       await page.getByLabel('שם משתמש').fill('review'); await page.getByLabel('סיסמה', { exact: true }).fill('local-response-only');
       await page.getByRole('button', { name: 'כניסה', exact: true }).click();
       await page.locator('.page-insights').waitFor(); assert.equal(new URL(page.url()).searchParams.get('page'), '/');

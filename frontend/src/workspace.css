@@ -1,0 +1,382 @@
+@font-face {
+  font-family: Heebo;
+  src: url("/fonts/heebo-400.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: Heebo;
+  src: url("/fonts/heebo-500.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: Heebo;
+  src: url("/fonts/heebo-600.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: Heebo;
+  src: url("/fonts/heebo-700.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+:root {
+  --sans: Heebo, sans-serif;
+  --serif: Heebo, sans-serif;
+  --mono: Heebo, sans-serif;
+  --rail: 15rem;
+  --rail-collapsed: 4.5rem;
+}
+html,
+body,
+input,
+select,
+textarea,
+button {
+  font-family: Heebo, sans-serif;
+}
+body {
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.55;
+}
+.page {
+  max-width: 100rem;
+  padding-block-start: 1.3rem;
+}
+.page-head {
+  margin-block-start: 0;
+  padding-block: 0.4rem 0.9rem;
+  margin-block-end: 1.25rem;
+  align-items: center;
+}
+.page-head h1 {
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: 0;
+}
+.page-head__tools {
+  gap: 0.65rem;
+}
+.page-head__meta {
+  font-size: 0.82rem;
+}
+.side-rail {
+  padding: 1.3rem 0.9rem;
+  gap: 1.75rem;
+}
+.rail-top {
+  padding-block: 0.35rem 1.4rem;
+}
+.brand-name b {
+  font-size: 1.04rem;
+  letter-spacing: 0;
+}
+.rail-section {
+  font-size: 0.75rem;
+  padding-block-end: 0.5rem;
+}
+.rail-link {
+  font-size: 0.95rem;
+  font-weight: 500;
+  min-height: 48px;
+}
+.rail-link svg {
+  stroke-width: 1.7;
+}
+.rail-foot {
+  margin-block-start: auto;
+  display: grid;
+  gap: 0.6rem;
+}
+.rail-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  color: #edf3fa;
+}
+.rail-user > span:last-child {
+  display: grid;
+  gap: 0.2rem;
+}
+.rail-user b {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.rail-user small {
+  font-size: 0.72rem;
+  color: var(--rail-muted);
+}
+.rail-avatar {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: var(--rail-active);
+  border-radius: 8px;
+  color: var(--rail-accent);
+}
+.shell--collapsed .rail-user {
+  display: none;
+}
+.shell--collapsed .rail-nav .rail-link:nth-of-type(3) {
+  margin-block-start: 0;
+}
+.shell--collapsed .rail-nav .rail-link:nth-of-type(4) {
+  margin-block-start: 1.25rem;
+}
+.mobile-more {
+  display: none;
+}
+.panel__head {
+  min-height: 58px;
+  padding: 0.8rem 1.2rem;
+}
+.panel__head h2 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.panel__body {
+  padding: 1.2rem;
+}
+.stat-row {
+  border-radius: 12px;
+}
+.stat {
+  padding: 1.05rem 1.3rem;
+}
+.stat__label {
+  font-size: 0.84rem;
+}
+.stat__value,
+.page > .stat-row .stat__value {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.comparison-labels {
+  font-size: 0.78rem;
+  padding-block: 0.65rem;
+}
+.comparison-list a {
+  min-height: 67px;
+  padding-block: 0.9rem;
+}
+.comparison-identity b {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.comparison-value strong {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.service-list__main {
+  padding-block: 1rem;
+}
+.service-list__name b {
+  font-size: 1rem;
+}
+.btn {
+  font-size: 0.9rem;
+  min-height: 44px;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+.btn svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.7;
+}
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+}
+.icon-btn svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 1.7;
+}
+.form label,
+.login__card label {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+.form input,
+.form textarea,
+.login__card input {
+  font-size: 1rem;
+  min-height: 48px;
+}
+.login__card {
+  gap: 1.15rem;
+  max-width: 28rem;
+  padding: 2rem;
+}
+.login__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--accent);
+  border-block-end: 1px solid var(--line);
+  padding-block-end: 1.2rem;
+}
+.login__brand svg {
+  width: 24px;
+  height: 24px;
+}
+.login__brand b {
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+.login__card h1 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+.login__card > p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.settings-tabs {
+  margin-block-end: 1.25rem;
+}
+.settings-content {
+  max-width: 56rem;
+}
+.settings-security-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-block-start: 1rem;
+}
+.page--infrastructure .stat__value {
+  color: var(--ink);
+}
+
+@media (max-width: 900px) {
+  .side-rail {
+    display: none;
+  }
+  .shell,
+  .shell.shell--collapsed {
+    padding-inline: 0;
+    padding-right: 0;
+  }
+  .mobile-header {
+    background: var(--rail-bg);
+    color: #edf3fa;
+    justify-content: space-between;
+    padding-inline: 1rem;
+  }
+  .mobile-header .mobile-logout {
+    color: var(--rail-muted);
+  }
+  .bottom-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .bottom-nav .rail-link,
+  .bottom-nav > button {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    justify-content: center;
+    align-items: center;
+    padding: 0.45rem 0.2rem;
+    min-height: 58px;
+    border: 0;
+    background: transparent;
+    color: var(--rail-muted);
+    font: inherit;
+    font-size: 0.7rem;
+    border-radius: 0;
+  }
+  .bottom-nav .is-active {
+    background: var(--rail-active);
+    color: #edf9fa;
+  }
+  .bottom-nav svg {
+    width: 20px;
+    height: 20px;
+  }
+  .mobile-more {
+    display: grid;
+    position: fixed;
+    z-index: 75;
+    bottom: calc(70px + env(safe-area-inset-bottom));
+    inset-inline: 0.75rem;
+    background: var(--paper-light);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1rem;
+  }
+  .mobile-more > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .mobile-more h2 {
+    font-size: 1.15rem;
+    margin: 0;
+  }
+  .mobile-more .rail-link {
+    color: var(--ink);
+  }
+  .mobile-more .rail-link.is-active {
+    background: var(--selected);
+    color: var(--accent);
+  }
+  .page {
+    padding-block-start: 1rem;
+  }
+  .page-head h1 {
+    font-size: 1.3rem;
+  }
+}
+@media (max-width: 480px) {
+  .page-head {
+    gap: 0.75rem;
+  }
+  .page-head__tools {
+    gap: 0.5rem;
+  }
+  .page-head__tools .btn {
+    font-size: 0.82rem;
+    padding-inline: 0.7rem;
+  }
+  .panel__head,
+  .panel__body {
+    padding: 0.85rem;
+  }
+  .stat {
+    padding: 0.8rem 0.65rem;
+  }
+  .stat__value,
+  .page > .stat-row .stat__value {
+    font-size: 1.7rem;
+  }
+  .comparison-identity b {
+    font-size: 0.95rem;
+  }
+  .comparison-list a {
+    padding-inline: 0.85rem;
+  }
+  .login__card {
+    padding: 1.35rem;
+  }
+  .settings-content {
+    width: 100%;
+  }
+}
+
+.app-modal { margin: auto; width: min(480px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 24px; background: var(--surface); color: var(--ink); }
+.app-modal::backdrop { background: rgb(20 33 40 / 55%); }
+dialog.mobile-more { margin-block-start: auto; margin-block-end: 80px; inset: 0; }

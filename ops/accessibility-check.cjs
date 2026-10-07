@@ -6,7 +6,7 @@ const { execFileSync } = require('node:child_process');
 const { chromium } = require('../backend/node_modules/playwright');
 const out = path.resolve(__dirname, '../.impeccable/review');
 const base = process.env.UI_REVIEW_BASE || 'http://127.0.0.1:5180/serve-monitor';
-const mint = "process.chdir('/root/ServerMonitor/backend');require(process.cwd()+'/node_modules/dotenv').config({quiet:true});const db=require(process.cwd()+'/database');process.stdout.write(require(process.cwd()+'/routes/auth').createSessionToken(db.prepare('SELECT id,username FROM users ORDER BY id LIMIT 1').get(),'5m'));db.close();";
+const mint = "process.chdir('/root/ServerMonitor/backend');require(process.cwd()+'/node_modules/dotenv').config({quiet:true});const db=require(process.cwd()+'/database');process.stdout.write(require(process.cwd()+'/routes/auth').createSessionToken(db.prepare('SELECT id,username FROM users WHERE disabled=0 ORDER BY id LIMIT 1').get(),'5m'));db.close();";
 let token;
 try { token = execFileSync('ssh', ['-o', 'BatchMode=yes', 'root@vee-app.co.il', 'node -'], { input: mint, encoding: 'utf8' }).trim(); } catch { throw new Error('Could not create a short-lived review session'); }
 const luminance = hex => hex.match(/[a-f0-9]{2}/ig).map(h => parseInt(h,16)/255).map(c => c <= .04045 ? c/12.92 : ((c+.055)/1.055)**2.4).reduce((v,c,i) => v+c*[.2126,.7152,.0722][i],0);
@@ -16,8 +16,8 @@ const contrast = (a,b) => (Math.max(luminance(a),luminance(b))+.05)/(Math.min(lu
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   try {
     const page = await browser.newPage({ userAgent: 'ServerMonitor-Audit-Bot/1.0' });
-    await page.goto(base + '/login'); await page.evaluate(t => localStorage.setItem('token',t), token);
-    const apps = await page.evaluate(async () => (await fetch('/serve-monitor/api/apps', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })).json());
+    await page.goto(base + '/login'); await page.context().addCookies([{ name: '__Host-monitor', value: token, url: new URL(base).origin, httpOnly: true, secure: true, sameSite: 'Strict' }]);
+    const apps = await page.evaluate(async () => (await fetch('/serve-monitor/api/apps', { credentials: 'same-origin' })).json());
     const id = apps.find(a => a.name === 'LA webs').id;
     for (const width of [1440,390,320]) {
       await page.setViewportSize({ width, height: 960 });

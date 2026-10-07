@@ -1,0 +1,214 @@
+{
+  "errors": [],
+  "checks": [
+    {
+      "width": 1440,
+      "noOverflow": true,
+      "direction": "rtl"
+    },
+    {
+      "width": 390,
+      "noOverflow": true,
+      "direction": "rtl"
+    },
+    {
+      "width": 320,
+      "noOverflow": true,
+      "direction": "rtl"
+    },
+    {
+      "filter": "vault",
+      "count": 18
+    },
+    {
+      "filter": "vault-mobile",
+      "count": 7,
+      "allMobile": true
+    },
+    {
+      "viewerOpened": true,
+      "viewerImageLoaded": true
+    },
+    {
+      "viewerClosedWithEscape": true
+    },
+    {
+      "emptyCombination": true
+    },
+    {
+      "referenceOnly": true
+    }
+  ],
+  "assets": [
+    {
+      "file": "vault-desktop.prompted.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "vault-detail-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "vault-detail-1536.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "vault-list-390.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "vault-detail-390.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "vault-edit-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "vault-edit-390.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "vault-team-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "vault-locked-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "password-upgrade-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "login-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "password-upgrade-320.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "mfa-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "vault-recovery-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "vault-edit-footer-390.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "visitors-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "clients-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "infrastructure-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "services-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "settings-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "visitors-390.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "clients-390.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "infrastructure-390.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "services-390.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "settings-390.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "vault-list-768.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "vault-detail-768.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "vault-list-320.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "vault-detail-320.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "visitors-320.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "clients-320.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "infrastructure-320.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "services-320.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "settings-320.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    }
+  ]
+}

@@ -17,7 +17,7 @@ const check = async (name, fn) => {
 let browser;
 (async () => {
   const app = db.prepare("SELECT id FROM apps WHERE name='LA webs'").get();
-  const user = db.prepare('SELECT id,username FROM users ORDER BY id LIMIT 1').get();
+  const user = db.prepare('SELECT id,username FROM users WHERE disabled=0 ORDER BY id LIMIT 1').get();
   const token = createSessionToken(user, '5m');
   const monitor = 'https://monitor.vee-app.co.il/serve-monitor';
   for (const days of [1, 30, 90]) await check(`monitor-api-${days}d`, async () => {
@@ -36,7 +36,8 @@ let browser;
   page.on('pageerror', () => failures.push('JavaScript exception'));
   page.on('response', r => { if (r.status() >= 400 && ['script', 'stylesheet', 'image', 'font'].includes(r.request().resourceType())) failures.push(`Resource HTTP ${r.status()}: ${new URL(r.url()).pathname}`); });
   await check('login-screen', async () => { await page.goto(`${monitor}/login`); await page.getByRole('button', { name: 'כניסה', exact: true }).waitFor(); });
-  await context.addInitScript(({ token, monitor }) => { if (location.origin === new URL(monitor).origin || (location.origin === 'https://vee-app.co.il' && location.pathname.startsWith('/serve-monitor'))) localStorage.setItem('token', token); }, { token, monitor });
+  await context.addCookies([{ name: '__Host-monitor', value: token, url: new URL(monitor).origin, httpOnly: true, secure: true, sameSite: 'Strict' }]);
+  await check('monitor-identity-cannot-open-vault', async () => { const r = await fetch(monitor + '/api/vault/status', { headers: { Authorization: `Bearer ${token}` } }); assert.equal(r.status, 403); });
   const routes = ['/visitors', `/visitors/${app.id}`, '/infrastructure', '/services', `/services/${app.id}`, '/settings', '/clients', `/clients/${app.id}`];
   for (const width of [1365, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });

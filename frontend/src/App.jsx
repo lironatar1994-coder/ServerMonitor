@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react';
+import { bootstrapSession, getSessionSnapshot, subscribeSession } from './lib/session';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { safeReturnPath } from './lib/reportNavigation';
 import AppShell from './components/AppShell';
@@ -12,6 +13,7 @@ const Services = lazy(() => import('./pages/Services'));
 const AppDetails = lazy(() => import('./pages/AppDetails'));
 const Settings = lazy(() => import('./pages/Settings'));
 const ClientGrowth = lazy(() => import('./pages/ClientGrowth'));
+const Vault = lazy(() => import('./pages/Vault'));
 
 const VisitorSite = () => {
   const { id } = useParams();
@@ -30,7 +32,8 @@ const PageLoader = () => {
 
 const ProtectedRoute = ({ children }) => {
   const location = useLocation();
-  return localStorage.getItem('token') ? children : <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`} replace />;
+  const user = useSyncExternalStore(subscribeSession, getSessionSnapshot);
+  return user ? children : <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`} replace />;
 };
 
 const LoginDestination = () => {
@@ -39,18 +42,16 @@ const LoginDestination = () => {
 };
 
 function App() {
-  const [authenticated, setAuthenticated] = useState(Boolean(localStorage.getItem('token')));
+  const authenticated = useSyncExternalStore(subscribeSession, getSessionSnapshot);
+  const [loading,setLoading] = useState(true);
+  const [error,setError] = useState('');
 
   useEffect(() => {
-    const handleAuthChange = () => setAuthenticated(Boolean(localStorage.getItem('token')));
-    window.addEventListener('storage', handleAuthChange);
-    window.addEventListener('auth-change', handleAuthChange);
-    return () => {
-      window.removeEventListener('storage', handleAuthChange);
-      window.removeEventListener('auth-change', handleAuthChange);
-    };
+    bootstrapSession().catch(e=>setError(e.message)).finally(()=>setLoading(false));
   }, []);
 
+  if(loading) return <PageLoader/>;
+  if(error) return <div className="login"><div className="login__card"><p role="alert">{error}</p><button className="btn" onClick={()=>location.reload()}>ניסיון נוסף</button></div></div>;
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <LoadBoundary><Suspense fallback={<PageLoader />}>
@@ -64,6 +65,7 @@ function App() {
             <Route path="/services" element={<Services />} />
             <Route path="/services/:id" element={<AppDetails />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/vault/*" element={<Vault />} />
             <Route path="/clients" element={<ClientGrowth key="overview" />} />
             <Route path="/clients/:id" element={<ClientGrowth />} />
             <Route path="/app/:id" element={<LegacyAppRedirect />} />

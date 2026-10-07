@@ -12,7 +12,7 @@
 - `src/pages/ClientGrowth.jsx` and `client-growth.css` own the internal client workspace: prioritization, goals, leads, tasks, campaigns, activity and editable manual-share drafts, composed from AnalyticsParts.
 
 - `src/App.jsx` owns client routing and session-level app shell behavior.
-- `src/theme.css` owns the fleet-console palette, surfaces, controls and density; `src/index.css` owns the base layout and component geometry. Load the theme after the base stylesheet in `src/main.jsx`; route styles use shared tokens.
+- `src/theme.css` owns the fleet-console palette, surfaces, controls and density; `src/index.css` owns the base layout and component geometry. `src/workspace.css` is the final shared Heebo and shell layer. Load the theme after the base stylesheet in `src/main.jsx`; route styles use shared tokens.
 - `src/components/AppShell.jsx` owns the collapsible desktop rail, mobile header/bottom navigation, and visitor/infrastructure visual-mode boundary.
 - `src/components/AnalyticsParts.jsx` owns the shared UI kit every screen composes from: `PageHead`, `Stat`/`StatRow`, `Panel`, `Tabs`, `RangePicker`, `RankedList`, `Hint`, `Empty`, `DataState`.
 - `src/components/ProductAnalytics.jsx` owns reusable engagement heatmaps, named click/visibility zones, and scroll reach, plus PDF Studio usage totals and per-tool outcomes.
@@ -24,6 +24,11 @@
 - `dist/` is generated build output and should only change through frontend builds.
 
 ## Local Contracts
+
+- `pages/Vault.jsx` owns encrypted list/detail orchestration, on-demand secrets, 15-second reveal, worker termination, five-minute idle lock and one-minute hidden lock. Never persist plaintext, passphrases, keys or decrypted search indexes.
+- `lib/session.js` holds CSRF/profile state in memory; human credentials use HttpOnly cookies. Remove legacy localStorage tokens without reusing them. `SecurityStep` owns MFA enrollment/verification and one-use code saving; `Modal` owns native modal focus containment.
+- Human sessions expire after 30 idle minutes or 12 hours; logout broadcasts to other tabs. UI permissions mirror server checks and cannot replace them.
+
 
 - Keep `מבקרים משוערים` explicit; compact labels `ביקורים` and `צפיות` mean measured visits and recorded page opens, with full meaning in accessible labels and shared hints. Mobile comparison tables retain aligned numeric columns with one subdued text header; omit repeated row icons. Keep low samples visible with a named warning icon and missing measurement with `לא נמדד`.
 - Shared `Change` renders neutral signed absolute changes with accessible full explanations. Zero baselines show `אין קודמים`; unavailable comparisons stay an em dash. Client objectives/coverage remain in detail views rather than repeating in overview rows. Page limitations live in a disclosure, with low samples still flagged outside it.
@@ -57,15 +62,15 @@
 - The visits column includes an equivalent visual bar scaled to the maximum measured sessions across all sites in the selected period. Search/sort must not change that denominator. The count remains visible and accessible; zero activity has zero fill, and bars do not imply business success or people.
 - Small samples use absolute change; zero baselines say no previous activity. A failed comparison stays unavailable, never a fabricated zero. Show real data-generation/check timestamps, never unconditional connected badges.
 - Client overview prioritizes overdue follow-up, open inquiries and upcoming tasks; goals/campaigns/history/sharing are secondary. Browser clicks, source records and manual outcomes remain separate.
-- Service actions live in a separate administration disclosure, retaining confirmation. Navigation labels are `אתרים`, `לקוחות`, `שרת`, `שירותים`, `הגדרות`, with safe-area spacing and 44px targets.
+- Service actions live in a separate administration disclosure, retaining confirmation. Mobile navigation labels are `אתרים`, `לקוחות`, `כספת`, `שרת`, `עוד`; More opens services/settings in a native modal, with safe-area spacing and 44px targets.
 
 ## Work Guidance
 
 - Compose screens from `AnalyticsParts` primitives instead of adding per-page layout classes; extend the kit when a genuinely new pattern appears.
 - Use existing component structure and CSS files before introducing new UI libraries.
 - Prefer lucide-react icons already installed when adding icon controls.
-- Follow `../DESIGN.md`: porcelain canvas, white summaries/data/plots, slate navigation, petrol actions, and graphite infrastructure. Use Noto Sans Hebrew throughout, green health, amber attention and red failure/destruction.
-- Navigation separates `מעקב` from `תפעול`; its destinations retain accessible names when collapsed. Use one subtle boundary per surface, 12px section corners and 8px controls. Content tabs use underlines; navigation and period selections stay explicit. Shared tokens carry all light/dark control, status and overlay colors.
+- Follow `../DESIGN.md`: porcelain canvas, white summaries/data/plots, slate navigation, petrol actions, and graphite infrastructure. Use self-hosted Heebo throughout, green health, amber attention and red failure/destruction.
+- Navigation separates `סביבת עבודה` from `תפעול`; its destinations retain accessible names when collapsed. Use one subtle boundary per surface, 12px section corners and 8px controls. Content tabs use underlines; navigation and period selections stay explicit. Shared tokens carry all light/dark control, status and overlay colors.
 - Favour density over prose: one short screen title, no marketing copy, and explanatory caveats behind a `Hint` icon rather than repeated paragraphs.
 - Group related breakdowns behind `Tabs` in a single `Panel` instead of stacking one panel per dimension.
 - Keep desktop tables paired with purpose-built mobile cards and maintain 44px touch targets (see the `pointer: coarse` block in `index.css`), visible focus states, and reduced-motion support.
@@ -85,6 +90,8 @@
 - `.claude/launch.json` runs the Vite dev server for these checks.
 
 ## Child DOX Index
+
+- `src/vault/AGENTS.md` - Browser cryptography, worker lifecycle, forms, recovery and team-vault presentation.
 
 - `src/pages/` - Route-level dashboard screens; no separate child contract yet.
 - `src/components/` - Reusable dashboard components and app templates; no separate child contract yet.
