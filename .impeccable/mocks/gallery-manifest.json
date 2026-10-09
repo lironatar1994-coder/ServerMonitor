@@ -171,8 +171,36 @@
       "available": true,
       "width": 1440,
       "height": 1000,
-      "bytes": 14861,
-      "sha256": "14d9b33f08f365ab8d6f252e34ece0b60d0487105df75c45635cba5faff95331"
+      "bytes": 28238,
+      "sha256": "6a495a58b5b74a103561e24ad2e5138d15e74f6cca116949f0dfd9cd1601deef"
+    },
+    {
+      "file": "mfa-setup-1440.png",
+      "title": "Google Authenticator — הגדרת הדגמה",
+      "category": "vault",
+      "viewport": "desktop",
+      "path": "screenshots/mfa-setup-1440.png",
+      "alt": "Google Authenticator — הגדרת הדגמה — הממשק שיושם עם נתוני הדגמה סינתטיים",
+      "note": "קוד QR סינתטי להדגמה בלבד. לחיבור הטלפון סרקו את הקוד שמוצג בכניסה לחשבון שלכם.",
+      "available": true,
+      "width": 1440,
+      "height": 1000,
+      "bytes": 36750,
+      "sha256": "40610466009dd7d3eac82e6320d66792df6ea79bf75c03eb18fc3a855f9701dd"
+    },
+    {
+      "file": "mfa-setup-390.png",
+      "title": "Google Authenticator — הדגמה בנייד",
+      "category": "vault",
+      "viewport": "mobile",
+      "path": "screenshots/mfa-setup-390.png",
+      "alt": "Google Authenticator — הדגמה בנייד — הממשק שיושם עם נתוני הדגמה סינתטיים",
+      "note": "קוד QR סינתטי להדגמה בלבד. לחיבור הטלפון סרקו את הקוד שמוצג בכניסה לחשבון שלכם.",
+      "available": true,
+      "width": 390,
+      "height": 1000,
+      "bytes": 31322,
+      "sha256": "52fec38b7416e8f16ce1bc2195ab277a65613b0410b1cd3277e4b82688cea59d"
     },
     {
       "file": "vault-recovery-1440.png",

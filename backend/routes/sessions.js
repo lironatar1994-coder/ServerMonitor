@@ -121,11 +121,11 @@ router.post("/mfa/setup", pending, (req, res) => {
     return s.failure(res, 409, "יש לעדכן תחילה את סיסמת הכניסה.");
   const user = db.prepare("SELECT * FROM users WHERE id=?").get(req.user.id);
   if (user.mfa_secret) return s.failure(res, 409, "כבר הוגדר אימות דו־שלבי.");
-  const secret = new s.OTPAuth.Secret({ size: 20 }).base32;
-  db.prepare("UPDATE users SET mfa_pending=? WHERE id=?").run(
-    s.seal(secret),
-    user.id,
-  );
+  // Refresh/retry keeps the phone's just-scanned key valid until enrollment.
+  const secret = user.mfa_pending
+    ? s.unseal(user.mfa_pending)
+    : new s.OTPAuth.Secret({ size: 20 }).base32;
+  if (!user.mfa_pending) db.prepare("UPDATE users SET mfa_pending=? WHERE id=?").run(s.seal(secret), user.id);
   res.json({ secret, uri: s.totp(secret, user.username).toString() });
 });
 router.post("/mfa/verify", pending, (req, res) => {

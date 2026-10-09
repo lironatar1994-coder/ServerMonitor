@@ -48,6 +48,8 @@
 
 ## Verification
 
+- `node ops/auth-review.cjs` uses an isolated synthetic database and browser to decode the actual locally generated Google Authenticator QR, verify refresh/retry, phone/manual entry, real enrollment, backup download/copy and one-use recovery. It denies external network requests and saves only synthetic review evidence under `.impeccable/review/auth/`; never aim it at production.
+
 - UI review includes global keyboard search/date preservation, direct-site links, activity filters, legacy redirects, consistent service availability, connection-source failures/recovery and confirmation focus. Confirmation tests mock owner UI, abort service mutations and never submit an action. `UI_REVIEW_OPERATIONAL_FIXTURE` may supply a sanitized source-derived operational snapshot for a pre-deployment local UI review; final production checks must exercise the deployed endpoint. Label snapshot evidence as preview data.
 
 

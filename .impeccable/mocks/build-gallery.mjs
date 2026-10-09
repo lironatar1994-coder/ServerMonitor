@@ -44,6 +44,8 @@ const specs = [
   ['login-1440.png', 'כניסה למערכת', 'vault', 'desktop'],
   ['password-upgrade-320.png', 'כניסה — עדכון סיסמה בנייד', 'vault', 'mobile'],
   ['mfa-1440.png', 'כניסה — אימות נוסף', 'vault', 'desktop'],
+  ['mfa-setup-1440.png', 'Google Authenticator — הגדרת הדגמה', 'vault', 'desktop'],
+  ['mfa-setup-390.png', 'Google Authenticator — הדגמה בנייד', 'vault', 'mobile'],
   ['vault-recovery-1440.png', 'כספת — שחזור גישה', 'vault', 'desktop'],
   ['vault-edit-footer-390.png', 'כספת — פעולות עריכה בנייד', 'vault', 'mobile'],
   ['visitors-1440.png', 'אתרים', 'workspace', 'desktop'],
@@ -80,7 +82,7 @@ const screens = specs.map(([file, title, category, viewport]) => {
     fs.copyFileSync(source, destination);
   }
   const available = fs.existsSync(destination);
-  const note = category === 'workspace' ? 'סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.' : file.includes('recovery') ? 'סביבת בדיקה סינתטית. ערכי השחזור מוסתרים.' : undefined;
+  const note = file.includes('mfa-setup') ? 'קוד QR סינתטי להדגמה בלבד. לחיבור הטלפון סרקו את הקוד שמוצג בכניסה לחשבון שלכם.' : category === 'workspace' ? 'סביבת בדיקה סינתטית. ערכים חסרים ומצבים ריקים נשמרו כפי שהם בממשק.' : file.includes('recovery') ? 'סביבת בדיקה סינתטית. ערכי השחזור מוסתרים.' : undefined;
   return { file, title, category, viewport, path: `screenshots/${file}`, alt: `${title} — הממשק שיושם עם נתוני הדגמה סינתטיים`, ...(note ? { note } : {}), available, ...(available ? metadata(destination) : {}) };
 });
 screens.unshift({ file: 'vault-desktop.prompted.png', title: 'הקונספט הראשוני שאושר', category: 'reference', viewport: 'desktop', path: 'vault-desktop.prompted.png', alt: 'קונספט ראשוני שאושר: כספת בעברית עם רשימת פריטים ופאנל פרטים לצד ניווט כהה', note: 'מבנה הרשימה והפרטים שאושר בתחילת העבודה. צילומי המימוש מציגים את הפלטה המעודכנת; הקונספט המקורי נשמר ללא שינוי ואינו עדות לפעולה או לאבטחה.', available: true, ...metadata(embeddedPng) });

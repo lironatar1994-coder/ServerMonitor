@@ -18,11 +18,11 @@
     },
     {
       "filter": "vault",
-      "count": 18
+      "count": 20
     },
     {
       "filter": "vault-mobile",
-      "count": 7,
+      "count": 8,
       "allMobile": true
     },
     {
@@ -102,6 +102,16 @@
     },
     {
       "file": "mfa-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "mfa-setup-1440.png",
+      "loaded": true,
+      "dimensionsMatch": true
+    },
+    {
+      "file": "mfa-setup-390.png",
       "loaded": true,
       "dimensionsMatch": true
     },

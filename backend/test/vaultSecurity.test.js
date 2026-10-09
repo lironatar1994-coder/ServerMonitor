@@ -300,6 +300,13 @@ test("invitation is expiring and single-use; enrollment rotates sessions and log
   const setup = await (
     await request(member, "/auth/mfa/setup", "POST", {})
   ).json();
+  const retry = await (await request(member, "/auth/mfa/setup", "POST", {})).json();
+  assert.equal(retry.secret, setup.secret, "refresh must preserve the scanned setup key");
+  assert.equal(retry.uri, setup.uri);
+  const provisioned = s.OTPAuth.URI.parse(setup.uri);
+  assert.equal(provisioned.issuer, "Server Monitor");
+  assert.equal(provisioned.digits, 6);
+  assert.equal(provisioned.period, 30);
   const response = await request(member, "/auth/mfa/verify", "POST", {
     code: s.totp(setup.secret).generate(),
   });

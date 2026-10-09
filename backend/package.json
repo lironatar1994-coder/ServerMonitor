@@ -21,6 +21,7 @@
     "otpauth": "^9.5.2"
   },
   "devDependencies": {
+    "jsqr": "1.4.0",
     "playwright": "^1.63.0"
   }
 }

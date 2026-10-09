@@ -1,0 +1,17 @@
+.security-step :is(h1, h2) { margin: 0; font-size: 1.35rem; line-height: 1.4; }
+.security-step p { margin: 0; }
+.security-step .banner--error { color: var(--vermilion); }
+.security-setup { margin: 0; padding-inline-start: 1.4rem; display: grid; gap: 1rem; list-style: decimal; }
+.security-setup li::marker { color: var(--accent); font-weight: 700; }
+.security-setup li > b { display: block; font-size: .94rem; margin-block-end: .45rem; }
+.security-step details > summary { cursor: pointer; color: var(--accent-hover); min-height: 44px; display: list-item; padding-block: .7rem; font-size: .9rem; }
+.security-step details[open] { display: grid; gap: .6rem; }
+.security-qr { display: block; max-width: 100%; height: auto; background: #fff; margin-inline: auto; }
+.security-links { display: flex; flex-wrap: wrap; gap: .5rem; }
+.security-manual { margin-block-start: .5rem; }
+.security-step .security-code { text-align: center; font-size: 1.5rem; letter-spacing: .25em; font-variant-numeric: tabular-nums; }
+.security-step .form { gap: .65rem; }
+.security-step .form small { color: var(--ink-muted); }
+.security-alternative { white-space: normal; text-align: center; }
+.security-notice { font-size: .85rem; color: var(--accent-hover); }
+.security-notice:empty { display: none; }

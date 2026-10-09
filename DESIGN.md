@@ -239,6 +239,8 @@ Fields have visible labels, a white/local surface, a strong neutral border and c
 
 Login is a centered white form on porcelain, at most 26rem wide, with a compact brand separator, 48px fields and a 48px petrol submit action. Password reveal remains a named icon control in sign-in, invitation and legacy-password upgrade forms. MFA and recovery use the same labeled field and error grammar; the separate vault unlock is a bounded white form with a functional key/lock mark.
 
+Google Authenticator enrollment is a short numbered phone/QR/code sequence. Generate the 240px black-on-white QR locally with its quiet zone; never style its pixels or send the seed to a QR service. Native disclosures hold app-store links and same-phone manual entry. Later sign-in shows one centered numeric six-digit field, the matching account and a separate backup-code alternative. Successful setup clears the QR/key, offers backup copy/download, and requires the user to confirm saving before continuing. Keep copy plain Hebrew and preserve the login destination.
+
 ### Navigation and selection
 
 Slate navigation stays stable across workspaces. Selected destinations have a darker petrol-slate surface, light text and a pale petrol icon. A plain Server Monitor wordmark anchors it. Tracking and operations group labels serve wayfinding rather than page decoration.

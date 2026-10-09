@@ -8,6 +8,7 @@
 - `build-gallery.mjs` prepares gallery metadata and a prompt-embedded reference copy; `screenshots/` holds confirmed final synthetic UI captures copied from `../review/vault/`.
 - `fonts/` contains gallery Heebo files and their license; `assets-manifest.json` records the semantic handoff and empty production-raster manifest.
 - `review-gallery.cjs` validates the local gallery; `gallery-review*.png` and `gallery-review.json` are its synthetic review evidence.
+- Google Authenticator captures come from isolated `ops/auth-review.cjs` evidence; copy confirmed synthetic setup/sign-in images into the allowlisted review source names before building. Mark setup QRs as demonstrations, never codes for a real account.
 
 ## Local Contracts
 - Use synthetic account values and metrics only; never real passwords, authentication tokens, or personal data.

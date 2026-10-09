@@ -34,6 +34,7 @@
 
 - `pages/Vault.jsx` owns encrypted list/detail orchestration, on-demand secrets, 15-second reveal, worker termination, five-minute idle lock and one-minute hidden lock. Never persist plaintext, passphrases, keys or decrypted search indexes.
 - `lib/session.js` holds CSRF/profile state in memory; human credentials use HttpOnly cookies. Remove legacy localStorage tokens without reusing them. `SecurityStep` owns MFA enrollment/verification and one-use code saving; `Modal` owns native modal focus containment.
+- `SecurityStep` and `security-step.css` guide Google Authenticator setup with a browser-generated QR, same-phone manual key, six-digit phone-code input and a separate backup-code flow. Keep setup/QR only in memory, clear them after enrollment, offer failure recovery and explicit backup saving/download. The bundled QR encoder is functional; never use a remote QR service or put the secret in a link.
 - Human sessions expire after 30 idle minutes or 12 hours; logout broadcasts to other tabs. UI permissions mirror server checks and cannot replace them.
 
 

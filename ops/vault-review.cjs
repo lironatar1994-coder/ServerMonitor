@@ -81,16 +81,16 @@ let browser, server;
     .getByRole("button", { name: "עדכון והמשך לאימות", exact: true })
     .click();
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.getByLabel("קוד אימות או קוד גיבוי").waitFor();
+  await page.getByLabel("קוד בן 6 ספרות", { exact: true }).waitFor();
   await page.screenshot({
     path: path.join(out, "mfa-1440.png"),
     fullPage: true,
   });
   check("legacy password upgrade, reveal and MFA continuation");
   await page
-    .getByLabel("קוד אימות או קוד גיבוי")
+    .getByLabel("קוד בן 6 ספרות", { exact: true })
     .fill(s.totp(otpSecret).generate());
-  await page.getByRole("button", { name: "אימות", exact: true }).click();
+  await page.getByRole("button", { name: "כניסה", exact: true }).click();
   await page.getByRole("heading", { name: "אתרים", exact: true }).waitFor();
   check("password login followed by real MFA");
   await page.goto(base + "/vault");

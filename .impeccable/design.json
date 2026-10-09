@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-07T20:19:03Z",
+  "generatedAt": "2026-10-09T07:26:52Z",
   "title": "Design System: Server Monitor",
   "extensions": {
     "colorMeta": {
@@ -665,7 +665,16 @@
         "name": "narrow-controls",
         "value": "380px"
       }
-    ]
+    ],
+    "authentication": {
+      "component": "SecurityStep.jsx",
+      "styles": "security-step.css",
+      "provider": "Google Authenticator",
+      "setup": "Numbered phone/QR/code sequence; locally generated black-on-white QR with quiet zone; native disclosures for download and same-phone manual key",
+      "signin": "Centered six-digit numeric input, matching account and separate backup-code alternative",
+      "recovery": "Explicit backup saving with copy/download; clear QR and setup key after enrollment",
+      "constraints": "Mandatory TOTP retained; no remote QR service, secret links, persistent browser keys or existing-seed replacement"
+    }
   },
   "components": [
     {

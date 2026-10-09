@@ -27,6 +27,7 @@ export default function Login() {
       );
     bootstrapSession()
       .then((data) => {
+        if (data?.user?.username) setUsername(data.user.username);
         if (data && data.next !== "ready") setStep(data.next);
       })
       .catch(() => {});
@@ -190,7 +191,7 @@ export default function Login() {
             </button>
           </form>
         ) : (
-          <SecurityStep mode={step} onComplete={complete} />
+          <SecurityStep mode={step} username={username} purpose="login" onComplete={complete} />
         )}
       </div>
     </main>
