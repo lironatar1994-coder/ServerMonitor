@@ -27,6 +27,7 @@ DATABASES = {
     'koralevents': '/opt/koralevents/shared/data/koral.sqlite',
     'koralevents2': '/opt/koralevents2/shared/data/koral.sqlite',
     'seder': '/var/lib/seder/seder.db',
+    'dfus-suppliers': '/var/lib/dfus-reuven/store/suppliers.db',
 }
 ASSETS = {
     'maavar-encrypted': Path('/opt/maavar/shared/export'),
@@ -34,6 +35,8 @@ ASSETS = {
     'seder-whatsapp-auth': Path('/var/lib/seder/whatsapp-auth'),
     'koral-uploads': Path('/opt/koralevents/shared/uploads'),
     'koral2-uploads': Path('/opt/koralevents2/shared/uploads'),
+    'dfus-store': Path('/var/lib/dfus-reuven/store'),
+    'dfus-legacy-quotes': Path('/var/lib/dfus-reuven/quotes'),
 }
 AUTH_KEY = Path('/root/.server-monitor-auth-key')
 AUTH_KEY_BACKUP = Path('/root/server-monitor-key-backups/auth.key')
@@ -110,7 +113,10 @@ def snapshot():
             if not source.is_dir():
                 raise RuntimeError(f'Missing required assets: {source}')
             dest = staging / (name + '.tar.gz')
-            run(['tar', '-czf', str(dest), '-C', str(source), '.'], timeout=180)
+            # SQLite gets its own online snapshot; never restore a live WAL copy
+            # from the file archive over the verified suppliers snapshot.
+            excludes = ['--exclude=./suppliers.db', '--exclude=./suppliers.db-wal', '--exclude=./suppliers.db-shm'] if name == 'dfus-store' else []
+            run(['tar', *excludes, '-czf', str(dest), '-C', str(source), '.'], timeout=180)
             with tarfile.open(dest) as archive:
                 for member in archive:
                     if member.isfile():

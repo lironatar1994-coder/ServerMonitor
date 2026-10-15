@@ -24,7 +24,8 @@ const PROJECTS = [
     { id: 'server-monitor', name: 'Server Monitor', path: '/root/ServerMonitor', dependencies: ['/root/ServerMonitor/backend/node_modules', '/root/ServerMonitor/frontend/node_modules'] },
     { id: 'manager-site', name: 'Manager Site', path: '/root/Manager_Site', dependencies: ['/root/Manager_Site/node_modules'] },
     { id: 'dfus-reuven-preview', name: 'Dfus Reuven Preview', path: '/root/DfusReuven', dependencies: ['/root/DfusReuven/node_modules'] },
-    { id: 'dfus-reuven-live', name: 'Dfus Reuven', path: '/root/DfusReuven-live', dependencies: ['/root/DfusReuven-live/node_modules'] },
+    { id: 'dfus-reuven-live', name: 'Dfus Reuven', path: '/root/DfusReuven-live', dependencies: [] },
+    { id: 'dfus-reuven-data', name: 'Dfus Reuven persistent data', path: '/var/lib/dfus-reuven/store', type: 'data' },
     { id: 'miryam-zelig', name: 'Miryam Zelig', path: '/root/Miryam_Zelig', dependencies: [] }
 ];
 

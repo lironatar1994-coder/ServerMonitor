@@ -9,7 +9,7 @@
 
 - `pageInsights.js` owns exact-page anonymous visit cohorts, ordered next-page transitions and subsequent observed actions. `trackingHealth.js` reads the bounded browser-check result for authenticated dashboards.
 
-- `growthSchema.js` owns idempotent growth tables and canonical client defaults. `clientGrowth.js` and `routes/clientGrowth.js` own authenticated internal goals, workflow, evidence, campaigns, comparisons and draft reports. `growthSignals.js` validates anonymous action beacons; `growthSources.js` polls five allow-listed source stores read-only once per minute.
+- `growthSchema.js` owns idempotent growth tables and canonical client defaults. `clientGrowth.js` and `routes/clientGrowth.js` own authenticated internal goals, workflow, evidence, campaigns, comparisons and draft reports. `growthSignals.js` validates anonymous action beacons; `growthSources.js` polls allow-listed source stores read-only once per minute.
 
 - `server.js` owns middleware, API mounting, frontend static serving, and process startup.
 - `database.js` owns schema creation, migrations, explicit bootstrap accounts, and seed monitor records.
@@ -52,6 +52,7 @@
 
 - Growth routes must never accept the Manager Site service key or expose customer-facing access. Scope every record mutation to the canonical app and record ID; validate metric/status/path/number fields and keep an activity trail.
 - Growth source rows retain only opaque/source IDs, timestamps and statuses. Exclude known deployment fixtures, deduplicate `(app, origin, external_key)`, preserve manual treatment on sync, and expose failed/stale adapters without clearing prior data. Native source status is distinct from internal workflow.
+- Dfus Reuven keeps legacy `quotes` history and imports new `store.json` orders/contacts under separate origins. Nested customer fixture markers are checked before discarding private fields. Aggregate all adapters per app: any failed source keeps the app source state failed and preserves its last complete success, even when another source imports successfully. Store `completed` means handled, never paid/revenue; `in_review`/`ready` mean working until an internal edit overrides them.
 - Source-approved/closed registrations become `completed` (handled in source), never revenue or won deals. Source workflow updates apply only until the first internal lead edit; cancelled rows are irrelevant. Newly identified test fixtures are archived from business totals without deleting source records.
 - Growth events have a 90-day retention, site-scoped session hashes, no form values/query strings, explicit automation filtering, a bounded per-site/IP rate limit, and browser types cannot create confirmed leads. Source-confirmed leads cannot be attributed to browser sessions without a real join.
 - Goals define their own 7/30/90-day period. Before/after task comparisons use equal full-day windows up to seven days and label low samples and confounders. Do not infer causality or call click counts leads. Campaign budgets are lifetime amounts; never divide them by leads from a partial selected period.

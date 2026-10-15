@@ -6,6 +6,8 @@ const db = require('./database');
 const DAY = 86400000;
 const SOURCES = [
     { app: 'Dfus Reuven', file: '/var/lib/dfus-reuven/quotes/quotes.jsonl', type: 'quotes' },
+    { app: 'Dfus Reuven', file: '/var/lib/dfus-reuven/store/store.json', type: 'dfus_orders' },
+    { app: 'Dfus Reuven', file: '/var/lib/dfus-reuven/store/store.json', type: 'dfus_contacts' },
     { app: 'Pinhas Ratzon', file: '/var/lib/pinhas-ratzon/leads.jsonl', type: 'contact' },
     { app: 'Koral Events', file: '/opt/koralevents2/shared/data/koral.sqlite', type: 'registrations' },
     { app: 'Koral Events 2', file: '/opt/koralevents/shared/data/koral.sqlite', type: 'registrations' },
@@ -24,6 +26,21 @@ function isTest(row) {
         || /(?:בדיק[הת]|דיפלוי|דמו|\b(?:smoke|deploy|playwright|test|demo|qa)(?:[\s_-]|\d|$))/i.test(name);
 }
 async function readRows(source) {
+    if (['dfus_orders', 'dfus_contacts'].includes(source.type)) {
+        const stat = await fs.stat(source.file);
+        if (stat.size > 16 * 1024 * 1024) throw new Error('source_too_large');
+        const store = JSON.parse(await fs.readFile(source.file, 'utf8'));
+        const entries = store[source.type === 'dfus_orders' ? 'orders' : 'contacts'];
+        if (!entries || typeof entries !== 'object' || Array.isArray(entries)) throw new Error('source_invalid');
+        const rows = Object.values(entries);
+        if (rows.some(row => !row || typeof row !== 'object' || Array.isArray(row))) {
+            throw new Error('source_invalid');
+        }
+        // Inspect fixture markers in memory, then discard every customer field.
+        const statuses = ['request_saved', 'in_review', 'ready', 'completed', 'cancelled', 'open', 'done'];
+        return rows.map(row => ({ id: row.id, createdAt: row.createdAt, status: statuses.includes(row.status) ? row.status : 'stored',
+            isTest: isTest(row) || isTest(row.customer || {}) }));
+    }
     if (['quotes', 'contact'].includes(source.type)) {
         const stat = await fs.stat(source.file);
         if (stat.size > 16 * 1024 * 1024) throw new Error('source_too_large');
@@ -71,8 +88,8 @@ function importRows(appId, type, rows) {
             update.run(state, appId, type, key);
             // Respect authoritative operational completion without calling it a
             // sale. Any internal user edit takes precedence over source status.
-            const workflow = state === 'cancelled' ? 'irrelevant' : ['approved', 'CLOSED'].includes(state) ? 'completed'
-                : state === 'ASSIGNED' ? 'working' : 'new';
+            const workflow = state === 'cancelled' ? 'irrelevant' : ['approved', 'CLOSED', 'completed', 'done'].includes(state) ? 'completed'
+                : ['ASSIGNED', 'in_review', 'ready'].includes(state) ? 'working' : 'new';
             db.prepare(`UPDATE growth_leads SET status=? WHERE app_id=? AND origin=? AND external_key=?
                 AND NOT EXISTS(SELECT 1 FROM growth_activity a WHERE a.app_id=growth_leads.app_id AND a.kind='leads' AND a.entity_id=growth_leads.id)`)
                 .run(workflow, appId, type, key);
@@ -85,21 +102,28 @@ async function syncGrowthSources(sources = SOURCES) {
     if (running) return;
     running = true;
     try {
-        for (const source of sources) {
-            const app = db.prepare('SELECT id FROM apps WHERE name=? AND reporting_enabled=1').get(source.app);
+        const grouped = Map.groupBy(sources, source => source.app);
+        for (const [appName, appSources] of grouped) {
+            const app = db.prepare('SELECT id FROM apps WHERE name=? AND reporting_enabled=1').get(appName);
             if (!app) continue;
             const stamp = new Date().toISOString();
-            try {
-                const result = importRows(app.id, source.type, await readRows(source));
-                db.prepare(`INSERT INTO growth_sources(app_id,last_success_at,last_attempt_at,status,imported,excluded,detail)
-                    VALUES(?,?,?,'ok',?,?,'') ON CONFLICT(app_id) DO UPDATE SET last_success_at=excluded.last_success_at,
-                    last_attempt_at=excluded.last_attempt_at,status='ok',imported=growth_sources.imported+excluded.imported,
-                    excluded=excluded.excluded,detail=''`).run(app.id, stamp, stamp, result.imported, result.excluded);
-            } catch (error) {
-                db.prepare(`INSERT INTO growth_sources(app_id,last_attempt_at,status,detail) VALUES(?,?,'error',?)
-                    ON CONFLICT(app_id) DO UPDATE SET last_attempt_at=excluded.last_attempt_at,status='error',detail=excluded.detail`)
-                    .run(app.id, stamp, error.code === 'ENOENT' ? 'קובץ הפניות טרם נוצר או אינו זמין' : 'לא ניתן לקרוא בבטחה את מקור הפניות');
+            let imported = 0, excluded = 0;
+            const failures = [];
+            for (const source of appSources) {
+                try {
+                    const result = importRows(app.id, source.type, await readRows(source));
+                    imported += result.imported; excluded += result.excluded;
+                } catch (error) {
+                    failures.push(error.code === 'ENOENT' ? 'קובץ הפניות טרם נוצר או אינו זמין' : 'לא ניתן לקרוא בבטחה את מקור הפניות');
+                }
             }
+            const ok = failures.length === 0;
+            db.prepare(`INSERT INTO growth_sources(app_id,last_success_at,last_attempt_at,status,imported,excluded,detail)
+                VALUES(?,?,?,?,?,?,?) ON CONFLICT(app_id) DO UPDATE SET
+                last_success_at=CASE WHEN excluded.status='ok' THEN excluded.last_success_at ELSE growth_sources.last_success_at END,
+                last_attempt_at=excluded.last_attempt_at,status=excluded.status,
+                imported=growth_sources.imported+excluded.imported,excluded=excluded.excluded,detail=excluded.detail`)
+                .run(app.id, ok ? stamp : null, stamp, ok ? 'ok' : 'error', imported, excluded, [...new Set(failures)].join('; '));
         }
         const cutoff = new Date(Date.now() - 90 * DAY).toISOString();
         db.prepare('DELETE FROM growth_events WHERE occurred_at<?').run(cutoff);
@@ -111,4 +135,4 @@ function startGrowthSources() {
     tick();
     setInterval(tick, 60000).unref();
 }
-module.exports = { startGrowthSources, syncGrowthSources, importRows, isTest, timestamp, SOURCES };
+module.exports = { startGrowthSources, syncGrowthSources, importRows, readRows, isTest, timestamp, SOURCES };

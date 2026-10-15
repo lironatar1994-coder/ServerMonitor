@@ -61,6 +61,34 @@ class Backups(unittest.TestCase):
         self.assertFalse((m.STATE / 'backup-status.json').exists())
         self.assertEqual(list(m.BACKUPS.iterdir()), [old])
 
+    def test_dfus_archive_restores_files_with_separate_verified_supplier_snapshot(self):
+        import tarfile
+        store = self.root / 'store'
+        store.mkdir()
+        (store / 'store.json').write_text('{"orders":[],"contacts":[]}')
+        (store / 'prices.json').write_text('{"version":1}')
+        (store / 'uploads').mkdir()
+        (store / 'uploads' / 'design.txt').write_text('customer design')
+        source = store / 'suppliers.db'
+        db = sqlite3.connect(source)
+        try:
+            db.execute('PRAGMA journal_mode=WAL')
+            db.execute('CREATE TABLE suppliers(id INTEGER)')
+            db.execute('INSERT INTO suppliers VALUES (7)')
+            db.commit()
+            m.DATABASES = {'dfus-suppliers': str(source)}
+            m.ASSETS = {'dfus-store': store}
+            saved = Path(m.snapshot())
+            with tarfile.open(saved / 'dfus-store.tar.gz') as archive:
+                names = archive.getnames()
+                self.assertIn('./store.json', names)
+                self.assertIn('./uploads/design.txt', names)
+                self.assertFalse(any('suppliers.db' in name for name in names))
+            with sqlite3.connect(saved / 'dfus-suppliers.sqlite') as restored:
+                self.assertEqual(restored.execute('SELECT id FROM suppliers').fetchone(), (7,))
+        finally:
+            db.close()
+
     def test_retention_preserves_recent_and_unacknowledged(self):
         now = dt.datetime.now(dt.timezone.utc)
         folders = {}

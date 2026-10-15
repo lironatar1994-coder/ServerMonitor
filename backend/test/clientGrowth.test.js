@@ -11,7 +11,7 @@ process.env.VISITOR_SIGNAL_KEY = 'isolated-growth-test-key';
 const db = require('../database');
 const growth = require('../clientGrowth');
 const { recordGrowthSignal } = require('../growthSignals');
-const { importRows, syncGrowthSources } = require('../growthSources');
+const { importRows, syncGrowthSources, readRows } = require('../growthSources');
 const app = db.prepare("SELECT * FROM apps WHERE name='Dfus Reuven'").get();
 const second = db.prepare("SELECT * FROM apps WHERE name='Pinhas Ratzon'").get();
 const at = new Date().toISOString();
@@ -89,6 +89,41 @@ test('source completion is not revenue and newly identified fixtures are exclude
     assert.equal(growth.metrics(second.id, '2000-01-01', '2100-01-01').won, 0);
     importRows(second.id, 'registrations', [{ ...row, name: 'בדיקת הרשמה' }]);
     assert.equal(db.prepare('SELECT archived FROM growth_leads WHERE id=?').get(lead.id).archived, 1);
+});
+test('new Dfus store adapters exclude nested fixtures and retain only source metadata', async () => {
+    const file = path.join(temp, 'store.json');
+    fs.writeFileSync(file, JSON.stringify({ orders: {
+        'store-order': { id: 'store-order', createdAt: at, status: 'ready', customer: { name: 'PRIVATE NAME', phone: '0521234567' }, notes: 'PRIVATE NOTE' },
+        'store-fixture': { id: 'store-fixture', createdAt: at, customer: { name: 'בדיקת הזמנה' } }
+    }, contacts: { 'store-contact': { id: 'store-contact', createdAt: at, customer: {name: 'PRIVATE CONTACT'}, message: 'PRIVATE MESSAGE' } } }));
+    const orders = { app: app.name, file, type: 'dfus_orders' };
+    const contacts = { ...orders, type: 'dfus_contacts' };
+    const rows = await readRows(orders);
+    assert.ok(!JSON.stringify(rows).includes('PRIVATE')); assert.ok(!JSON.stringify(rows).includes('0521234567'));
+    await syncGrowthSources([orders, contacts]);
+    const leads = db.prepare("SELECT * FROM growth_leads WHERE app_id=? AND origin LIKE 'dfus_%'").all(app.id);
+    assert.equal(leads.length, 2); assert.ok(!JSON.stringify(leads).includes('PRIVATE'));
+    const lead = leads.find(row => row.origin === 'dfus_orders'); assert.equal(lead.status, 'working');
+    assert.equal(db.prepare('SELECT excluded FROM growth_sources WHERE app_id=?').get(app.id).excluded, 1);
+    await syncGrowthSources([orders, contacts]);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM growth_leads WHERE app_id=? AND origin LIKE 'dfus_%'").get(app.id).n, 2);
+    growth.save(app.id, 'leads', lead.id, { status: 'contacted' }, 'tester');
+    importRows(app.id, 'dfus_orders', [{ id: 'store-order', createdAt: at, status: 'completed' }]);
+    assert.equal(db.prepare('SELECT status FROM growth_leads WHERE id=?').get(lead.id).status, 'contacted');
+    importRows(app.id, 'dfus_orders', [{ id: 'store-completed', createdAt: at, status: 'completed' }]);
+    assert.equal(db.prepare("SELECT status FROM growth_leads WHERE reference='פנייה store-completed'").get().status, 'completed');
+    assert.equal(growth.metrics(app.id, '2000-01-01', '2100-01-01').won, 1); // only earlier manually won quote
+});
+test('a healthy second adapter cannot hide a failed source or advance complete success', async () => {
+    const store = { app: app.name, type: 'dfus_contacts', file: path.join(temp, 'store.json') };
+    await syncGrowthSources([store]);
+    const previous = db.prepare('SELECT last_success_at FROM growth_sources WHERE app_id=?').get(app.id).last_success_at;
+    await syncGrowthSources([{ app: app.name, type: 'quotes', file: path.join(temp, 'missing.jsonl') }, store]);
+    const failed = db.prepare('SELECT * FROM growth_sources WHERE app_id=?').get(app.id);
+    assert.equal(failed.status, 'error'); assert.equal(failed.last_success_at, previous);
+    fs.writeFileSync(store.file, JSON.stringify({ contacts: [] }));
+    await syncGrowthSources([store]);
+    assert.equal(db.prepare('SELECT status FROM growth_sources WHERE app_id=?').get(app.id).status, 'error');
 });
 test('HTTP workspace requires internal sessions, not the Manager Site integration key', async () => {
     const express = require('express');
