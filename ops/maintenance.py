@@ -48,6 +48,7 @@ EXPECTED_PM2 = {'dfus-reuven', 'dfus-reuven-live', 'libi-diamonds-2',
                 'on-your-way-frontend', 'pinhas-ratzon-form', 'seder-live',
                 'seder-whatsapp', 'seder-calendar', 'server-monitor', 'sos-landing-standalone', 'vee-app'}
 TRACKER_URLS = ['https://www.libidiamonds.co.il/', 'https://pinhasratzon.co.il/',
+                'https://www.dfusreuven.co.il/',
                 'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents',
                 'https://lawebs.co.il/Koralevents2', 'https://vee-app.co.il/DfusReuven',
                 'https://vee-app.co.il/LibiDiamonds2']
