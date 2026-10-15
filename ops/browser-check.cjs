@@ -143,7 +143,12 @@ let browser;
       if (response.request().method() !== 'POST' || !/(?:visit(?:or)?|browser)[-_]signal/.test(response.url())) return false;
       try {
         const body = response.request().postDataJSON();
-        return Boolean(body?.event_id && !body.event_type && (!body.kind || body.kind === 'navigation'));
+        // The previous page may still finish a keepalive request. Only accept
+        // the canonical site's own navigation, including a nested site's path.
+        const target = new URL(site.url);
+        const normalize = path => String(path || '/').replace(/\/+$/, '') || '/';
+        return Boolean(new URL(response.url()).origin === target.origin && normalize(body?.path) === normalize(target.pathname)
+          && body?.event_id && !body.event_type && (!body.kind || body.kind === 'navigation'));
       } catch { return false; }
     }, { timeout: Math.min(6000, remaining) }).catch(error => error);
     const response = await signalPage.goto(site.url, { waitUntil: 'domcontentloaded', timeout: Math.min(8000, remaining) });
