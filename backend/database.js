@@ -3,7 +3,9 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 
 const dbPath = process.env.MONITOR_DB_PATH || path.join(__dirname, 'monitor.db');
+// Every process shares this file; wait for another writer (e.g. a reclassification) rather than failing at startup.
 const db = new Database(dbPath, {
+    timeout: 30000,
     verbose: process.env.NODE_ENV !== 'production' && process.env.DB_VERBOSE === 'true' ? console.log : undefined
 });
 db.pragma('journal_mode = WAL');
@@ -448,7 +450,7 @@ function purgeRetiredProductionApps() {
             });
             if (retiredApps.length) console.log(`Purged retired production app monitor: ${name}`);
         });
-    })();
+    }).immediate();
 }
 
 function splitPaths(value) {
@@ -508,7 +510,7 @@ function syncProductionApps() {
             }
             updateApp.run({ id: existing.id, ...normalized });
         });
-    })();
+    }).immediate();
 }
 
 renameProductionApps();
