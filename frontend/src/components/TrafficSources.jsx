@@ -7,6 +7,7 @@ import { apiFetch, rangeQuery } from '../lib/api';
 import { formatNumber } from '../lib/format';
 import { getSessionSnapshot } from '../lib/session';
 
+const SHORT_CODES = { whatsapp: 'wa', facebook: 'fb', instagram: 'ig', tiktok: 'tt', google_business: 'g', email: 'mail', sms: 'sms', qr: 'qr', linkedin: 'in', youtube: 'yt', telegram: 'tg' };
 const share = (part, total) => (total ? Math.round((part / total) * 100) : 0);
 
 /** Channels, campaigns and referring sites for one site, from the anonymous action tracker. */
@@ -114,7 +115,8 @@ export function LinksPanel({ appId, siteUrl }) {
   useEffect(() => { const timer = setTimeout(load, 0); return () => clearTimeout(timer); }, [load]);
   const choose = async (channel) => {
     const value = await apiFetch(`/visitor-analytics/links?app_id=${appId}&channel=${channel}`).catch(() => null);
-    setForm((current) => ({ ...current, channel, code: value?.suggestion || current.code }));
+    // The server suggestion avoids codes already in use; the local short form covers a failed lookup.
+    setForm((current) => ({ ...current, channel, code: value?.suggestion || SHORT_CODES[channel] || current.code }));
   };
   const open = async () => { setError(''); setForm({ channel: 'whatsapp', code: '', campaign: '', path: basePath }); await choose('whatsapp'); };
   const save = async (event) => {
