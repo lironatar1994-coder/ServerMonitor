@@ -140,3 +140,18 @@ test('HTTP workspace requires internal sessions, not the Manager Site integratio
         assert.equal((await fetch(`${url}/${app.id}?days=1000`, { headers })).status, 400);
     } finally { await new Promise(resolve => server.close(resolve)); }
 });
+test('QA events are archived as a whole while a real event keeps an owner test registration separate', () => {
+    const { markFixtureEvents } = require('../growthSources');
+    const row = (id, event, name, created = '2026-09-07T10:00:00.000Z') => ({ id, event_id: event, name, phone: '0521234567', event_created_at: created });
+    const marked = markFixtureEvents([
+        row('a', 'qa', 'בדיקה'), row('b', 'qa', 'נועה'), row('c', 'qa', 'דנה'),
+        ...Array.from({ length: 12 }, (_, i) => row(`r${i}`, 'real', `אורחת ${String.fromCharCode(1488 + i)}`)), row('t', 'real', 'test owner'),
+        row('s1', 'seed1', 'test', '2026-09-07T12:57:22.100Z'), row('s2', 'seed1', 'רותם', '2026-09-07T12:57:22.100Z'),
+        row('x', 'seed2', 'יעל', '2026-09-07T12:57:22.300Z'), row('y', 'seed3', 'מאיה', '2026-09-07T12:57:22.900Z')
+    ]);
+    const flag = Object.fromEntries(marked.map(item => [item.id, item.isTest]));
+    assert.deepEqual([flag.a, flag.b, flag.c], [true, true, true]);
+    assert.equal(flag.r0, false);
+    assert.equal(flag.t, true);
+    assert.deepEqual([flag.s1, flag.s2, flag.x], [true, true, false]);
+});

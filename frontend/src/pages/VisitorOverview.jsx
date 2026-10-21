@@ -26,7 +26,7 @@ import {
   StatRow,
   Tabs,
 } from "../components/AnalyticsParts";
-import { formatNumber } from "../lib/format";
+import { formatAgo, formatDateTime, formatNumber } from "../lib/format";
 import TrackingStatus from "../components/TrackingStatus";
 import TrafficChart from "../components/TrafficChart";
 import { previousRange, rangeSearch } from "../lib/dailyCheck";
@@ -380,7 +380,15 @@ const VisitorOverview = () => {
                   <span className="comparison-change">
                     {!Number(site.browser_signal_sessions) &&
                     !Number(site.previous) ? (
-                      <small>ללא פעילות</small>
+                      <small
+                        title={site.last_any_signal_at ? `אות אחרון מהאתר (כולל בדיקה אוטומטית): ${formatDateTime(site.last_any_signal_at)}` : undefined}
+                      >
+                        {site.last_signal_at
+                          ? `ביקור אחרון ${formatAgo(site.last_signal_at)}`
+                          : site.last_any_signal_at
+                            ? "ללא ביקורים שנמדדו"
+                            : "לא נמדד"}
+                      </small>
                     ) : (
                       <Change
                         current={site.browser_signal_sessions}

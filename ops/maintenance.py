@@ -301,10 +301,11 @@ def cleanup(apply=False, releases=True):
                         candidates.append(remove_candidate(version, root, apply))
             incoming = base / 'incoming'
             if releases and incoming.is_dir() and not incoming.is_symlink():
-                files = sorted((p for p in incoming.iterdir() if re.fullmatch(r'[0-9a-f]{40}(?:-[A-Za-z0-9-]+)?\.tar\.gz', p.name) and p.is_file() and not p.is_symlink()), key=lambda p:p.stat().st_mtime, reverse=True)
-                protected_hashes = {p.name[:40] for p in keep}
+                files = sorted((p for p in incoming.iterdir() if re.fullmatch('(?:' + RELEASE_NAME.pattern + r')\.tar\.gz', p.name) and p.is_file() and not p.is_symlink()), key=lambda p:p.stat().st_mtime, reverse=True)
+                protected_hashes = {p.name[:40] for p in keep} | {p.name for p in keep}
                 for archive in files[3:]:
-                    if archive.name[:40] not in protected_hashes and archive.stat().st_mtime < time.time() - 86400:
+                    stem = archive.name[:-len('.tar.gz')]
+                    if archive.name[:40] not in protected_hashes and stem not in protected_hashes and archive.stat().st_mtime < time.time() - 86400:
                         candidates.append(remove_candidate(archive, incoming, apply))
             # Only compiler caches; preserve runtime image and fetch caches.
             for version in versions:

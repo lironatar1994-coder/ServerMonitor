@@ -25,6 +25,25 @@ function isTest(row) {
     return row.isTest === true || row.test === true || ['0500000000', '0000000000'].includes(phone)
         || /(?:בדיק[הת]|דיפלוי|דמו|\b(?:smoke|deploy|playwright|test|demo|qa)(?:[\s_-]|\d|$))/i.test(name);
 }
+// QA runs create whole events: a fifth or more of an event's registrations carry test
+// markers, or the event was inserted in a same-second batch of three or more events.
+function markFixtureEvents(rows) {
+    const events = new Map();
+    const batches = new Map();
+    for (const row of rows) {
+        const item = events.get(row.event_id) || { total: 0, tests: 0, created: row.event_created_at };
+        item.total++;
+        if (isTest(row)) item.tests++;
+        events.set(row.event_id, item);
+    }
+    for (const item of events.values()) {
+        const second = String(item.created || '').slice(0, 19);
+        if (second) batches.set(second, (batches.get(second) || 0) + 1);
+    }
+    const fixture = (item) => item && item.tests > 0
+        && (item.tests * 5 >= item.total || (batches.get(String(item.created || '').slice(0, 19)) || 0) >= 3);
+    return rows.map((row) => ({ ...row, isTest: isTest(row) || fixture(events.get(row.event_id)) }));
+}
 async function readRows(source) {
     if (['dfus_orders', 'dfus_contacts'].includes(source.type)) {
         const stat = await fs.stat(source.file);
@@ -56,7 +75,11 @@ async function readRows(source) {
     }
     const sourceDb = new Database(source.file, { readonly: true, fileMustExist: true, timeout: 1000 });
     try {
-        if (source.type === 'registrations') return sourceDb.prepare('SELECT id,created_at,status,paid,name,phone FROM registrations ORDER BY id DESC LIMIT 10000').all();
+        if (source.type === 'registrations') {
+            const rows = sourceDb.prepare(`SELECT r.id,r.event_id,r.created_at,r.status,r.paid,r.name,r.phone,e.created_at AS event_created_at
+                FROM registrations r LEFT JOIN events e ON e.id = r.event_id ORDER BY r.id DESC LIMIT 10000`).all();
+            return markFixtureEvents(rows).map(({ event_id, event_created_at, ...row }) => row);
+        }
         return sourceDb.prepare('SELECT id,createdAt,status,fullName,phoneNumber FROM Lead ORDER BY createdAt DESC LIMIT 10000').all();
     } finally { sourceDb.close(); }
 }
@@ -135,4 +158,4 @@ function startGrowthSources() {
     tick();
     setInterval(tick, 60000).unref();
 }
-module.exports = { startGrowthSources, syncGrowthSources, importRows, readRows, isTest, timestamp, SOURCES };
+module.exports = { startGrowthSources, syncGrowthSources, importRows, readRows, isTest, markFixtureEvents, timestamp, SOURCES };

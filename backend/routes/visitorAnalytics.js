@@ -239,12 +239,17 @@ function getSiteRanking(range) {
         GROUP BY app_id
     `).all(range.from, range.to);
     const signalsByApp = new Map(signals.map((row) => [row.app_id, row]));
+    // Latest signal regardless of the selected range, so a silent tracker stays visible.
+    const lastSignal = db.prepare(`SELECT
+        (SELECT occurred_at FROM browser_signals WHERE app_id = ? AND automation_hint = 0 ORDER BY occurred_at DESC LIMIT 1) AS last_signal_at,
+        (SELECT occurred_at FROM browser_signals WHERE app_id = ? ORDER BY occurred_at DESC LIMIT 1) AS last_any_signal_at`);
     return sites.map((site) => ({
         ...site,
         browser_signal_visitors: 0,
         browser_signal_sessions: 0,
         browser_signal_page_views: 0,
-        ...(signalsByApp.get(site.app_id) || {})
+        ...(signalsByApp.get(site.app_id) || {}),
+        ...lastSignal.get(site.app_id, site.app_id)
     }));
 }
 

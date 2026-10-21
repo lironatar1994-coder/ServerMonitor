@@ -197,7 +197,7 @@ const Services = () => {
                       </span>
                       <ChevronLeft aria-hidden="true" />
                     </Link>
-                    {app.url && (
+                    {app.url ? (
                       <a
                         className="icon-btn"
                         href={app.url}
@@ -207,6 +207,8 @@ const Services = () => {
                       >
                         <ExternalLink aria-hidden="true" />
                       </a>
+                    ) : (
+                      <span className="icon-btn icon-btn--placeholder" aria-hidden="true" />
                     )}
                   </li>
                 );

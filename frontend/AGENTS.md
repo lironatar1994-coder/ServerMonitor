@@ -45,6 +45,7 @@
 - API requests time out after 20 seconds with recovery text, validate JSON responses, and preserve cancellation. Lazy-load failures offer reload; the loader offers recovery if a chunk stalls. Never disguise a failed request as no traffic.
 - Report links preserve the requested internal app route through login/session expiry. Only allow-listed local destinations are accepted. Valid `from`/`to` query dates initialize the analytics range (maximum 90 days); manual range changes replace the email range through React Router. When a page detail is selected, write its exact current dates to the URL so shared links work without local preferences. Site switching and comparison-row links carry the exact displayed dates. Default to 24 hours only when no saved or linked preference exists.
 
+- The client period uses the shared period segment group (7/30/90 days) with a refresh control; client rows open internally with a chevron.
 - `/clients` and `/clients/:id` are internal-only. Keep Search Console and customer portals absent. Email/WhatsApp controls open editable drafts; opening is not proof of sending. Summaries remain reviewable before the user shares.
 - Show source-confirmed, manual and observed browser actions separately. Expose collection start and source-sync gaps, independent goal periods, low-sample comparisons, and the absence of confirmed session-to-lead attribution. Source PII is not copied into forms.
 
@@ -61,7 +62,7 @@
 - Keep Miryam Zelig and Seder engagement panels visible before their first measurements, omit PDF-specific tool metrics there, and label sessions, heatmaps, zones, dwell, and scroll reach as anonymous browser signals rather than people.
 - Present successful page views as the primary activity metric. Do not label asset, script, font, API, or failed requests as visitor engagement.
 - `TrackingStatus` on a site page shows only that site's browser-check failures (fleet-wide portfolio checks belong to LA webs); the overview shows them all, with the availability list first and no healthy line while sites are down.
-- The site ledger folds sites with no visits in either period and a healthy check behind one `עוד N אתרים ללא פעילות` row when unfiltered and not sorted by name. Zero in both periods reads `ללא פעילות`, not a change.
+- The site ledger folds sites with no visits in either period and a healthy check behind one `עוד N אתרים ללא פעילות` row when unfiltered and not sorted by name. Zero in both periods shows the last measured visit (`ביקור אחרון …`), `ללא ביקורים שנמדדו` when only automated checks reached the tracker, or `לא נמדד` when no signal ever arrived.
 - Status words are `זמין`, `לא זמין` and `לא נבדק` everywhere. Infrastructure lists only unavailable services and links to `/services`; its memory rows rank and show the RAM+Swap footprint with RAM and Swap beneath. Hidden tabs pause polling.
 - Service configuration supports full health-check URLs plus separate visitor-analytics and client-report toggles; operational services must not link into visitor analytics.
 - Preserve RTL Hebrew presentation, `he-IL` formatting, and `Asia/Jerusalem` timestamps.

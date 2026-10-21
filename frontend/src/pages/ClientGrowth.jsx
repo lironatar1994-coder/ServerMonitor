@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowUpRight, Check, CircleAlert, ClipboardList, Copy, Inbox, Mail, MessageCircle, Pencil, Plus, RefreshCw, Timer, X } from 'lucide-react';
+import { Check, ChevronLeft, CircleAlert, ClipboardList, Copy, Inbox, Mail, MessageCircle, Pencil, Plus, RefreshCw, Timer, X } from 'lucide-react';
 import { DataState, Empty, Hint, IconAction, PageHead, Panel, Stat, StatRow, Tabs } from '../components/AnalyticsParts';
 import { apiFetch } from '../lib/api';
 import { formatDateTime, formatNumber } from '../lib/format';
@@ -116,25 +116,29 @@ export default function ClientGrowth() {
 
   return <div className="page page--visitors growth-workspace">
     <PageHead title={id ? data?.app?.name || 'לקוח' : 'לקוחות'} meta={id ? <Link className="crumb" to="/clients">לקוחות</Link> : null}>
-      <Tabs label="טווח מדידה" tabs={[{ id: 7, label: '7 ימים' }, { id: 30, label: '30 יום' }, { id: 90, label: '90 יום' }]} value={days} onChange={setDays} />
-      <button className="icon-btn" onClick={() => load()} aria-label="רענון"><RefreshCw /></button>
+      <div className="range-picker">
+        <div className="range-picker__segments" role="group" aria-label="טווח מדידה">
+          {[[7, '7 ימים'], [30, '30 יום'], [90, '90 יום']].map(([value, label]) => <button type="button" key={value} aria-pressed={days === value} className={days === value ? 'is-active' : ''} onClick={() => setDays(value)}>{label}</button>)}
+        </div>
+        <button type="button" className="range-picker__refresh" onClick={() => load()} disabled={loading} aria-label="רענון נתונים"><RefreshCw className={loading ? 'is-spinning' : ''} aria-hidden="true" /></button>
+      </div>
     </PageHead>
     {feedback && <div className={`banner banner--${feedback.isError ? 'error' : 'success'}`} role={feedback.isError ? 'alert' : 'status'}>{feedback.message}</div>}
     <DataState loading={loading} error={error} onRetry={() => load()}>{data && <>
       {!id ? <>
-        <StatRow><Stat icon={Timer} label="באיחור" value={data.sites.filter(s => s.insights.some(i => ['unanswered', 'overdue-tasks'].includes(i.key))).length} hint="מספר לקוחות עם מעקב או משימה באיחור" /><Stat icon={CircleAlert} label="לטיפול" value={data.sites.filter(s => s.insights.length).length} /><Stat icon={Inbox} label="פניות פתוחות" value={data.sites.reduce((n, s) => n + s.open_leads, 0)} /><Stat icon={ClipboardList} label="משימות" value={data.sites.reduce((n, s) => n + s.open_tasks, 0)} /></StatRow>
+        <StatRow><Stat icon={Timer} label="לקוחות באיחור" value={data.sites.filter(s => s.insights.some(i => ['unanswered', 'overdue-tasks'].includes(i.key))).length} hint="מספר לקוחות עם מעקב או משימה באיחור" /><Stat icon={CircleAlert} label="לקוחות לטיפול" value={data.sites.filter(s => s.insights.length).length} /><Stat icon={Inbox} label="פניות פתוחות" value={data.sites.reduce((n, s) => n + s.open_leads, 0)} /><Stat icon={ClipboardList} label="משימות" value={data.sites.reduce((n, s) => n + s.open_tasks, 0)} /></StatRow>
         <Panel title="מעקב" hint="הסדר מתעדף פניות שממתינות, בעיות איסוף ומשימות באיחור. ההשוואה היא של כל אתר לעצמו.">
-          <div className="growth-toolbar"><label className="growth-search"><span className="sr-only">חיפוש לקוח</span><input placeholder="חיפוש לקוח" value={search} onChange={e => setSearch(e.target.value)} /></label><Tabs tabs={[{ id: 'all', label: 'לקוחות' }, { id: 'attention', label: 'לטיפול' }]} value={filter} onChange={setFilter} /></div>
+          <div className="growth-toolbar"><label className="growth-search"><span className="sr-only">חיפוש לקוח</span><input placeholder="חיפוש לקוח" value={search} onChange={e => setSearch(e.target.value)} /></label><Tabs tabs={[{ id: 'all', label: 'הכול' }, { id: 'attention', label: 'לטיפול' }]} value={filter} onChange={setFilter} /></div>
           <div className="growth-client-table">
-          <div className="growth-client-head" aria-hidden="true"><span>לקוח</span><span>פניות</span><span>פתוחות</span><span>משימות</span><span /></div>
+          <div className="growth-client-head" aria-hidden="true"><span>לקוח</span><span title="פניות שהתקבלו בתקופה">חדשות</span><span title="כל הפניות הפתוחות">פתוחות</span><span title="משימות פתוחות">משימות</span><span /></div>
           <div className="growth-list">{sites.map(site => <Link className="growth-client" key={site.id} to={`/clients/${site.id}`}>
             <div><strong>{site.name}</strong>{site.owner && <small>{site.owner}</small>}</div>
             <dl><div><dt className="sr-only">פניות בתקופה</dt><dd>{num(site.metrics.lead_received)}</dd></div><div><dt className="sr-only">פניות פתוחות</dt><dd>{num(site.open_leads)}</dd></div><div><dt className="sr-only">משימות פתוחות</dt><dd>{num(site.open_tasks)}</dd></div></dl>
-            <span className="growth-row-state">{site.insights[0]?.title ? <CircleAlert role="img" className="is-attention" aria-label={site.insights[0].title} title={site.insights[0].title} /> : <ArrowUpRight aria-hidden="true" />}</span>
+            <span className="growth-row-state">{site.insights[0]?.title ? <CircleAlert role="img" className="is-attention" aria-label={site.insights[0].title} title={site.insights[0].title} /> : <ChevronLeft aria-hidden="true" />}</span>
           </Link>)}</div></div>{!sites.length && <Empty text="אין לקוחות בסינון" />}
         </Panel>
       </> : <>
-        <div className="growth-toolbar"><Tabs tabs={tabs.slice(0, 3)} value={tab} onChange={value => { setTab(value); setEdit(null); setFilter('all'); }} label="סביבת לקוח" /><label className="client-secondary"><span className="sr-only">תצוגות נוספות ללקוח</span><select value={tabs.slice(3).some(t => t.id === tab) ? tab : ''} onChange={e => { if (e.target.value) { setTab(e.target.value); setEdit(null); } }}><option value="">עוד</option>{tabs.slice(3).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></label><Link className="btn" to={`/visitors/${id}`}>אתר<ArrowUpRight /></Link></div>
+        <div className="growth-toolbar"><Tabs tabs={tabs.slice(0, 3)} value={tab} onChange={value => { setTab(value); setEdit(null); setFilter('all'); }} label="סביבת לקוח" /><label className="client-secondary"><span className="sr-only">תצוגות נוספות ללקוח</span><select value={tabs.slice(3).some(t => t.id === tab) ? tab : ''} onChange={e => { if (e.target.value) { setTab(e.target.value); setEdit(null); } }}><option value="">עוד</option>{tabs.slice(3).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></label><Link className="btn" to={`/visitors/${id}`}>תנועה באתר<ChevronLeft aria-hidden="true" /></Link></div>
         {edit && <Editor key={`${edit.kind}:${edit.value.id || 'new'}`} edit={edit} onSave={save} onClose={() => setEdit(null)} busy={busy} />}
         {tab === 'overview' && <>
           <StatRow><Stat icon={Timer} label="באיחור" value={openLeads.filter(isOverdue).length} /><Stat icon={Inbox} label="פניות פתוחות" value={openLeads.length} /><Stat icon={ClipboardList} label="משימות" value={activeTasks.length} /></StatRow>
