@@ -347,7 +347,38 @@ function recordBrowserSignal({ body, ip, userAgent, siteUrl }) {
     return { accepted: true, duplicate: result.changes === 0, app: app.name };
 }
 
+/** One page's Core Web Vitals (LCP, INP, CLS, TTFB); no identifiers beyond the event ID. */
+function recordWebVitals({ body, ip, userAgent, siteUrl }) {
+    const normalizedIp = normalizeIp(ip);
+    const eventId = String(body?.event_id || '').trim();
+    const path = normalizePath(body?.path);
+    if (!normalizedIp || !ID_PATTERN.test(eventId) || !path) {
+        const error = new Error('Invalid web vitals');
+        error.status = 400;
+        throw error;
+    }
+    const app = findSignalApp(siteUrl);
+    if (!app) {
+        const error = new Error('Browser signal site is not configured');
+        error.status = 400;
+        throw error;
+    }
+    const values = require('./observability').cleanVitals(body);
+    if (Object.values(values).every((value) => value === null)) {
+        const error = new Error('Invalid web vitals');
+        error.status = 400;
+        throw error;
+    }
+    const device = VIEWPORT_CLASSES.has(body?.viewport_class) ? body.viewport_class : '';
+    const result = db.prepare(`INSERT OR IGNORE INTO web_vitals
+        (app_id, event_id, occurred_at, path, device, lcp_ms, inp_ms, cls, ttfb_ms, automation_hint)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(app.id, eventId, new Date().toISOString(), path, device,
+        values.lcp_ms, values.inp_ms, values.cls, values.ttfb_ms, getAutomationHint({ body, ip: normalizedIp, userAgent, path }));
+    return { accepted: true, duplicate: result.changes === 0, app: app.name };
+}
+
 module.exports = {
+    recordWebVitals,
     getAutomationHint,
     getSignalKey,
     findSignalApp,

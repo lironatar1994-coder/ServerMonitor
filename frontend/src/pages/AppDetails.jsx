@@ -124,7 +124,7 @@ const AppDetails = () => {
                 <span>{connection.detail}</span>
               </div>
             )}
-            {owner && app.name === "SSH Security" ? (
+            {owner && app.name === "אבטחת SSH" ? (
               <SshSecurityTemplate app={app} />
             ) : (
               <div className="grid grid--1-2">

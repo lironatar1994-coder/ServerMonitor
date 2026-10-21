@@ -94,6 +94,10 @@ ${operationsHtml}
         ]), ...(operations.length ? ['מצב האתרים והשירותים — הבדיקה האחרונה בלבד · שעון ישראל',
             ...orderedOps.map(app => `${app.name}: ${status(app.status)} · ${checked(app.last_checked)}\n${reportLink(app, period, true)}`)] : []),
         '', caveat, measurementHelp, 'נתוני שרת נפרדים בדוח המלא.', reportLink({}, period)].join('\n');
-    return { subject: `Server Monitor — ${title} | ${label}`, html, text };
+    // The inbox line carries the answer: visits, their change, contacts and anything down.
+    const headline = [`${n(totalVisits)} ביקורים (${change(totalVisits, previousVisits)})`,
+        ...(totalContacts ? [`${n(totalContacts)} לחיצות קשר`] : []),
+        ...(attention.length ? [attention.length === 1 ? `${attention[0].name} לא זמין` : `${n(attention.length)} שירותים לא זמינים`] : [])].join(' · ');
+    return { subject: `${title} ${label}: ${headline}`, html, text };
 }
 module.exports = { renderEmail, reportLink };

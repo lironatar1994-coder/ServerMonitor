@@ -382,7 +382,7 @@ const lawebsExcludedPaths = [
 const productionApps = [
     { name: 'LA webs', url: 'https://lawebs.co.il/', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_exclude: lawebsExcludedPaths, health_url: 'https://lawebs.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Pinhas Ratzon', url: 'https://pinhasratzon.co.il/', log_path: sharedNginxLog, log_host: 'pinhasratzon.co.il|www.pinhasratzon.co.il', health_url: 'https://pinhasratzon.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
-    { name: 'Pinhas Ratzon Form', pm2_name: 'pinhas-ratzon-form', health_url: 'http://127.0.0.1:3108/health', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'Pinhas Ratzon · טופס פניות', pm2_name: 'pinhas-ratzon-form', health_url: 'http://127.0.0.1:3108/health', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Koral Events', url: 'https://lawebs.co.il/Koralevents', systemd_unit: 'koralevents2.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/Koralevents|/koralevents', health_url: 'http://127.0.0.1:3111/Koralevents', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Koral Events 2', url: 'https://lawebs.co.il/Koralevents2', systemd_unit: 'koralevents.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/Koralevents2', health_url: 'http://127.0.0.1:3110/Koralevents2', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Alenu', url: 'https://lawebs.co.il/alenu/', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/alenu', health_url: 'https://lawebs.co.il/alenu/', analytics_enabled: 1, reporting_enabled: 1 },
@@ -390,34 +390,38 @@ const productionApps = [
     // Storefronts only; kitchen/admin/platform routes stay outside visitor analytics.
     { name: 'Pizza Manager', url: 'https://lawebs.co.il/PizzaManager/', systemd_unit: 'pizza-manager-platform.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/PizzaManager/p', health_url: 'http://127.0.0.1:4180/PizzaManager/p/oven-demo/', analytics_enabled: 1, reporting_enabled: 0 },
     { name: 'Alenu CRM', url: 'https://lawebs.co.il/alenu-crm', systemd_unit: 'maavar.service', health_url: 'http://127.0.0.1:3127/alenu-crm/api/health', analytics_enabled: 0, reporting_enabled: 0 },
-    { name: 'Alenu CRM Worker', systemd_unit: 'maavar-worker.service', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'Alenu CRM · עיבוד מסמכים', systemd_unit: 'maavar-worker.service', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'CV Manager', url: 'https://lawebs.co.il/cv-manager', systemd_unit: 'cv-manager.service', health_url: 'http://127.0.0.1:3139/cv-manager', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Desk', url: 'https://lawebs.co.il/desk/', systemd_unit: 'desk.service', health_url: 'http://127.0.0.1:3150/desk/', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'AllSee', url: 'https://lawebs.co.il/allsee/', systemd_unit: 'allsee.service', health_url: 'http://127.0.0.1:4310/allsee/', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Video Library', url: 'https://lawebs.co.il/videos/', pm2_name: 'video-library-api', health_url: 'http://127.0.0.1:3192/videos/api/health', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Claude RC', url: 'https://lawebs.co.il/rc/', pm2_name: 'claude-rc', health_url: 'http://127.0.0.1:3193/rc/', analytics_enabled: 0, reporting_enabled: 0 },
-    { name: 'PostgreSQL', systemd_unit: 'postgresql@16-main.service', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'מסד נתונים PostgreSQL', systemd_unit: 'postgresql@16-main.service', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Seder WhatsApp', pm2_name: 'seder-whatsapp', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Seder Calendar', pm2_name: 'seder-calendar', analytics_enabled: 0, reporting_enabled: 0 },
     // The Vee application was retired on 2026-10-20; its static landing page remains.
     { name: 'Vee Landing', url: 'https://vee-app.co.il/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_exclude: veeExcludedPaths, health_url: 'https://vee-app.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
-    { name: 'SSH Security', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'אבטחת SSH', analytics_enabled: 0, reporting_enabled: 0 },
     // PDF Studio moved to lawebs.co.il on 2026-10-15; the old vee-app path redirects there.
     { name: 'PDF Studio', url: 'https://lawebs.co.il/pdf-studio/', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il|vee-app.co.il|www.vee-app.co.il', log_filter: '/pdf-studio', health_url: 'https://lawebs.co.il/pdf-studio/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'SOS Landing', url: 'https://sosbaderech.co.il/', pm2_name: 'sos-landing-standalone', log_path: sharedNginxLog, log_host: 'sosbaderech.co.il|www.sosbaderech.co.il', health_url: 'http://127.0.0.1:3200/', analytics_enabled: 1, reporting_enabled: 1 },
-    { name: 'Cleanup Summary', log_path: '/var/log/server_cleanup_summary.log', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'תחזוקה לילית', log_path: '/var/log/server_cleanup_summary.log', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Miryam Zelig', url: 'https://miryamzelig.co.il/', log_path: sharedNginxLog, log_host: 'miryamzelig.co.il|www.miryamzelig.co.il', health_url: 'https://miryamzelig.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Seder', url: 'https://lawebs.co.il/seder', pm2_name: 'seder-live', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/seder', health_url: 'http://127.0.0.1:3107/seder', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Server Monitor', url: 'https://monitor.vee-app.co.il/', pm2_name: 'server-monitor', health_url: 'http://127.0.0.1:4010/serve-monitor/', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Manager Site', url: 'https://vee-app.co.il/Manager_Site/', pm2_name: 'manager-site', health_url: 'http://127.0.0.1:3027/Manager_Site/', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'On Your Way', url: 'https://vee-app.co.il/OnYourWay', pm2_name: 'on-your-way-frontend', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/OnYourWay|/onyourway', health_url: 'http://127.0.0.1:3101/OnYourWay', analytics_enabled: 1, reporting_enabled: 1 },
-    { name: 'On Your Way API', pm2_name: 'on-your-way-backend', health_url: 'http://127.0.0.1:3004/health', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'On Your Way · שרת', pm2_name: 'on-your-way-backend', health_url: 'http://127.0.0.1:3004/health', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Dfus Reuven', url: 'https://www.dfusreuven.co.il/', pm2_name: 'dfus-reuven-live', log_path: sharedNginxLog, log_host: 'dfusreuven.co.il|www.dfusreuven.co.il', health_url: 'http://127.0.0.1:3106/api/health', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Miryam Zelig Preview', url: 'https://vee-app.co.il/Miryam_Zelig/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/miryamzelig2|/Miryam_Zelig|/miryam_zelig', health_url: 'https://vee-app.co.il/miryamzelig2/', analytics_enabled: 1, reporting_enabled: 0 },
 ];
 
 // Renames keep the record ID, history and client work of an existing app.
-const renamedProductionApps = { 'Maavar': 'Alenu CRM', 'Maavar Worker': 'Alenu CRM Worker', 'Vee Main App': 'Vee Landing' };
+const renamedProductionApps = {
+    'Maavar': 'Alenu CRM', 'Maavar Worker': 'Alenu CRM · עיבוד מסמכים', 'Alenu CRM Worker': 'Alenu CRM · עיבוד מסמכים', 'Vee Main App': 'Vee Landing',
+    'Cleanup Summary': 'תחזוקה לילית', 'SSH Security': 'אבטחת SSH', 'PostgreSQL': 'מסד נתונים PostgreSQL',
+    'Pinhas Ratzon Form': 'Pinhas Ratzon · טופס פניות', 'On Your Way API': 'On Your Way · שרת'
+};
 // Libi Diamonds (live and preview), the Dfus preview, the Vee application and its
 // WhatsApp worker were removed from production on 2026-10-20 (archives in /root/retired-20261020).
 const retiredProductionApps = ['Pixel Dungeon', 'PDF Generator', 'ToDoFast (inactive)', 'Toren Hazak',
@@ -511,5 +515,6 @@ renameProductionApps();
 purgeRetiredProductionApps();
 syncProductionApps();
 require('./growthSchema').initializeGrowth(db);
+require('./observability').initializeObservability(db);
 
 module.exports = db;

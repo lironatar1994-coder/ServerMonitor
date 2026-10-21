@@ -33,7 +33,7 @@ const check = async (name, fn) => { try { await fn(); results.push({ name, ok: t
     const ready = async route => { await page.goto(base + route); await page.locator('.page h1, .login h1').waitFor(); await page.locator('.skeleton-stack,.page-loader').first().waitFor({ state: 'hidden' }); await page.evaluate(() => document.fonts.ready); assert.equal(await page.locator('.error-state').count(), 0); };
     const routes = ['/visitors', `/visitors/${id}`, '/clients', `/clients/${id}`, '/infrastructure', '/services', `/services/${id}`, '/settings'];
     if (process.env.UI_REVIEW_EXTRA_ONLY) {
-      routes.splice(0, routes.length, ...apps.filter(app => ['PDF Studio','Seder','Miryam Zelig','Libi Diamonds','SSH Security','WhatsApp Worker'].includes(app.name))
+      routes.splice(0, routes.length, ...apps.filter(app => ['PDF Studio','Seder','Miryam Zelig','אבטחת SSH'].includes(app.name))
         .map(app => `/${app.analytics_enabled ? 'visitors' : 'services'}/${app.id}`));
     }
     if (process.env.UI_REVIEW_FLOWS_ONLY) routes.splice(0);

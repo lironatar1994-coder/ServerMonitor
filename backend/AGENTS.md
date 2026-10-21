@@ -18,7 +18,11 @@
 - `visitorAnalytics.js` owns cursor-based access-log ingestion, initial bounded backfill, GeoIP enrichment, and raw-event retention.
 - `browserSignals.js` owns authenticated first-party browser-signal site matching, validation, identifier hashing, path/IP normalization, bot filtering, deduplication, and persistence for navigation, engagement, heatmap, and product-use events.
 - `resourceUsage.js` owns complete PM2 process-tree attribution and cached, bounded production-storage scans.
-- `alerts.js` owns outage/recovery email rendering and Resend delivery. `monitor.js` batches one email per cycle, alerts after two consecutive failed cycles, repeats every six hours, marks `last_alerted_at` only after delivery succeeds and reports recovery only for reported failures.
+- `alerts.js` owns alert rendering (down, slow, silent, recovered) and delivery by Resend email plus `push.js` browser push. `monitor.js` lists PM2 once per cycle, times the health URL and public URL, batches one alert per cycle, alerts after two consecutive failed cycles, repeats every six hours, marks `last_alerted_at` (or `slow-alert:`/`silent-alert:` metadata) only after a delivery succeeds and reports recovery only for reported failures.
+- `observability.js` owns `status_events` (availability), `metrics.response_ms`, `deploy_events` (runtime starts from PM2 `pm_uptime` and systemd `ActiveEnterTimestamp`), `chart_notes`, `web_vitals` (p75, 90-day retention) and real-visitor 404 and silent-tracker queries. `idx_metrics_app_time` keeps per-app metric reads indexed.
+- `operationsViews.js` reads backup manifests, PC acknowledgements, daily status, CRM backups and the Alenu CRM export (names, sizes and dates only) and checks TLS certificates of catalog hosts, cached for six hours.
+- `push.js` and `routes/push.js` store per-user Web Push subscriptions; VAPID keys live in `PUSH_KEY_FILE` (production `/root/.server-monitor-push-key.json`, mode 0600), never in the database. Monitor sessions cannot subscribe.
+- `catalogNames.js` names the catalog records the monitor treats specially (`תחזוקה לילית`, `אבטחת SSH`); renames go through `renamedProductionApps` so IDs and history stay.
 - `emailReports.js` owns daily and weekly client comparison reports, Resend delivery, scheduling, and delivery deduplication.
 - `emailReportTemplate.js` owns shared Hebrew HTML/plain-text report presentation and app-specific monitor links.
 - `routes/` owns HTTP route handlers and request/response contracts.

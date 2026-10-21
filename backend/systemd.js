@@ -12,7 +12,8 @@ function parseSystemdSnapshot(output) {
         return { name: fields.Id, systemd_unit: fields.Id, pid: Number(fields.MainPID) || 0,
             status: fields.LoadState === 'loaded' && fields.ActiveState === 'active' && Number(fields.MainPID) > 0 ? 'online' : 'offline',
             memory: Number(fields.MemoryCurrent) || 0,
-            cpu_ns: /^\d+$/.test(fields.CPUUsageNSec || '') ? Number(fields.CPUUsageNSec) : null };
+            cpu_ns: /^\d+$/.test(fields.CPUUsageNSec || '') ? Number(fields.CPUUsageNSec) : null,
+            started_at: /^@\d+$/.test(fields.ActiveEnterTimestamp || '') ? new Date(Number(fields.ActiveEnterTimestamp.slice(1)) * 1000).toISOString() : null };
     }).filter((row) => UNIT_PATTERN.test(row.systemd_unit));
 }
 
@@ -24,7 +25,7 @@ function getSystemdSnapshot(apps, force = false) {
     let rows;
     try {
         rows = parseSystemdSnapshot(execFileSync('/usr/bin/systemctl', ['show', ...units,
-            '--property=Id,LoadState,ActiveState,MainPID,MemoryCurrent,CPUUsageNSec'], { encoding: 'utf8', timeout: 3000, maxBuffer: 128 * 1024 }));
+            '--property=Id,LoadState,ActiveState,MainPID,MemoryCurrent,CPUUsageNSec,ActiveEnterTimestamp', '--timestamp=unix'], { encoding: 'utf8', timeout: 3000, maxBuffer: 128 * 1024 }));
     } catch {
         rows = units.map((unit) => ({ name: unit, systemd_unit: unit, pid: 0, status: 'unknown', memory: 0 }));
     }

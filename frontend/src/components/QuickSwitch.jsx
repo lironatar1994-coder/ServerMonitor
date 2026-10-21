@@ -6,6 +6,8 @@ import {
   KeyRound,
   Search,
   ServerCog,
+  Activity,
+  Archive,
   Settings,
   Wrench,
   X,
@@ -23,11 +25,13 @@ const destinations = [
   { id: "vault", title: "כספת", to: "/vault", icon: KeyRound },
   {
     id: "server",
-    title: "שרת ומשאבים",
+    title: "תפעול: משאבים",
     to: "/infrastructure",
     icon: ServerCog,
   },
-  { id: "services", title: "שירותים", to: "/services", icon: Wrench },
+  { id: "services", title: "תפעול: שירותים", to: "/services", icon: Wrench },
+  { id: "availability", title: "תפעול: זמינות ומהירות", to: "/operations/availability", icon: Activity },
+  { id: "backups", title: "תפעול: גיבויים ותעודות", to: "/operations/backups", icon: Archive },
   { id: "settings", title: "הגדרות", to: "/settings", icon: Settings },
 ];
 const publicLocation = (value) => {

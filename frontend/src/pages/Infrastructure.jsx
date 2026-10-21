@@ -10,6 +10,7 @@ import {
 import { Link } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import OperationalStatus from "../components/OperationalStatus";
+import OpsTabs from "../components/OpsTabs";
 import {
   DataState,
   Empty,
@@ -194,6 +195,7 @@ const Infrastructure = () => {
   const offline = apps.filter((app) => app.status !== "online");
   const resources = stats?.resources;
   const applications = resources?.applications || [];
+  const [showAllResources, setShowAllResources] = useState(false);
   const storage = resources?.storage;
   const topProcesses = resources?.top_memory_processes || [];
   const storageItems = useMemo(
@@ -215,7 +217,7 @@ const Infrastructure = () => {
   return (
     <div className="page page--infrastructure">
       <PageHead
-        title="שרת ומשאבים"
+        title="תפעול"
         meta={<span>עודכן {formatTime(updatedAt)}</span>}
       >
         <button
@@ -228,6 +230,7 @@ const Infrastructure = () => {
           <RefreshCw aria-hidden="true" />
         </button>
       </PageHead>
+      <OpsTabs />
 
       <DataState loading={loading && !stats} error={error} onRetry={fetchData}>
         <StatRow label="משאבי שרת">
@@ -333,7 +336,12 @@ const Infrastructure = () => {
               </strong>
             </span>
           </div>
-          <ResourceRows items={selectedItems} kind={resourceView} />
+          <ResourceRows items={showAllResources ? selectedItems : selectedItems.slice(0, 8)} kind={resourceView} />
+          {selectedItems.length > 8 && (
+            <button type="button" className="idle-toggle" aria-expanded={showAllResources} onClick={() => setShowAllResources((value) => !value)}>
+              {showAllResources ? "הצגת 8 המובילים" : `עוד ${formatNumber(selectedItems.length - 8)}`}
+            </button>
+          )}
         </Panel>
 
         <Panel

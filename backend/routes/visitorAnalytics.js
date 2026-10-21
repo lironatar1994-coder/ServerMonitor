@@ -693,6 +693,50 @@ router.get('/apps/:id/visitors', (req, res) => {
     }
 });
 
+router.get('/apps/:id/vitals', (req, res) => {
+    try {
+        const app = assertApp(req.params.id);
+        const range = parseRange(req.query);
+        res.json(require('../observability').vitalsSummary(db, app.id, range.from, range.to));
+    } catch (error) { respondError(res, error); }
+});
+
+router.get('/apps/:id/not-found', (req, res) => {
+    try {
+        const app = assertApp(req.params.id);
+        const range = parseRange(req.query);
+        res.json({ pages: require('../observability').notFoundPages(db, app.id, range.from, range.to) });
+    } catch (error) { respondError(res, error); }
+});
+
+// Chart notes and recorded runtime starts for one site, or the whole fleet.
+router.get('/annotations', (req, res) => {
+    try {
+        const range = parseRange(req.query);
+        const appId = req.query.app_id ? Number(req.query.app_id) : null;
+        res.json(require('../observability').timeline(db, Number.isInteger(appId) ? appId : null, range.from, range.to));
+    } catch (error) { respondError(res, error); }
+});
+
+router.post('/annotations', (req, res) => {
+    try {
+        if (req.user.service || !['owner', 'editor'].includes(req.user.role)) return res.status(403).json({ error: 'נדרשת הרשאת עריכה.' });
+        const note = require('../observability').validateNote(req.body);
+        if (note.appId !== null) assertApp(note.appId);
+        const id = db.prepare('INSERT INTO chart_notes (app_id, at, text, author, created_at) VALUES (?, ?, ?, ?, ?)')
+            .run(note.appId, note.at, note.text, req.user.username, new Date().toISOString()).lastInsertRowid;
+        res.status(201).json({ id: Number(id) });
+    } catch (error) { respondError(res, error); }
+});
+
+router.delete('/annotations/:id', (req, res) => {
+    const note = db.prepare('SELECT author FROM chart_notes WHERE id = ?').get(req.params.id);
+    if (!note) return res.status(404).json({ error: 'ההערה לא נמצאה.' });
+    if (req.user.service || (req.user.role !== 'owner' && note.author !== req.user.username)) return res.status(403).json({ error: 'אפשר למחוק רק הערות שלך.' });
+    db.prepare('DELETE FROM chart_notes WHERE id = ?').run(req.params.id);
+    res.json({ ok: true });
+});
+
 router.get('/apps/:id/timeline', (req, res) => {
     try {
         const app = assertApp(req.params.id);

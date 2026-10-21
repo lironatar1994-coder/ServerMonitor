@@ -5,7 +5,6 @@ import {
   PanelRightOpen,
   ServerCog,
   Settings,
-  Wrench,
   BriefcaseBusiness,
   KeyRound,
   MoreHorizontal,
@@ -27,13 +26,15 @@ const main = [
   { to: "/clients", label: "לקוחות", icon: BriefcaseBusiness },
   { to: "/vault", label: "כספת", icon: KeyRound },
 ];
+// One operations destination; its tabs cover resources, services, availability and backups.
 const operations = [
-  { to: "/infrastructure", label: "שרת ומשאבים", icon: ServerCog },
-  { to: "/services", label: "שירותים", icon: Wrench },
+  { to: "/infrastructure", label: "שרת ושירותים", icon: ServerCog, match: ["/infrastructure", "/services", "/operations"] },
 ];
 const settings = { to: "/settings", label: "הגדרות", icon: Settings };
 const NavItem = ({ item, onClick, badge = 0 }) => {
   const Icon = item.icon;
+  const { pathname } = useLocation();
+  const inSection = item.match?.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   const label = badge ? `${item.label}, ${badge} לא זמינים` : item.label;
   return (
     <NavLink
@@ -41,7 +42,7 @@ const NavItem = ({ item, onClick, badge = 0 }) => {
       onClick={onClick}
       title={label}
       aria-label={label}
-      className={({ isActive }) => `rail-link ${isActive ? "is-active" : ""}`}
+      className={({ isActive }) => `rail-link ${isActive || inSection ? "is-active" : ""}`}
     >
       <Icon aria-hidden="true" />
       <span>{item.label}</span>
@@ -59,7 +60,7 @@ export default function AppShell() {
   const user = useSyncExternalStore(subscribeSession, getSessionSnapshot),
     navigate = useNavigate(),
     location = useLocation(),
-    infrastructure = location.pathname.startsWith("/infrastructure");
+    infrastructure = ["/infrastructure", "/services", "/operations"].some((path) => location.pathname.startsWith(path));
   const logout = async () => {
     try {
       await apiFetch("/auth/logout", { method: "POST", body: "{}" });
@@ -104,7 +105,7 @@ export default function AppShell() {
     };
     let last = Date.now();
     const active = () => {
-      if (Date.now() - last >= 30 * 60000) {
+      if (Date.now() - last >= 2 * 3600000) {
         apiFetch("/auth/logout", { method: "POST", body: "{}" }).catch(
           () => {},
         );
@@ -116,7 +117,7 @@ export default function AppShell() {
       channel.postMessage({ active: last });
     };
     const timer = setInterval(() => {
-      if (Date.now() - last >= 30 * 60000) {
+      if (Date.now() - last >= 2 * 3600000) {
         apiFetch("/auth/logout", { method: "POST", body: "{}" }).catch(
           () => {},
         );
@@ -259,9 +260,7 @@ export default function AppShell() {
         <button
           className={
             more ||
-            ["/settings", "/services"].some((p) =>
-              location.pathname.startsWith(p),
-            )
+            location.pathname.startsWith("/settings")
               ? "is-active"
               : ""
           }
@@ -290,7 +289,6 @@ export default function AppShell() {
               <X />
             </button>
           </div>
-          <NavItem item={operations[1]} onClick={() => setMore(false)} />
           <NavItem item={settings} onClick={() => setMore(false)} />
         </Modal>
       )}

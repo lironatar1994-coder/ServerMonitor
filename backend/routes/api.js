@@ -8,6 +8,7 @@ const { getRecentVisitors, getUniqueVisitors, isTargetAppLine } = require('../lo
 const { getResourceUsage } = require('../resourceUsage');
 
 const { UNIT_PATTERN, getSystemdSnapshot } = require('../systemd');
+const { MAINTENANCE_APP, SSH_APP } = require('../catalogNames');
 const router = express.Router();
 let pm2SnapshotCache = { fetchedAt: 0, processes: [] };
 let cpuSnapshotCache = { fetchedAt: 0, snapshot: null };
@@ -244,6 +245,19 @@ router.get('/operational-health', async (req, res, next) => {
     catch (error) { next(error); }
 });
 
+router.get('/availability', (req, res) => {
+    res.json({ apps: require('../observability').availabilitySummary(db) });
+});
+
+router.get('/backups', (req, res) => {
+    res.json(require('../operationsViews').backups());
+});
+
+router.get('/certificates', async (req, res, next) => {
+    try { res.json(await require('../operationsViews').certificates(db)); }
+    catch (error) { next(error); }
+});
+
 router.get('/server-stats', async (req, res) => {
     const cpuLoad = os.loadavg()[0]; // 1 min average
     const cpuSnapshot = getCpuSnapshot();
@@ -409,11 +423,11 @@ router.get('/:id/logs', (req, res) => {
             res.json({ logs: output.split('\n').filter(Boolean) });
         });
     }
-    if (app.name === 'Cleanup Summary') {
+    if (app.name === MAINTENANCE_APP) {
         const summary = '/var/log/server_cleanup_summary.log';
         return res.json({ logs: fs.existsSync(summary) ? fs.readFileSync(summary, 'utf8').split('\n').filter(Boolean).slice(-100) : ['Maintenance has not produced a summary yet'] });
     }
-    if (app.name === 'SSH Security') {
+    if (app.name === SSH_APP) {
         const logPath = '/var/log/fail2ban.log';
         if (fs.existsSync(logPath)) {
             try {

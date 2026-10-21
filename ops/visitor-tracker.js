@@ -1,4 +1,4 @@
-/* Anonymous navigation only. No forms, query strings, document contents or secrets. */
+/* Anonymous navigation and page-speed numbers only. No forms, query strings, document contents or secrets. */
 (() => {
   const script = document.currentScript;
   const prefix = script?.dataset.prefix || '';
@@ -18,6 +18,33 @@
       return original.call(this, input, options);
     };
     return;
+  }
+  // Core Web Vitals, once per page load, whichever monitor script runs first. Numbers only.
+  if (!window.__veeVitals && 'PerformanceObserver' in window && !document.cookie.split(';').some(c => c.trim() === 'monitor_internal=1')) {
+    window.__veeVitals = true;
+    const vitals = { lcp: null, inp: null, cls: 0, ttfb: null };
+    const watch = (type, handle, options = {}) => { try { new PerformanceObserver(list => list.getEntries().forEach(handle)).observe({ type, buffered: true, ...options }); } catch { /* unsupported */ } };
+    watch('largest-contentful-paint', entry => { vitals.lcp = entry.startTime; });
+    watch('event', entry => { if (entry.interactionId) vitals.inp = Math.max(vitals.inp || 0, entry.duration); }, { durationThreshold: 40 });
+    let windowValue = 0, windowStart = 0, windowLast = 0;
+    watch('layout-shift', entry => {
+      if (entry.hadRecentInput) return;
+      if (entry.startTime - windowLast > 1000 || entry.startTime - windowStart > 5000) { windowValue = 0; windowStart = entry.startTime; }
+      windowValue += entry.value; windowLast = entry.startTime; vitals.cls = Math.max(vitals.cls, windowValue);
+    });
+    try { vitals.ttfb = performance.getEntriesByType('navigation')[0]?.responseStart || null; } catch { /* unsupported */ }
+    let sent = false;
+    const flush = () => {
+      if (sent || document.visibilityState !== 'hidden' || vitals.lcp == null) return;
+      sent = true;
+      const width = innerWidth;
+      fetch(endpoint, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'vitals', event_id: crypto.randomUUID(), path: location.pathname, lcp: vitals.lcp, inp: vitals.inp,
+          cls: Math.round(vitals.cls * 1000) / 1000, ttfb: vitals.ttfb, viewport_class: width < 768 ? 'mobile' : width < 1100 ? 'tablet' : 'desktop',
+          webdriver: navigator.webdriver === true }) }).catch(() => {});
+    };
+    addEventListener('visibilitychange', flush);
+    addEventListener('pagehide', () => { if (document.visibilityState !== 'hidden') return; flush(); });
   }
   const key = `monitor.navigation:${prefix || '/'}`;
   const random = () => crypto.randomUUID();

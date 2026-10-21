@@ -29,14 +29,16 @@ const VisitorOverview = lazy(() => import("./pages/VisitorOverview"));
 const VisitorDetail = lazy(() => import("./pages/VisitorDetail"));
 const Infrastructure = lazy(() => import("./pages/Infrastructure"));
 const Services = lazy(() => import("./pages/Services"));
+const Availability = lazy(() => import("./pages/Availability"));
+const Backups = lazy(() => import("./pages/Backups"));
 const AppDetails = lazy(() => import("./pages/AppDetails"));
 const Settings = lazy(() => import("./pages/Settings"));
 const ClientGrowth = lazy(() => import("./pages/ClientGrowth"));
 const Vault = lazy(() => import("./pages/Vault"));
 
-const VisitorSite = () => {
+const VisitorSite = ({ diagnostics = false }) => {
   const { id } = useParams();
-  return <VisitorDetail key={id} />;
+  return <VisitorDetail key={`${id}:${diagnostics}`} diagnostics={diagnostics} />;
 };
 
 const PageLoader = () => {
@@ -130,9 +132,12 @@ function App() {
               <Route index element={<Navigate to="/visitors" replace />} />
               <Route path="/visitors" element={<VisitorOverview />} />
               <Route path="/visitors/:id" element={<VisitorSite />} />
+              <Route path="/visitors/:id/diagnostics" element={<VisitorSite diagnostics />} />
               <Route path="/infrastructure" element={<Infrastructure />} />
               <Route path="/services" element={<Services />} />
               <Route path="/services/:id" element={<AppDetails />} />
+              <Route path="/operations/availability" element={<Availability />} />
+              <Route path="/operations/backups" element={<Backups />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/vault/*" element={<Vault />} />
               <Route

@@ -3,13 +3,15 @@ const {
     isAuthorizedSignal,
     recordBrowserSignal,
     recordEngagementSignal,
-    recordProductEvent
+    recordProductEvent,
+    recordWebVitals
 } = require('../browserSignals');
 
 const SIGNAL_RECORDERS = {
     growth: require('../growthSignals').recordGrowthSignal,
     engagement: recordEngagementSignal,
-    product: recordProductEvent
+    product: recordProductEvent,
+    vitals: recordWebVitals
 };
 
 const router = express.Router();

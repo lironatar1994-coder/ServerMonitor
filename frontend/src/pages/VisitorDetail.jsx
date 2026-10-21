@@ -10,6 +10,7 @@ import PageInsights from '../components/PageInsights';
 import TrafficChart from '../components/TrafficChart';
 import SiteSwitcher from '../components/SiteSwitcher';
 import SiteLink from '../components/SiteLink';
+import { ChartNotes, NotFoundPanel, SpeedPanel } from '../components/SiteInsights';
 import { previousRange, rangeSearch } from '../lib/dailyCheck';
 import { pageName } from '../lib/analyticsLabels';
 import { formatDateTime, formatNumber } from '../lib/format';
@@ -30,8 +31,10 @@ const BREAKDOWN_META = {
   statuses: { color: 'ochre', empty: 'אין נתוני תגובה' }
 };
 
-const VisitorDetail = () => {
+// `diagnostics` renders the per-connection measurement view on its own route.
+const VisitorDetail = ({ diagnostics = false }) => {
   const { id } = useParams();
+  const [marks, setMarks] = useState([]);
   const { days, custom, setDays, setCustom, resolveRange } = useRange(1);
   const [data, setData] = useState(null);
   const [visitors, setVisitors] = useState({ visitors: [], total: 0, page: 1, limit: 25 });
@@ -100,6 +103,7 @@ const VisitorDetail = () => {
   }, [id, resolveRange]);
 
   const fetchVisitors = useCallback(async () => {
+    if (!diagnostics) return;
     setTableLoading(true);
     try {
       const query = `${rangeQuery(resolveRange())}&page=${page}&limit=25&search=${encodeURIComponent(search)}`;
@@ -107,7 +111,7 @@ const VisitorDetail = () => {
       setTableError('');
     } catch (error) { setTableError(error.message); }
     finally { setTableLoading(false); }
-  }, [id, page, search, resolveRange]);
+  }, [id, page, search, resolveRange, diagnostics]);
 
   useEffect(() => {
     const timeout = window.setTimeout(fetchAnalytics, 0);
@@ -146,10 +150,12 @@ const VisitorDetail = () => {
   return (
     <div className="page page--visitor-detail">
       <PageHead
-        title={data?.app?.name || 'אתר'}
+        title={diagnostics ? 'אבחון מדידה' : data?.app?.name || 'אתר'}
         meta={
           <>
-            <Link className="crumb" to={`/visitors${rangeSearch(data?.range || resolveRange())}`}><ChevronRight aria-hidden="true" /> אתרים</Link>
+            {diagnostics
+              ? <Link className="crumb" to={`/visitors/${id}${rangeSearch(data?.range || resolveRange())}`}><ChevronRight aria-hidden="true" /> {data?.app?.name || 'אתר'}</Link>
+              : <Link className="crumb" to={`/visitors${rangeSearch(data?.range || resolveRange())}`}><ChevronRight aria-hidden="true" /> אתרים</Link>}
             {data?.app && (
               <span className={`chip ${data.app.status === 'online' ? 'is-online' : 'is-offline'}`}>
                 {data.app.status === 'online' ? 'זמין' : 'לא זמין'}
@@ -161,7 +167,7 @@ const VisitorDetail = () => {
           </>
         }
       >
-        <SiteSwitcher currentId={id} range={data?.range || resolveRange()} />
+        {!diagnostics && <SiteSwitcher currentId={id} range={data?.range || resolveRange()} />}
         <RangePicker
           updatedAt={data?.generated_at}
           range={custom}
@@ -175,6 +181,7 @@ const VisitorDetail = () => {
       </PageHead>
 
       <DataState loading={loading && !data} error={error} onRetry={fetchAnalytics}>
+        {!diagnostics && <>
         <TrackingStatus health={data?.tracking_health} site={data?.app?.name} />
         {data?.app?.status && data.app.status !== 'online' && <div className="attention-list"><Link to={`/services/${id}`}>האתר לא זמין בבדיקה האחרונה <ChevronLeft aria-hidden="true" /></Link></div>}
         <StatRow>
@@ -185,8 +192,10 @@ const VisitorDetail = () => {
         <div className="workspace-tabs"><Tabs label="תצוגת אתר" tabs={[{ id: 'overview', label: 'סקירה', icon: ChartNoAxesCombined }, { id: 'pages', label: 'עמודים', icon: PanelsTopLeft }, { id: 'audience', label: 'קהל', icon: Globe }]} value={view} onChange={value => { const next = new URLSearchParams(query); next.set('view', value); next.delete('page'); setQuery(next); }} /></div>
         {view === 'overview' && <>
           {!summary.browser_signal_page_views && <p className="status-line is-attention">לא נמדדה פעילות בטווח הזה.</p>}
-          <TrafficChart data={data} previous={previous} comparisonError={comparisonError} />
+          <TrafficChart data={data} previous={previous} comparisonError={comparisonError} marks={marks} />
+          {data?.range && <ChartNotes appId={Number(id)} range={data.range} onMarks={setMarks} />}
           <Panel title="עמודים מובילים" hint={`הספירה לפי פתיחות עמודים שנרשמו בשרת, ולכן עשויה להיות גבוהה מהצפיות שנמדדו בדפדפן. ${PAGE_VIEW_HINT}`}><RankedList items={data?.pages} max={5} onSelect={setSelectedPath} labelFor={value => pageName(value, data?.app?.name)} /></Panel>
+          {data?.range && <SpeedPanel appId={id} range={data.range} />}
         </>}
         {view === 'audience' && <Panel title="מקורות וקהל" hint="פילוח לפי פתיחות עמודים שנרשמו בשרת; מיקום משוער לפי כתובת רשת." action={<Tabs tabs={BREAKDOWN_TABS} value={breakdown} onChange={setBreakdown} />}><RankedList items={data?.[breakdown]} color={breakdownMeta.color} empty={breakdownMeta.empty} /></Panel>}
         {view === 'pages' && <>
@@ -196,6 +205,7 @@ const VisitorDetail = () => {
           </Panel>
           {selectedPath && data?.app && <PageInsights key={`${id}:${selectedPath}:${days}:${custom?.from}`} app={data.app} path={selectedPath} resolveRange={resolveRange} onClose={() => setSelectedPath(null)} onSelect={setSelectedPath} />}
         </div>
+        {data?.range && <NotFoundPanel appId={id} range={data.range} />}
         <details className="measurement-details"><summary>מעורבות</summary>
         {engagementError && <div className="banner banner--error" role="alert">מדידת השימוש לא נטענה. {engagementError}<button className="btn" onClick={fetchAnalytics}>ניסיון נוסף</button></div>}
         {(data?.app?.name === 'PDF Studio' || data?.app?.name === 'LA webs' || data?.app?.name === 'Miryam Zelig' || data?.app?.name === 'Seder' || Boolean(engagement?.engagement_samples) || Boolean(engagement?.product?.summary?.sessions)) && (
@@ -204,7 +214,9 @@ const VisitorDetail = () => {
         </details>
 
         </>}
-        <details className="measurement-details"><summary>אבחון מדידה</summary>
+        <Link className="diagnostics-link" to={`/visitors/${id}/diagnostics${rangeSearch(data?.range || resolveRange())}`}>אבחון מדידה: חיבורים, תגובות שרת ובקשות אוטומטיות <ChevronLeft aria-hidden="true" /></Link>
+        </>}
+        {diagnostics && <>
         <StatRow>
           <Stat label="כתובות רשת שונות" value={summary.unique_candidates} previous={data?.comparison?.previous?.unique_candidates} hint={CANDIDATE_HINT} />
           <Stat label="פתיחות עמודים לפי השרת" value={summary.page_views} previous={data?.comparison?.previous?.page_views} hint={PAGE_VIEW_HINT} />
@@ -273,7 +285,7 @@ const VisitorDetail = () => {
             </div>
           )}
         </Panel>
-        </details>
+        </>}
       </DataState>
 
       {selectedIp && (

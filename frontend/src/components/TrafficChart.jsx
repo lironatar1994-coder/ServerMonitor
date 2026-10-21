@@ -1,12 +1,26 @@
 import { useState } from 'react';
 import { Eye, Users } from 'lucide-react';
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Panel, Tabs } from './AnalyticsParts';
 import { comparisonSeries } from '../lib/dailyCheck';
 import { formatDateTime, formatNumber } from '../lib/format';
 
 const metrics = [{ id: 'browser_signal_visitors', label: 'משוערים', icon: Users }, { id: 'browser_signal_page_views', label: 'צפיות', icon: Eye }];
-export default function TrafficChart({ data, previous, comparisonError }) {
+// Notes and runtime starts sit on the bucket that contains them.
+const markBuckets = (rows, marks = []) => {
+  const buckets = rows.map((row) => Date.parse(row.bucket));
+  const found = new Map();
+  for (const mark of marks) {
+    const time = Date.parse(mark.at);
+    const index = buckets.findLastIndex((bucket) => bucket <= time);
+    if (index < 0 || (index === buckets.length - 1 && time - buckets[index] > (buckets[1] - buckets[0] || 3600000))) continue;
+    const key = rows[index].bucket;
+    found.set(key, found.get(key) === 'note' ? 'note' : mark.kind);
+  }
+  return [...found];
+};
+
+export default function TrafficChart({ data, previous, comparisonError, marks }) {
   const [metric, setMetric] = useState(metrics[0].id);
   const rows = comparisonSeries(data?.series, previous?.series, data?.range, metric);
   return <Panel title="פעילות לאורך הזמן" className="traffic-panel" hint="מבקרים משוערים או פתיחות עמודים שנמדדו, לפי מקטע זמן. חוסר מדידה אינו הוכחה שאין מבקרים." action={<Tabs tabs={metrics} value={metric} onChange={setMetric} label="מדד בגרף" />}>
@@ -19,6 +33,7 @@ export default function TrafficChart({ data, previous, comparisonError }) {
           <XAxis dataKey="bucket" tickFormatter={v => new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', ...(rows.length > 2 && Date.parse(rows[1].bucket) - Date.parse(rows[0].bucket) === 3600000 ? { hour: '2-digit' } : { day: '2-digit', month: '2-digit' }) }).format(new Date(v))} minTickGap={35} axisLine={false} tickLine={false} tick={{ fill: 'var(--ink-muted)', fontSize: 12 }} />
           <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: 'var(--ink-muted)', fontSize: 12 }} />
           <Tooltip content={({ active, payload }) => active && payload?.length ? <div className="chart-tooltip" dir="rtl">{payload.map(p => <p key={p.dataKey}>{p.dataKey === 'current' ? 'נוכחית' : 'קודמת'} · {formatDateTime(p.dataKey === 'current' ? p.payload.bucket : p.payload.previousBucket)}: <b>{formatNumber(p.value)}</b></p>)}</div> : null} />
+          {markBuckets(rows, marks).map(([bucket, kind]) => <ReferenceLine key={bucket} x={bucket} stroke={kind === 'note' ? 'var(--ochre)' : 'var(--ink-muted)'} strokeDasharray={kind === 'note' ? undefined : '2 4'} />)}
           <Line isAnimationActive={false} dataKey="current" name="נוכחית" stroke="var(--accent)" strokeWidth={2.5} dot={false} />
           <Line isAnimationActive={false} dataKey="previous" name="קודמת" stroke="var(--ink-muted)" strokeWidth={2} strokeDasharray="5 5" dot={false} />
         </LineChart>

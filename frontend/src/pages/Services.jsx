@@ -3,6 +3,7 @@ import { ChevronLeft, ExternalLink, Plus, Search, X } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import AddAppModal from "../components/AddAppModal";
 import SiteLink from "../components/SiteLink";
+import OpsTabs from "../components/OpsTabs";
 import {
   DataState,
   Empty,
@@ -20,6 +21,23 @@ const FILTERS = [
   { id: "online", label: "זמינים" },
   { id: "issues", label: "לבדיקה" },
 ];
+
+// Sites first, then systems people log into, background processes and server infrastructure.
+const SERVICE_GROUPS = [
+  ["issues", "דורש בדיקה"],
+  ["sites", "אתרים"],
+  ["systems", "מערכות"],
+  ["background", "תהליכי רקע"],
+  ["infrastructure", "תשתית"],
+];
+const serviceGroup = (app) =>
+  app.analytics_enabled
+    ? "sites"
+    : app.url
+      ? "systems"
+      : (app.pm2_name || app.systemd_unit) && !/^postgresql/.test(app.systemd_unit || "")
+        ? "background"
+        : "infrastructure";
 
 const Services = () => {
   const [params] = useSearchParams();
@@ -87,9 +105,9 @@ const Services = () => {
   const online = apps.filter((app) => !serviceState(app, operations, operationsError).needsCheck).length;
 
   return (
-    <div className="page page--services">
+    <div className="page page--services page--infrastructure">
       <PageHead
-        title="שירותים"
+        title="תפעול"
         meta={
           <span className="muted">
             {online} מתוך {apps.length} זמינים
@@ -106,6 +124,7 @@ const Services = () => {
           </button>
         )}
       </PageHead>
+      <OpsTabs />
 
       <DataState loading={loading} error={error} onRetry={fetchApps}>
         {operationsError && (
@@ -146,8 +165,19 @@ const Services = () => {
           bleed
         >
           {visible.length ? (
+            <div className="service-groups">
+              {SERVICE_GROUPS.map(([group, groupLabel]) => {
+                // Anything that needs a check is pinned above its usual group.
+                const items = visible.filter((app) => {
+                  const needsCheck = serviceState(app, operations, operationsError).needsCheck;
+                  return group === "issues" ? needsCheck : !needsCheck && serviceGroup(app) === group;
+                });
+                if (!items.length) return null;
+                return (
+            <section key={group} aria-label={groupLabel}>
+            <h3 className="service-group">{groupLabel}<small>{items.length}</small></h3>
             <ul className="service-list">
-              {visible.map((app) => {
+              {items.map((app) => {
                 const state = serviceState(app, operations, operationsError);
                 return (
                   <li key={app.id}>
@@ -215,6 +245,10 @@ const Services = () => {
                 );
               })}
             </ul>
+            </section>
+                );
+              })}
+            </div>
           ) : (
             <Empty
               text={

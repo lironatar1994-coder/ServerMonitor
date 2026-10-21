@@ -41,6 +41,7 @@ app.use('/serve-monitor/api/apps', apiRoutes);
 app.use('/serve-monitor/api/browser-signals', browserSignalRoutes);
 app.use('/serve-monitor/api/visitor-analytics', visitorAnalyticsRoutes);
 app.use('/serve-monitor/api/client-growth', require('./routes/clientGrowth'));
+app.use('/serve-monitor/api/push', require('./routes/push'));
 app.use('/serve-monitor/api', (req, res) => res.status(404).json({ error: 'הנתיב לא נמצא.' }));
 
 // Serve frontend

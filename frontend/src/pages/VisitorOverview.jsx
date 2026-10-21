@@ -29,6 +29,7 @@ import {
 import { formatAgo, formatDateTime, formatNumber } from "../lib/format";
 import TrackingStatus from "../components/TrackingStatus";
 import SiteLink from "../components/SiteLink";
+import { ChartNotes } from "../components/SiteInsights";
 import TrafficChart from "../components/TrafficChart";
 import { previousRange, rangeSearch } from "../lib/dailyCheck";
 import { VISITOR_HINT, CONNECTION_HINT } from "../lib/analyticsLabels";
@@ -62,6 +63,7 @@ const VisitorOverview = () => {
   });
   const [breakdown, setBreakdown] = useState("pages");
   const [showIdle, setShowIdle] = useState(false);
+  const [marks, setMarks] = useState([]);
   const request = useRef(0);
   const fetchAnalytics = useCallback(
     async (quiet = false) => {
@@ -447,7 +449,9 @@ const VisitorOverview = () => {
           data={data}
           previous={previous}
           comparisonError={comparisonError}
+          marks={marks}
         />
+        {data?.range && <ChartNotes range={data.range} onMarks={setMarks} />}
         <details className="measurement-details">
           <summary>אבחון מדידה</summary>
           <StatRow>

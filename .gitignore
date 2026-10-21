@@ -19,3 +19,4 @@ __pycache__/
 
 # Local review screenshots and report previews may contain internal metrics.
 .impeccable/review/
+backend/.push-key.json

@@ -37,7 +37,7 @@
 - `pages/Vault.jsx` owns encrypted list/detail orchestration, on-demand secrets, 15-second reveal, worker termination, five-minute idle lock and one-minute hidden lock. Never persist plaintext, passphrases, keys or decrypted search indexes.
 - `lib/session.js` holds CSRF/profile state in memory; human credentials use HttpOnly cookies. Remove legacy localStorage tokens without reusing them. `SecurityStep` owns MFA enrollment/verification and one-use code saving; `Modal` owns native modal focus containment.
 - `SecurityStep` and `security-step.css` guide Google Authenticator setup with a browser-generated QR, same-phone manual key, six-digit phone-code input and a separate backup-code flow. Keep setup/QR only in memory, clear them after enrollment, offer failure recovery and explicit backup saving/download. The bundled QR encoder is functional; never use a remote QR service or put the secret in a link.
-- Human sessions expire after 30 idle minutes or 12 hours; logout broadcasts to other tabs. UI permissions mirror server checks and cannot replace them.
+- Human sessions expire after two idle hours or 12 hours; logout broadcasts to other tabs. UI permissions mirror server checks and cannot replace them.
 
 
 - Keep `מבקרים משוערים` explicit; compact labels `ביקורים` and `צפיות` mean measured visits and recorded page opens, with full meaning in accessible labels and shared hints. Mobile comparison tables retain aligned numeric columns with one subdued text header; omit repeated row icons. Keep low samples visible with a named warning icon and missing measurement with `לא נמדד`.
@@ -75,7 +75,10 @@
 - The visits column includes an equivalent visual bar scaled to the maximum measured sessions across all sites in the selected period. Search/sort must not change that denominator. The count remains visible and accessible; zero activity has zero fill, and bars do not imply business success or people.
 - Small samples use absolute change; zero baselines say no previous activity. A failed comparison stays unavailable, never a fabricated zero. Show real data-generation/check timestamps, never unconditional connected badges.
 - Client overview prioritizes overdue follow-up, open inquiries and upcoming tasks; goals/campaigns/history/sharing are secondary. Browser clicks, source records and manual outcomes remain separate.
-- Service actions live in a separate administration disclosure, retaining confirmation. Mobile navigation labels are `אתרים`, `לקוחות`, `כספת`, `שרת`, `עוד`; More opens services/settings in a native modal, with safe-area spacing and 44px targets.
+- Service actions live in a separate administration disclosure, retaining confirmation. Mobile navigation labels are `אתרים`, `לקוחות`, `כספת`, `שרת`, `עוד`; More opens settings in a native modal, with safe-area spacing and 44px targets.
+- `OpsTabs` joins `/infrastructure`, `/services`, `/operations/availability` and `/operations/backups` into one graphite operations workspace behind one navigation destination. Services group into a pinned `דורש בדיקה` group, then sites, systems, background processes and infrastructure. Resource rankings show the top eight with an expander.
+- The site page adds `SpeedPanel` (p75 Core Web Vitals with Google's thresholds), `NotFoundPanel` and `ChartNotes` (notes plus runtime starts, drawn as `TrafficChart` reference lines); per-connection diagnostics live on `/visitors/:id/diagnostics` and load only there.
+- `PushSettings` subscribes a device through `public/sw.js` (push and notification clicks only, never fetch caching) and the installable `manifest.webmanifest`; iOS requires adding to the home screen first.
 
 ## Work Guidance
 

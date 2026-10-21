@@ -532,3 +532,65 @@ dialog.mobile-more { margin-block-start: auto; margin-block-end: 80px; inset: 0;
 .rail-badge { position: absolute; inset-inline-end: .65rem; top: 50%; transform: translateY(-50%); display: grid; place-items: center; min-width: 1.3rem; height: 1.3rem; padding: 0 .3rem; border-radius: 999px; background: #B13443; color: #FFFFFF; font-size: .72rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .shell--collapsed .rail-badge { top: .35rem; inset-inline-end: .35rem; transform: none; }
 @media (max-width: 900px) { .bottom-nav .rail-badge { top: .3rem; inset-inline-end: calc(50% - 1.45rem); transform: none; min-width: 1.1rem; height: 1.1rem; font-size: .66rem; } }
+
+/* Operations workspace: shared tabs, grouped services, availability and backups. */
+.ops-tabs { margin-block: -.25rem 1rem; }
+.service-group { display: flex; align-items: baseline; gap: .5rem; margin: 0; padding: .7rem 1rem .35rem; font-size: .8rem; font-weight: 600; color: var(--ink-muted); border-top: 1px solid var(--line); }
+.service-groups section:first-child .service-group { border-top: 0; }
+.service-group small { font-weight: 400; font-variant-numeric: tabular-nums; }
+.is-danger { color: var(--vermilion); }
+.is-attention { color: var(--ochre); }
+.is-healthy { color: var(--healthy); }
+.availability-table { display: grid; }
+.availability-row { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(4.5rem, .8fr)) minmax(0, 1.4fr) 1.2rem; align-items: center; gap: .75rem; min-height: 52px; padding: .45rem 1rem; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; font-variant-numeric: tabular-nums; }
+.availability-row:hover { background: var(--row-hover); }
+.availability-row--head { min-height: 36px; border-top: 0; background: var(--paper-deep); color: var(--ink-muted); font-size: .74rem; }
+.availability-row--head:hover { background: var(--paper-deep); }
+.availability-name { display: flex; flex-wrap: wrap; align-items: center; gap: .15rem .5rem; min-width: 0; }
+.availability-name i { width: .5rem; height: .5rem; border-radius: 50%; flex: none; }
+.availability-name b { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+.availability-name small, .availability-last { color: var(--ink-muted); font-size: .76rem; }
+.availability-row > svg { width: 1rem; height: 1rem; color: var(--ink-muted); }
+.backup-list { margin: 0; padding: 0; list-style: none; }
+.backup-list > li { border-top: 1px solid var(--line); }
+.backup-list > li:first-child { border-top: 0; }
+.backup-list button, .backup-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: .75rem; width: 100%; min-height: 52px; padding: .45rem 1rem; border: 0; background: transparent; color: var(--ink); font: inherit; text-align: start; font-variant-numeric: tabular-nums; }
+.backup-list button { cursor: pointer; }
+.backup-list button:hover { background: var(--row-hover); }
+.backup-list button > span, .backup-row > span:first-child { display: grid; gap: .1rem; min-width: 0; }
+.backup-list small { color: var(--ink-muted); font-size: .76rem; }
+.backup-list svg { width: 1.1rem; height: 1.1rem; }
+.backup-files { margin: 0 0 .5rem; padding: 0 1rem; list-style: none; font-size: .78rem; color: var(--ink-muted); }
+.backup-files li { display: flex; justify-content: space-between; gap: 1rem; padding: .2rem 0; }
+@media (max-width: 760px) {
+  .availability-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .3rem .6rem; padding-block: .6rem; }
+  .availability-row--head { display: none; }
+  .availability-name { grid-column: 1 / -1; }
+  .availability-row [data-label]::before { content: attr(data-label); display: block; color: var(--ink-muted); font-size: .7rem; }
+  .availability-last { grid-column: 1 / -1; }
+  .availability-row > svg { display: none; }
+}
+.availability-name i.is-online { background: var(--healthy); }
+.availability-name i.is-offline { background: var(--vermilion); }
+
+/* Site page: speed, chart notes and the diagnostics entry. */
+.vitals-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; margin: 0; }
+.vitals-grid > div { display: grid; gap: .25rem; min-width: 0; }
+.vitals-grid dt { color: var(--ink-muted); font-size: .78rem; }
+.vitals-grid dd { margin: 0; font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.vitals-grid dd small { font-size: .74rem; font-weight: 500; }
+.chart-notes { display: grid; gap: .5rem; margin-block: -.4rem 1rem; }
+.chart-notes ul { margin: 0; padding: 0; list-style: none; display: grid; gap: .15rem; }
+.chart-notes li { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem .6rem; min-height: 44px; font-size: .82rem; }
+.chart-notes li > svg { width: 1rem; height: 1rem; color: var(--ink-muted); flex: none; }
+.chart-notes time { color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.chart-notes small { color: var(--ink-muted); }
+.chart-notes__add { justify-self: start; }
+.chart-notes__form { display: flex; flex-wrap: wrap; gap: .5rem; }
+.chart-notes__form input { flex: 1 1 16rem; min-height: 44px; padding: .5rem .65rem; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--paper-light); color: var(--ink); font: inherit; }
+.diagnostics-link { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-height: 48px; margin-block-start: 1rem; padding: .6rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-light); color: var(--ink-muted); text-decoration: none; font-size: .86rem; }
+.diagnostics-link:hover { color: var(--accent); background: var(--row-hover); }
+.diagnostics-link svg { width: 1rem; height: 1rem; }
+@media (max-width: 760px) { .vitals-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.push-settings { display: grid; gap: .5rem; margin-block-start: 1rem; padding-block-start: 1rem; border-top: 1px solid var(--line); }
+.push-settings h3 { margin: 0; font-size: .95rem; font-weight: 600; }

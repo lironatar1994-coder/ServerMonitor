@@ -12,6 +12,7 @@ import { Panel, PageHead, Tabs } from "../components/AnalyticsParts";
 import { apiFetch } from "../lib/api";
 import { getSessionSnapshot } from "../lib/session";
 import InternalVisits from "../components/InternalVisits";
+import PushSettings from "../components/PushSettings";
 const tabs = [
   { id: "account", label: "חשבון" },
   { id: "security", label: "אבטחה" },
@@ -192,6 +193,7 @@ export default function Settings() {
               כשהוא חוזר לפעול.
             </p>
             <p className="muted">תוכן הכספת אינו נכלל בדוחות.</p>
+            {!user.service && <PushSettings />}
             {user.role === "owner" && (
               <Link className="btn" to="/services">
                 שירותי התראות <ExternalLink />

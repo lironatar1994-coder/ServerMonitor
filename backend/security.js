@@ -7,6 +7,8 @@ const OTPAuth = require("otpauth");
 const hash = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const random = (bytes = 32) => crypto.randomBytes(bytes).toString("base64url");
 const now = () => Date.now();
+// Monitoring screens stay signed in for two idle hours; the vault still locks after five minutes.
+const IDLE_MS = 2 * 3600000;
 const production = () => process.env.NODE_ENV === "production";
 const cookieName = () => (production() ? "__Host-monitor" : "monitor-session");
 const origin = () =>
@@ -90,7 +92,7 @@ function makeSession(
     csrf = random();
   db.prepare("DELETE FROM auth_sessions WHERE expires_at<? OR last_seen<?").run(
     t,
-    t - 30 * 60000,
+    t - IDLE_MS,
   );
   db.prepare("INSERT INTO auth_sessions VALUES (?,?,?,?,?,?,?,?)").run(
     hash(token),
@@ -131,7 +133,7 @@ function readSession(db, req) {
     !row ||
     row.disabled ||
     row.expires_at <= now() ||
-    row.last_seen < now() - 30 * 60000 ||
+    row.last_seen < now() - IDLE_MS ||
     (req.headers.authorization && row.kind !== "monitor")
   )
     return null;
