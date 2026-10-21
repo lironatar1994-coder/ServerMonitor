@@ -86,6 +86,7 @@ function buildOperationalHealth({
   discovered = { rows: [], error: false },
   whatsapp,
   alertsConfigured = true,
+  pcCopiedAt = undefined,
   now = Date.now(),
 }) {
   const issues = [];
@@ -205,6 +206,16 @@ function buildOperationalHealth({
       "לא נמצא גיבוי מוצלח מ־36 השעות האחרונות.",
       "error",
     );
+  // The PC copy is the only off-server backup; undefined means the check was not available.
+  if (pcCopiedAt !== undefined && !fresh(pcCopiedAt, now, 48 * 3600000))
+    add(
+      "backup-pc",
+      "הגיבוי לא הועתק למחשב",
+      pcCopiedAt
+        ? `ההעתקה האחרונה למחשב: ${new Date(pcCopiedAt * 1000).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" })}`
+        : "לא נמצאה העתקה למחשב.",
+      "warning",
+    );
   const report = (type) => {
     const row = reports.find((item) => item.report_type === type);
     return {
@@ -258,6 +269,17 @@ function buildOperationalHealth({
   };
 }
 
+// Newest PC acknowledgement (seconds), null when none, undefined when unreadable.
+function latestAcknowledgement(dir = "/var/lib/lawebs-maintenance/pc-acknowledgements") {
+  try {
+    const times = fs.readdirSync(dir).filter((name) => /^\d{8}T\d{6}Z\.json$/.test(name))
+      .map((name) => fs.statSync(`${dir}/${name}`).mtimeMs / 1000);
+    return times.length ? Math.max(...times) : null;
+  } catch {
+    return undefined;
+  }
+}
+
 async function operationalHealth(db, processes) {
   const { getMailerConfig } = require("./emailReports");
   const mail = getMailerConfig();
@@ -278,6 +300,7 @@ async function operationalHealth(db, processes) {
       .all().map(app => { if (!app.pm2_name || !processes.length) return app; const running = processes.find(item => item.name === app.pm2_name); return running?.pm2_env?.status === 'online' ? app : {...app,status:'offline'}; }),
     processes,
     discovered: await applicationServices(),
+    pcCopiedAt: latestAcknowledgement(),
     alertsConfigured: Boolean(mail.apiKey && (process.env.ALERT_EMAIL_TO || mail.recipient) && mail.from && !mail.from.includes("<undefined>")),
   });
 }

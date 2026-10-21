@@ -32,6 +32,7 @@
 
 - `operationalHealth.js` and authenticated GET `/apps/operational-health` expose a sanitized read-only attention view: recent host/browser/backup snapshots, report timestamps, active custom systemd apps missing from the catalog, legacy alert-queue counts and Seder connection readiness. This view does not create catalog records, change backup policy, send messages or restart services.
 - Read bounded JSON files (64 KiB), query the legacy message store read-only for aggregate pending counts only, and never expose recipients, message contents, QR codes or pairing data. Custom-unit discovery is limited to 100 names in `/etc/systemd/system`, cached 60 seconds and bounded to three seconds; unavailable discovery is explicit.
+- Operational health warns when the newest PC backup acknowledgement is older than 48 hours or missing; an unreadable acknowledgement folder is not reported as a gap.
 - Operational source freshness is 30 minutes for host health, seven hours for browser checks, 36 hours for documented backups and three minutes for messaging readiness. Keep failures and missing sources visible; prioritize delivery/connection/coverage warnings ahead of routine maintenance. Source-specific checks passing never imply complete catalog or backup coverage.
 
 

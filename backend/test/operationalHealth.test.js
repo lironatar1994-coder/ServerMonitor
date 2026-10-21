@@ -35,3 +35,10 @@ test('legacy application destinations retain exact dates and reject unsafe retur
   assert.equal(safeReturnPath('/server'+query),'/server'+query);
   assert.equal(safeReturnPath('//evil.example'),'\/visitors');
 });
+test('a stale or missing PC backup copy is a warning, an unreadable check is not', () => {
+  const stale = buildOperationalHealth({ ...base, pcCopiedAt: now / 1000 - 3 * 86400 });
+  assert.equal(stale.issues.find(item => item.id === 'backup-pc')?.severity, 'warning');
+  assert.ok(buildOperationalHealth({ ...base, pcCopiedAt: null }).issues.some(item => item.id === 'backup-pc'));
+  assert.equal(buildOperationalHealth({ ...base, pcCopiedAt: now / 1000 - 3600 }).issues.some(item => item.id === 'backup-pc'), false);
+  assert.equal(buildOperationalHealth({ ...base }).issues.some(item => item.id === 'backup-pc'), false);
+});
