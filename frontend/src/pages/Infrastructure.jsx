@@ -314,19 +314,21 @@ const Infrastructure = () => {
               <small>תלויות</small>
               <strong>
                 <bdi dir="ltr">
-                  {formatBytes(storage?.totals?.dependency_bytes)}
+                  {storage?.totals ? formatBytes(storage.totals.dependency_bytes) : "—"}
                 </bdi>
               </strong>
-              <b>{storage?.projects?.length || 0} פרויקטים</b>
+              <b>{storage?.projects ? `${storage.projects.length} פרויקטים` : "האחסון נסרק"}</b>
             </span>
             <span>
               <small>גיבויים ו-Rollback</small>
               <strong>
                 <bdi dir="ltr">
-                  {formatBytes(
-                    (Number(storage?.totals?.backup_bytes) || 0) +
-                      (Number(storage?.totals?.rollback_bytes) || 0),
-                  )}
+                  {storage?.totals
+                    ? formatBytes(
+                        (Number(storage.totals.backup_bytes) || 0) +
+                          (Number(storage.totals.rollback_bytes) || 0),
+                      )
+                    : "—"}
                 </bdi>
               </strong>
             </span>
