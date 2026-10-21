@@ -16,6 +16,8 @@ export default function SecurityStep({ mode = "mfa", onComplete, username, purpo
   const [codes, setCodes] = useState(null), [ready, setReady] = useState(null);
   const [error, setError] = useState(""), [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false), [notice, setNotice] = useState("");
+  // Only sign-in offers remembering; re-checking a code for a sensitive action never does.
+  const [remember, setRemember] = useState(() => { try { return localStorage.getItem("monitor-remember-device") === "1"; } catch { return false; } });
 
   const loadSetup = useCallback(async (signal) => {
     setSetupBusy(true); setSetupError("");
@@ -49,7 +51,9 @@ export default function SecurityStep({ mode = "mfa", onComplete, username, purpo
   const verify = async (event) => {
     event.preventDefault(); setBusy(true); setError(""); setNotice("");
     try {
-      const result = await apiFetch("/auth/mfa/verify", { method: "POST", body: JSON.stringify({ code: code.trim() }) });
+      const rememberDevice = purpose === "login" && remember;
+      try { localStorage.setItem("monitor-remember-device", rememberDevice ? "1" : "0"); } catch { /* storage unavailable */ }
+      const result = await apiFetch("/auth/mfa/verify", { method: "POST", body: JSON.stringify({ code: code.trim(), remember: rememberDevice }) });
       setCode(""); setSetup(null); setQr("");
       if (result.recoveryCodes) { setCodes(result.recoveryCodes); setReady(result); }
       else { setSession(result); onComplete?.(); }
@@ -73,6 +77,13 @@ export default function SecurityStep({ mode = "mfa", onComplete, username, purpo
       <small id="security-code-help">{backup
         ? "כל קוד גיבוי מאפשר כניסה אחת בלבד."
         : "הקוד מופיע בטלפון ומתחלף כל 30 שניות."}</small>
+      {purpose === "login" && (
+        <label className="check-row">
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} aria-describedby="remember-device-help" />
+          לזכור את המכשיר הזה ל־30 יום
+        </label>
+      )}
+      {purpose === "login" && <small id="remember-device-help">רק במחשב או בטלפון האישי. הכספת עדיין תבקש את סיסמת הכספת.</small>}
       {error && <p role="alert" className="banner banner--error">{error}</p>}
       <button className="btn btn--primary btn--wide" disabled={busy || (enrolling && !setup) || (!backup && code.length !== 6)}>
         {busy ? "בודק…" : enrolling ? "חיבור והמשך" : purpose === "login" ? "כניסה" : "אישור והמשך"}

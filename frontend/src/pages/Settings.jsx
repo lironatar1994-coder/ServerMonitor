@@ -13,6 +13,7 @@ import { apiFetch } from "../lib/api";
 import { getSessionSnapshot } from "../lib/session";
 import InternalVisits from "../components/InternalVisits";
 import PushSettings from "../components/PushSettings";
+import TrustedDevices from "../components/TrustedDevices";
 const tabs = [
   { id: "account", label: "חשבון" },
   { id: "security", label: "אבטחה" },
@@ -22,7 +23,10 @@ const tabs = [
 ];
 export default function Settings() {
   const user = getSessionSnapshot(),
-    [tab, setTab] = useState("account"),
+    [tab, setTab] = useState(() => {
+      const linked = new URLSearchParams(window.location.search).get("tab");
+      return tabs.some((item) => item.id === linked) ? linked : "account";
+    }),
     [oldPassword, setOld] = useState(""),
     [newPassword, setNew] = useState(""),
     [confirm, setConfirm] = useState(""),
@@ -145,7 +149,7 @@ export default function Settings() {
               </div>
               <div>
                 <dt>התחברות</dt>
-                <dd>עד 12 שעות</dd>
+                <dd>12 שעות, או 30 יום במכשיר שמור</dd>
               </div>
             </dl>
             <div className="settings-security-actions">
@@ -158,7 +162,7 @@ export default function Settings() {
                       method: "POST",
                       body: "{}",
                     });
-                    setFeedback({ text: "שאר ההתחברויות נותקו." });
+                    setFeedback({ text: "שאר ההתחברויות והמכשירים השמורים נותקו." });
                   })
                 }
               >
@@ -168,6 +172,7 @@ export default function Settings() {
                 <KeyRound /> פתיחת הכספת
               </Link>
             </div>
+            <TrustedDevices disabled={user.service} />
           </Panel>
         )}
         {tab === "team" && (

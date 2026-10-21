@@ -9,8 +9,15 @@ const random = (bytes = 32) => crypto.randomBytes(bytes).toString("base64url");
 const now = () => Date.now();
 // Monitoring screens stay signed in for two idle hours; the vault still locks after five minutes.
 const IDLE_MS = 2 * 3600000;
+// A remembered device skips password and code for 30 days, then signs in fully again.
+const DEVICE_MS = 30 * 86400000;
+const DEVICE_LIMIT = 10;
+// Two tabs may resume at once; a rotated token stays valid this long, then reuse means theft.
+const DEVICE_GRACE_MS = 60000;
 const production = () => process.env.NODE_ENV === "production";
 const cookieName = () => (production() ? "__Host-monitor" : "monitor-session");
+const deviceCookieName = () =>
+  production() ? "__Host-monitor-device" : "monitor-device";
 const origin = () =>
   process.env.MONITOR_ORIGIN || "https://monitor.vee-app.co.il";
 const failure = (res, status, error) => res.status(status).json({ error });
@@ -34,7 +41,12 @@ function initSecurity(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS auth_sessions (token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id),csrf TEXT NOT NULL,created_at INTEGER NOT NULL,last_seen INTEGER NOT NULL,expires_at INTEGER NOT NULL,mfa_at INTEGER NOT NULL DEFAULT 0,kind TEXT NOT NULL DEFAULT 'user');
     CREATE INDEX IF NOT EXISTS auth_sessions_user ON auth_sessions(user_id);
     CREATE TABLE IF NOT EXISTS auth_recovery (user_id INTEGER NOT NULL REFERENCES users(id),code_hash TEXT NOT NULL,PRIMARY KEY(user_id,code_hash));
-    CREATE TABLE IF NOT EXISTS auth_limits (bucket TEXT PRIMARY KEY,count INTEGER NOT NULL,expires_at INTEGER NOT NULL);`);
+    CREATE TABLE IF NOT EXISTS auth_limits (bucket TEXT PRIMARY KEY,count INTEGER NOT NULL,expires_at INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS auth_devices (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL REFERENCES users(id),token_hash TEXT NOT NULL UNIQUE,previous_hash TEXT,rotated_at INTEGER NOT NULL DEFAULT 0,label TEXT NOT NULL,created_at INTEGER NOT NULL,last_used INTEGER NOT NULL,expires_at INTEGER NOT NULL,mfa_at INTEGER NOT NULL);
+    CREATE INDEX IF NOT EXISTS auth_devices_user ON auth_devices(user_id);
+    CREATE INDEX IF NOT EXISTS auth_devices_previous ON auth_devices(previous_hash);`);
+  if (!db.prepare("PRAGMA table_info(auth_sessions)").all().some((row) => row.name === "device_id"))
+    db.exec("ALTER TABLE auth_sessions ADD COLUMN device_id INTEGER");
 }
 function serverKey() {
   const file =
@@ -85,7 +97,7 @@ async function verifyPassword(user, password, db) {
 function makeSession(
   db,
   userId,
-  { mfa = false, kind = "user", lifetime = 12 * 3600000 } = {},
+  { mfa = false, mfaAt = 0, kind = "user", lifetime = 12 * 3600000, deviceId = null } = {},
 ) {
   const token = random(),
     t = now(),
@@ -94,17 +106,99 @@ function makeSession(
     t,
     t - IDLE_MS,
   );
-  db.prepare("INSERT INTO auth_sessions VALUES (?,?,?,?,?,?,?,?)").run(
-    hash(token),
-    userId,
-    csrf,
-    t,
-    t,
-    t + lifetime,
-    mfa ? t : 0,
-    kind,
-  );
+  db.prepare(
+    "INSERT INTO auth_sessions (token_hash,user_id,csrf,created_at,last_seen,expires_at,mfa_at,kind,device_id) VALUES (?,?,?,?,?,?,?,?,?)",
+  ).run(hash(token), userId, csrf, t, t, t + lifetime, mfaAt || (mfa ? t : 0), kind, deviceId);
   return { token, csrf };
+}
+// "Chrome · Windows" — the only device detail kept; the full user agent is not stored.
+function deviceLabel(userAgent = "") {
+  const ua = String(userAgent).slice(0, 512);
+  const browser = [[/Edg\//, "Edge"], [/SamsungBrowser/, "Samsung Internet"], [/Firefox\//, "Firefox"], [/OPR\//, "Opera"], [/Chrome\//, "Chrome"], [/Safari\//, "Safari"]]
+    .find(([pattern]) => pattern.test(ua))?.[1] || "דפדפן";
+  const system = [[/iPhone/, "iPhone"], [/iPad/, "iPad"], [/Android/, "Android"], [/Windows/, "Windows"], [/Mac OS X/, "Mac"], [/Linux/, "Linux"]]
+    .find(([pattern]) => pattern.test(ua))?.[1] || "מכשיר";
+  return `${browser} · ${system}`;
+}
+function readCookie(req, name) {
+  const cookie = (req.headers.cookie || "")
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(name + "="));
+  const value = cookie ? cookie.slice(cookie.indexOf("=") + 1) : "";
+  return value && value.length <= 128 ? value : "";
+}
+function setDeviceCookie(res, token, expiresAt) {
+  res.cookie(deviceCookieName(), token, {
+    httpOnly: true,
+    secure: production(),
+    sameSite: "strict",
+    path: "/",
+    maxAge: Math.max(0, expiresAt - now()),
+  });
+}
+function clearDeviceCookie(res) {
+  res.clearCookie(deviceCookieName(), { path: "/", secure: production(), httpOnly: true, sameSite: "strict" });
+}
+/** Remember this browser after a full password + code sign-in; returns the device id. */
+function rememberDevice(db, res, userId, { userAgent, mfaAt = now() } = {}) {
+  const token = random(),
+    t = now(),
+    expiresAt = t + DEVICE_MS;
+  const id = db.transaction(() => {
+    db.prepare("DELETE FROM auth_devices WHERE expires_at<=?").run(t);
+    const kept = db.prepare("SELECT id FROM auth_devices WHERE user_id=? ORDER BY last_used DESC").all(userId).slice(DEVICE_LIMIT - 1);
+    for (const row of kept) forgetDeviceById(db, userId, row.id);
+    return db
+      .prepare("INSERT INTO auth_devices (user_id,token_hash,label,created_at,last_used,expires_at,mfa_at) VALUES (?,?,?,?,?,?,?)")
+      .run(userId, hash(token), deviceLabel(userAgent), t, t, expiresAt, mfaAt).lastInsertRowid;
+  })();
+  setDeviceCookie(res, token, expiresAt);
+  return Number(id);
+}
+function forgetDeviceById(db, userId, id) {
+  db.prepare("DELETE FROM auth_sessions WHERE device_id=? AND user_id=?").run(id, userId);
+  return db.prepare("DELETE FROM auth_devices WHERE id=? AND user_id=?").run(id, userId).changes;
+}
+/**
+ * Open a new session from a remembered device when no valid session exists.
+ * Rotates the device token on every use; a stale token presented after the grace
+ * window means the cookie was copied, so that device is revoked with its sessions.
+ * The new session keeps the original code time, so recent-code checks still ask again.
+ */
+function resumeDevice(db, req, res) {
+  const token = readCookie(req, deviceCookieName());
+  if (!token) return null;
+  const site = req.headers["sec-fetch-site"];
+  if (site && site !== "same-origin") return null;
+  const t = now(),
+    tokenHash = hash(token);
+  const valid = "u.disabled=0 AND u.mfa_secret IS NOT NULL AND u.password_upgrade=0 AND d.expires_at>?";
+  let device = db.prepare(`SELECT d.* FROM auth_devices d JOIN users u ON u.id=d.user_id WHERE d.token_hash=? AND ${valid}`).get(tokenHash, t);
+  let rotate = Boolean(device);
+  if (!device) {
+    const stale = db.prepare("SELECT d.* FROM auth_devices d WHERE d.previous_hash=?").get(tokenHash);
+    if (stale && stale.rotated_at > t - DEVICE_GRACE_MS)
+      device = db.prepare(`SELECT d.* FROM auth_devices d JOIN users u ON u.id=d.user_id WHERE d.id=? AND ${valid}`).get(stale.id, t);
+    else if (stale) forgetDeviceById(db, stale.user_id, stale.id);
+    if (!device) {
+      clearDeviceCookie(res);
+      return null;
+    }
+  }
+  if (rotate) {
+    const next = random();
+    db.prepare("UPDATE auth_devices SET token_hash=?,previous_hash=?,rotated_at=?,last_used=? WHERE id=?").run(hash(next), tokenHash, t, t, device.id);
+    setDeviceCookie(res, next, device.expires_at);
+  }
+  const session = makeSession(db, device.user_id, { mfaAt: device.mfa_at, deviceId: device.id });
+  return { ...session, userId: device.user_id, deviceId: device.id };
+}
+/** The device id behind this browser's remembered-device cookie, if it is still valid. */
+function currentDeviceId(db, req) {
+  const token = readCookie(req, deviceCookieName());
+  if (!token) return null;
+  return db.prepare("SELECT id FROM auth_devices WHERE token_hash=? OR previous_hash=?").get(hash(token), hash(token))?.id ?? null;
 }
 function setCookie(res, token) {
   res.cookie(cookieName(), token, {
@@ -253,6 +347,14 @@ module.exports = {
   makeSession,
   setCookie,
   readSession,
+  DEVICE_MS,
+  deviceCookieName,
+  deviceLabel,
+  rememberDevice,
+  resumeDevice,
+  forgetDeviceById,
+  currentDeviceId,
+  clearDeviceCookie,
   authMiddleware,
   allowedOrigin,
   owner,

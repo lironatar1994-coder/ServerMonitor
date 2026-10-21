@@ -20,6 +20,15 @@ export async function apiFetch(path, options = {}) {
   });
 
   if (response.status === 401) {
+    // An expired session on a remembered device reopens quietly; retry the request once.
+    if (!options.resumed && !path.startsWith('/auth/')) {
+      const resumed = await fetch('/serve-monitor/api/auth/session', { credentials: 'same-origin', signal: controller.signal }).catch(() => null);
+      const data = resumed?.ok ? await resumed.json().catch(() => null) : null;
+      if (data?.next === 'ready') {
+        setSession(data);
+        return apiFetch(path, { ...options, resumed: true });
+      }
+    }
     setSession(null);
     const destination = window.location.pathname.replace(/^\/serve-monitor/, '') + window.location.search;
     window.location.assign(`${import.meta.env.BASE_URL}login?returnTo=${encodeURIComponent(destination)}`);

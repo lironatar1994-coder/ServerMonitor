@@ -62,7 +62,22 @@ router.post(
     });
   }),
 );
-router.get("/session", pending, (req, res) =>
+// No valid session: a remembered device may open a new one without password or code.
+const resume = (req, res, next) => {
+  if (s.readSession(db, req)) return pending(req, res, next);
+  if (req.headers.cookie?.includes(s.deviceCookieName() + "=")) {
+    if (!s.limit(db, req, res, "device-resume", 60)) return;
+    const resumed = s.resumeDevice(db, req, res);
+    if (resumed) {
+      s.setCookie(res, resumed.token);
+      const user = db.prepare("SELECT id,username,role FROM users WHERE id=?").get(resumed.userId);
+      res.set("Cache-Control", "no-store");
+      return res.json({ user: { ...user, service: false }, csrf: resumed.csrf, next: "ready" });
+    }
+  }
+  return pending(req, res, next);
+};
+router.get("/session", resume, (req, res) =>
   res.json({
     user: profile(req.session),
     csrf: req.session.csrf,
@@ -80,6 +95,10 @@ router.post("/logout", pending, (req, res) => {
   db.prepare("DELETE FROM auth_sessions WHERE token_hash=?").run(
     req.session.token_hash,
   );
+  // Signing out also forgets this browser, so the next visit asks for password and code.
+  const device = s.currentDeviceId(db, req) ?? req.session.device_id;
+  if (device) s.forgetDeviceById(db, req.user.id, device);
+  s.clearDeviceCookie(res);
   res.clearCookie(s.cookieName(), {
     path: "/",
     secure: s.production(),
@@ -107,7 +126,9 @@ router.post(
         "UPDATE users SET password=?,password_upgrade=0 WHERE id=?",
       ).run(encoded, req.user.id);
       db.prepare("DELETE FROM auth_sessions WHERE user_id=?").run(req.user.id);
+      db.prepare("DELETE FROM auth_devices WHERE user_id=?").run(req.user.id);
     })();
+    s.clearDeviceCookie(res);
     const session = s.makeSession(db, req.user.id, { lifetime: 5 * 60000 });
     s.setCookie(res, session.token);
     res.json({
@@ -156,8 +177,13 @@ router.post("/mfa/verify", pending, (req, res) => {
       req.session.token_hash,
     );
   })();
-  const session = s.makeSession(db, user.id, { mfa: true });
+  // "Remember this device" is offered only after password and code both succeeded.
+  const deviceId = req.body.remember === true && req.session.kind === "user"
+    ? s.rememberDevice(db, res, user.id, { userAgent: req.headers["user-agent"] })
+    : null;
+  const session = s.makeSession(db, user.id, { mfa: true, deviceId });
   s.setCookie(res, session.token);
+  if (deviceId) notifyRemembered(user.id, s.deviceLabel(req.headers["user-agent"]));
   res.json({
     csrf: session.csrf,
     user: { id: user.id, username: user.username, role: user.role },
@@ -187,7 +213,9 @@ router.post(
     db.prepare(
       "DELETE FROM auth_sessions WHERE user_id=? AND token_hash<>?",
     ).run(user.id, req.session.token_hash);
-    res.json({ message: "הסיסמה שונתה. שאר ההתחברויות נותקו." });
+    db.prepare("DELETE FROM auth_devices WHERE user_id=?").run(user.id);
+    s.clearDeviceCookie(res);
+    res.json({ message: "הסיסמה שונתה. שאר ההתחברויות והמכשירים השמורים נותקו." });
   }),
 );
 router.get("/sessions", authenticateToken, (req, res) =>
@@ -204,8 +232,38 @@ router.post("/sessions/revoke", authenticateToken, (req, res) => {
     req.user.id,
     req.session.token_hash,
   );
+  db.prepare("DELETE FROM auth_devices WHERE user_id=? AND id IS NOT ?").run(
+    req.user.id,
+    s.currentDeviceId(db, req) ?? req.session.device_id ?? null,
+  );
   res.json({ ok: true });
 });
+router.get("/devices", authenticateToken, (req, res) => {
+  const current = s.currentDeviceId(db, req) ?? req.session.device_id ?? null;
+  res.json({
+    devices: db
+      .prepare("SELECT id,label,created_at,last_used,expires_at FROM auth_devices WHERE user_id=? AND expires_at>? ORDER BY last_used DESC")
+      .all(req.user.id, Date.now())
+      .map((row) => ({ ...row, current: row.id === current })),
+  });
+});
+router.delete("/devices/:id", authenticateToken, (req, res) => {
+  if (req.user.service) return s.failure(res, 403, "לחשבון הבדיקה הרשאת קריאה בלבד.");
+  const id = Number(req.params.id);
+  const current = s.currentDeviceId(db, req) ?? req.session.device_id ?? null;
+  // Keep this tab signed in even when forgetting this browser; only future visits ask again.
+  if (id === current) db.prepare("UPDATE auth_sessions SET device_id=NULL WHERE token_hash=?").run(req.session.token_hash);
+  if (!Number.isInteger(id) || !s.forgetDeviceById(db, req.user.id, id))
+    return s.failure(res, 404, "המכשיר לא נמצא.");
+  if (id === current) s.clearDeviceCookie(res);
+  res.json({ ok: true });
+});
+function notifyRemembered(userId, label) {
+  require("../push")
+    .sendPush({ title: "מכשיר נשמר בחשבון", body: `${label} יתחבר בלי סיסמה וקוד עד 30 יום. לא אתם? הסירו אותו בהגדרות › אבטחה.`, url: "/serve-monitor/settings?tab=security" },
+      { userId, urgent: true })
+    .catch(() => {});
+}
 const createSessionToken = (user) =>
   s.makeSession(db, user.id, {
     mfa: true,
