@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "frontend"],
       "port": 5180
+    },
+    {
+      "name": "monitor-frontend-live",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:live", "--prefix", "frontend"],
+      "port": 5180
     }
   ]
 }

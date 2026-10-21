@@ -2,7 +2,6 @@ const express = require('express');
 const crypto = require('crypto');
 const db = require('../database');
 const { authenticateToken } = require('./auth');
-const { getLibiJewelryInterest } = require('../jewelryAnalytics');
 const { findAppForSiteUrl } = require('../siteIdentity');
 const { trackingHealth } = require('../trackingHealth');
 
@@ -315,10 +314,7 @@ function buildAppAnalytics(app, range) {
         referrers: getRankedDimension(app.id, range, 'referrer'),
         devices: getRankedDimension(app.id, range, 'device_type', 4),
         statuses: getRankedDimension(app.id, range, 'status', 6),
-        recent: getRecent(app.id, range),
-        jewelry_interest: app.name === 'Libi Diamonds'
-            ? getLibiJewelryInterest(db, app.id, range)
-            : null
+        recent: getRecent(app.id, range)
     };
 }
 

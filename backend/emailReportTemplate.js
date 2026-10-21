@@ -7,10 +7,6 @@ const linkStyle = 'color:#006775;text-decoration:underline';
 const muted = 'color:#43565F;font-size:11px;line-height:1.5';
 const rule = 'border-top:1px solid #BAC8CE';
 
-function siteUrl(value) {
-    try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) ? url.href : null; }
-    catch { return null; }
-}
 function periodLabel(from, to) {
     const start = date(from), end = date(new Date(new Date(to).getTime() - 1));
     return start === end ? start : `${start}–${end}`;
@@ -32,14 +28,6 @@ function change(current, previous) {
 function measurementNote(row) {
     if (!row.browserSignalPageViews) return row.pageViews > 0 ? 'מדידה חסרה' : 'ללא תנועה שנרשמה';
     return row.browserSignalSessions < 30 ? 'מדגם קטן' : '';
-}
-function jewelryNotes(row) {
-    const notes = [];
-    const product = row.jewelryInterest?.summary?.top_product;
-    if (product) notes.push(`התכשיט הנצפה ביותר: ${product.name} · ${n(product.page_views)} צפיות שרת`);
-    const collection = row.jewelryInterest?.summary?.top_collection;
-    if (collection) notes.push(`קטגוריה מובילה: ${collection.label}`);
-    return notes;
 }
 function checked(value) {
     if (!value) return 'טרם נבדק';
@@ -66,10 +54,8 @@ function renderEmail(type, period, rows, operations = []) {
         const note = measurementNote(row);
         const missing = !row.browserSignalPageViews && row.pageViews > 0;
         const contact = Number(row.contactClicks) > 0 ? `<span class="muted" style="display:block;margin-top:4px;${muted}">${n(row.contactClicks)} לחיצות קשר</span>` : '';
-        const detail = jewelryNotes(row);
         return `<tr><th class="rule" scope="row" align="right" valign="top" style="padding:14px 6px 14px 0;${rule};font-weight:400;overflow-wrap:anywhere"><a class="link" href="${esc(reportLink(row, period))}" dir="auto" style="${linkStyle};font-size:14px;font-weight:700;line-height:1.45">${esc(row.name)}</a>${contact}${note ? `<span class="muted" style="display:block;margin-top:4px;${muted}">${esc(note)}</span>` : ''}</th>
-${metricCell(missing ? '—' : n(row.browserSignalVisitors))}${metricCell(missing ? '—' : n(row.browserSignalSessions), missing ? '' : `<span dir="auto">${esc(change(row.browserSignalSessions, row.previousBrowserSignalSessions))}</span>`, true)}${metricCell(missing ? '—' : n(row.browserSignalPageViews))}</tr>
-${detail.length ? `<tr><td colspan="4" class="muted" style="padding:0 0 14px;color:#43565F;font-size:12px;line-height:1.6">${detail.map(esc).join('<br>')}${siteUrl(row.url) ? `<br><a class="link" href="${esc(siteUrl(row.url))}" style="${linkStyle}">לאתר ${esc(row.name)}</a>` : ''}</td></tr>` : ''}`;
+${metricCell(missing ? '—' : n(row.browserSignalVisitors))}${metricCell(missing ? '—' : n(row.browserSignalSessions), missing ? '' : `<span dir="auto">${esc(change(row.browserSignalSessions, row.previousBrowserSignalSessions))}</span>`, true)}${metricCell(missing ? '—' : n(row.browserSignalPageViews))}</tr>`;
     }).join('');
     const operationsHtml = operations.length ? `<h2 style="font-size:16px;margin:28px 0 6px">מצב האתרים והשירותים</h2><p class="muted" style="font-size:12px;color:#43565F;margin:0 0 12px;line-height:1.6">הבדיקה האחרונה בלבד · שעון ישראל</p>
 <table dir="rtl" width="100%" cellpadding="0" cellspacing="0" style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px"><thead><tr><th scope="col" align="right" width="44%" class="muted" style="padding:0 0 8px;color:#43565F;font-weight:400">אתר / שירות</th><th scope="col" align="right" width="24%" class="muted" style="padding:0 4px 8px;color:#43565F;font-weight:400">מצב</th><th scope="col" align="left" width="32%" class="muted" style="padding:0 0 8px;color:#43565F;font-weight:400">נבדק ב־</th></tr></thead><tbody>${orderedOps.map(app => `<tr><th class="rule" scope="row" align="right" style="padding:8px 0;${rule};font-weight:400;overflow-wrap:anywhere"><a class="link" dir="auto" href="${esc(reportLink(app, period, true))}" style="${linkStyle}">${esc(app.name)}</a></th><td class="rule ${app.status === 'online' ? 'muted' : 'attention'}" style="padding:8px 4px;${rule};color:${app.status === 'online' ? '#43565F' : '#B42332'}">${status(app.status)}</td><td dir="ltr" align="left" class="rule muted" style="padding:8px 0;${rule};${muted};overflow-wrap:anywhere">${esc(checked(app.last_checked))}</td></tr>`).join('')}</tbody></table>` : '';
@@ -104,8 +90,7 @@ ${operationsHtml}
                 : `מבקרים משוערים: ${n(row.browserSignalVisitors)} · ביקורים שנמדדו: ${n(row.browserSignalSessions)} · עמודים שנפתחו: ${n(row.browserSignalPageViews)}`,
             ...(!row.browserSignalPageViews && row.pageViews > 0 ? [] : [`שינוי בביקורים: ${change(row.browserSignalSessions, row.previousBrowserSignalSessions)}`]),
             ...(row.contactClicks > 0 ? [`${n(row.contactClicks)} לחיצות קשר`] : []),
-            ...(measurementNote(row) ? [measurementNote(row)] : []), ...jewelryNotes(row),
-            ...(jewelryNotes(row).length && siteUrl(row.url) ? [siteUrl(row.url)] : []), reportLink(row, period), ''
+            ...(measurementNote(row) ? [measurementNote(row)] : []), reportLink(row, period), ''
         ]), ...(operations.length ? ['מצב האתרים והשירותים — הבדיקה האחרונה בלבד · שעון ישראל',
             ...orderedOps.map(app => `${app.name}: ${status(app.status)} · ${checked(app.last_checked)}\n${reportLink(app, period, true)}`)] : []),
         '', caveat, measurementHelp, 'נתוני שרת נפרדים בדוח המלא.', reportLink({}, period)].join('\n');

@@ -72,6 +72,7 @@ const VisitorOverview = () => {
     }
   });
   const [breakdown, setBreakdown] = useState("pages");
+  const [showIdle, setShowIdle] = useState(false);
   const request = useRef(0);
   const fetchAnalytics = useCallback(
     async (quiet = false) => {
@@ -150,6 +151,19 @@ const VisitorOverview = () => {
   const failures = apps.filter(
     (app) => app.analytics_enabled && app.status !== "online",
   );
+  // Sites without activity or issues fold under one row so the active ones stay in view.
+  const foldIdle = filter === "all" && !search.trim() && sort !== "name";
+  const isIdle = (site) =>
+    !Number(site.browser_signal_sessions) &&
+    !Number(site.previous) &&
+    site.health?.status === "online";
+  const idleCount = foldIdle ? sites.filter(isIdle).length : 0;
+  const visibleSites =
+    foldIdle && !showIdle && idleCount > 1
+      ? sites.filter((site) => !isIdle(site))
+      : sites;
+  const trackingIssue =
+    data?.tracking_health && data.tracking_health.status !== "ok";
   const peakSessions = Math.max(
     1,
     ...(data?.sites || []).map(
@@ -184,12 +198,12 @@ const VisitorOverview = () => {
       >
         {failures.length > 0 && (
           <div className="attention-list" role="alert">
-            <b>דורש בדיקה</b>
+            <b>לא זמין</b>
             {failures.map((app) => (
               <Link key={app.id} to={`/services/${app.id}`}>
                 {app.name} ·{" "}
-                {app.status === "offline" ? "לא זמין" : "מצב לא ידוע"}
-                <ChevronLeft />
+                {app.status === "unknown" ? "לא נבדק" : "לא זמין"}
+                <ChevronLeft aria-hidden="true" />
               </Link>
             ))}
           </div>
@@ -199,7 +213,9 @@ const VisitorOverview = () => {
             {healthError}
           </p>
         )}
-        <TrackingStatus health={data?.tracking_health} />
+        {(trackingIssue || !failures.length) && (
+          <TrackingStatus health={data?.tracking_health} />
+        )}
         <StatRow>
           <Stat
             icon={Users}
@@ -277,7 +293,7 @@ const VisitorOverview = () => {
             <span>אתר</span>
             <span title="מבקרים משוערים">
               <Users />
-              <span className="comparison-label-text">אומדן</span>
+              <span className="comparison-label-text">מבקרים</span>
             </span>
             <span title="ביקורים שנמדדו">
               <Activity />
@@ -290,7 +306,7 @@ const VisitorOverview = () => {
             <span>שינוי</span>
           </div>
           <ol className="comparison-list">
-            {sites.map((site) => (
+            {visibleSites.map((site) => (
               <li key={site.app_id}>
                 <Link
                   className="comparison-row-link"
@@ -362,13 +378,16 @@ const VisitorOverview = () => {
                     </strong>
                   </span>
                   <span className="comparison-change">
-                    <Change
-                      current={site.browser_signal_sessions}
-                      previous={site.previous}
-                    />
-                    {!site.browser_signal_page_views ? (
-                      <small>לא נמדד</small>
+                    {!Number(site.browser_signal_sessions) &&
+                    !Number(site.previous) ? (
+                      <small>ללא פעילות</small>
                     ) : (
+                      <Change
+                        current={site.browser_signal_sessions}
+                        previous={site.previous}
+                      />
+                    )}
+                    {!site.browser_signal_page_views ? null : (
                       site.browser_signal_sessions < 30 && (
                         <TriangleAlert
                           className="sample-warning"
@@ -396,6 +415,18 @@ const VisitorOverview = () => {
               </li>
             ))}
           </ol>
+          {foldIdle && idleCount > 1 && (
+            <button
+              type="button"
+              className="idle-toggle"
+              aria-expanded={showIdle}
+              onClick={() => setShowIdle((value) => !value)}
+            >
+              {showIdle
+                ? "הסתרת אתרים ללא פעילות"
+                : `עוד ${formatNumber(idleCount)} אתרים ללא פעילות`}
+            </button>
+          )}
           {!sites.length && (
             <div className="filter-empty">
               <Empty

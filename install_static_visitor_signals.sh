@@ -54,7 +54,7 @@ location = /pdf-studio/.well-known/vee-visitor-signal {
     proxy_http_version 1.1;
     proxy_set_header Content-Type application/json;
     proxy_set_header X-Visitor-Signal-Key "$SIGNAL_KEY";
-    proxy_set_header X-Visitor-Site-Url "https://vee-app.co.il/pdf-studio/";
+    proxy_set_header X-Visitor-Site-Url "https://lawebs.co.il/pdf-studio/";
     proxy_set_header X-Visitor-IP \$remote_addr;
     proxy_set_header X-Visitor-User-Agent \$http_user_agent;
 }
@@ -110,6 +110,11 @@ if ! nginx -t; then
   echo "[ERROR] Restored Nginx configs after visitor-signal validation failed." >&2
   exit 1
 fi
+
+# Keep only the three newest pre-change copies of each site config.
+for conf in "$VEE_CONF" "$MIRYAM_CONF" "$SEDER_CONF"; do
+  ls -1t "$conf".visitor-signal-backup.* 2>/dev/null | tail -n +4 | xargs -r rm -f --
+done
 
 systemctl reload nginx
 echo "[INFO] Installed first-party visitor-signal bridges for Vee, Miryam Zelig, and Seder."

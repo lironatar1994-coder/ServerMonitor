@@ -85,7 +85,7 @@ function buildOperationalHealth({
   processes = [],
   discovered = { rows: [], error: false },
   whatsapp,
-  pendingMessages = null,
+  alertsConfigured = true,
   now = Date.now(),
 }) {
   const issues = [];
@@ -151,20 +151,15 @@ function buildOperationalHealth({
       "unknown",
     );
 
-  const legacy = apps.find((app) => app.pm2_name === "vee-whatsapp-worker");
-  const sender = processes.find((item) => item.name === "vee-whatsapp-worker");
-  if (legacy && sender?.pm2_env?.status !== "online")
+  if (!alertsConfigured)
     add(
       "alert-delivery",
-      "התראות WhatsApp אינן זמינות",
-      pendingMessages == null
-        ? "שירות ההתראות אינו פעיל."
-        : `${pendingMessages.toLocaleString("he-IL")} הודעות ממתינות בתור הישן`,
+      "התראות דוא״ל אינן מוגדרות",
+      "תקלות בשירותים לא יישלחו בדוא״ל.",
       "warning",
-      legacy.id,
     );
   for (const app of apps)
-    if (app.status !== "online" && app !== legacy)
+    if (app.status !== "online")
       add(
         `service-${app.id}`,
         `${app.name} אינו זמין`,
@@ -264,27 +259,8 @@ function buildOperationalHealth({
 }
 
 async function operationalHealth(db, processes) {
-  let pendingMessages = null;
-  const file = "/root/Vee/backend/database.sqlite";
-  if (fs.existsSync(file)) {
-    let queue;
-    try {
-      queue = new (require("better-sqlite3"))(file, {
-        readonly: true,
-        fileMustExist: true,
-        timeout: 250,
-      });
-      pendingMessages = queue
-        .prepare(
-          "SELECT COUNT(*) n FROM whatsapp_outbox WHERE status='pending'",
-        )
-        .get().n;
-    } catch {
-      /* Never read message contents or contacts. */
-    } finally {
-      queue?.close();
-    }
-  }
+  const { getMailerConfig } = require("./emailReports");
+  const mail = getMailerConfig();
   return buildOperationalHealth({
     health: readJson("/var/lib/lawebs-maintenance/health.json"),
     browser: readJson("/var/lib/lawebs-maintenance/browser-check.json"),
@@ -302,7 +278,7 @@ async function operationalHealth(db, processes) {
       .all().map(app => { if (!app.pm2_name || !processes.length) return app; const running = processes.find(item => item.name === app.pm2_name); return running?.pm2_env?.status === 'online' ? app : {...app,status:'offline'}; }),
     processes,
     discovered: await applicationServices(),
-    pendingMessages,
+    alertsConfigured: Boolean(mail.apiKey && (process.env.ALERT_EMAIL_TO || mail.recipient) && mail.from && !mail.from.includes("<undefined>")),
   });
 }
 module.exports = { operationalHealth, buildOperationalHealth, readJson };

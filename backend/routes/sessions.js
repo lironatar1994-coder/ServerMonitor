@@ -206,53 +206,6 @@ router.post("/sessions/revoke", authenticateToken, (req, res) => {
   );
   res.json({ ok: true });
 });
-router.post(
-  "/test-whatsapp",
-  authenticateToken,
-  s.owner,
-  route(async (req, res) => {
-    const { phone, message } = req.body;
-    if (
-      typeof phone !== "string" ||
-      !/^\+?[\d -]{8,20}$/.test(phone) ||
-      typeof message !== "string" ||
-      !message.trim() ||
-      message.length > 2000
-    )
-      return s.failure(res, 400, "בדקו את המספר ואת תוכן ההודעה.");
-    const { promisify } = require("node:util"),
-      { execFile } = require("node:child_process");
-    let active = false;
-    try {
-      const { stdout } = await promisify(execFile)("pm2", ["jlist"], {
-        timeout: 5000,
-        maxBuffer: 4 * 1024 * 1024,
-      });
-      active = JSON.parse(stdout).some(
-        (p) =>
-          p.name === "vee-whatsapp-worker" && p.pm2_env?.status === "online",
-      );
-    } catch {
-      return s.failure(res, 409, "לא ניתן לאמת ששירות WhatsApp פעיל.");
-    }
-    if (!active)
-      return s.failure(res, 409, "שירות WhatsApp אינו פעיל. ההודעה לא נשלחה.");
-    const file = "/root/Vee/backend/database.sqlite";
-    if (!require("node:fs").existsSync(file))
-      return s.failure(res, 409, "בסיס נתוני ההודעות אינו זמין.");
-    const messages = new (require("better-sqlite3"))(file, {
-      fileMustExist: true,
-    });
-    try {
-      messages
-        .prepare("INSERT INTO whatsapp_outbox(to_phone,message) VALUES (?,?)")
-        .run(phone, message);
-    } finally {
-      messages.close();
-    }
-    res.json({ message: "ההודעה נוספה לתור השליחה." });
-  }),
-);
 const createSessionToken = (user) =>
   s.makeSession(db, user.id, {
     mfa: true,

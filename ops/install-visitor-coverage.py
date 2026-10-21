@@ -8,15 +8,17 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 SITES = [
-    ('libidiamonds.co.il.conf', ['libidiamonds.co.il', 'www.libidiamonds.co.il'], '', 'https://www.libidiamonds.co.il/', False),
     ('pinhasratzon.co.il.conf', ['pinhasratzon.co.il', 'www.pinhasratzon.co.il'], '', 'https://pinhasratzon.co.il/', False),
     ('dfusreuven.co.il.conf', ['dfusreuven.co.il', 'www.dfusreuven.co.il'], '', 'https://www.dfusreuven.co.il/', False),
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/Koralevents2', 'https://lawebs.co.il/Koralevents2', False),
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/Koralevents', 'https://lawebs.co.il/Koralevents', False),
+    ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/alenu', 'https://lawebs.co.il/alenu/', False),
+    ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/cv', 'https://lawebs.co.il/cv/', False),
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '', 'https://lawebs.co.il/', False),
-    ('vee-app.co.il.conf', ['vee-app.co.il', 'www.vee-app.co.il'], '/DfusReuven', 'https://vee-app.co.il/DfusReuven', False),
-    ('vee-app.co.il.conf', ['vee-app.co.il', 'www.vee-app.co.il'], '/LibiDiamonds2', 'https://vee-app.co.il/LibiDiamonds2', True),
 ]
+# Native collectors (Seder, PDF Studio) and internal or unmeasured apps under lawebs.co.il
+# must not inherit the LA webs portfolio tag.
+LAWEBS_UNTRACKED = 'seder|PinhasRatzon|pinhasratzon|pdf-studio|PizzaManager|cv-manager|alenu-crm|maavar|desk|allsee|videos|rc'
 
 def server_blocks(text):
     # Track braces while ignoring quoted strings/comments in the Nginx syntax.
@@ -51,12 +53,12 @@ def main():
         asset.mkdir(mode=0o755, exist_ok=True)
         write(asset / 'visitor-tracker.js', (ROOT / 'ops/visitor-tracker.js').read_text(), 0o644)
         maps = ['map "$host:$uri" $monitor_navigation_tag {', '    default "";',
-                '    ~^((www\\.)?lawebs\\.co\\.il):/(seder|PinhasRatzon|pinhasratzon)(/|$) "";',
+                f'    ~^((www\\.)?lawebs\\.co\\.il):/({LAWEBS_UNTRACKED})(/|$) "";',
                 '    ~^(www\\.)?dfusreuven\\.co\\.il:/(admin|api|supplier)([/.]|$) "";']
         for config, hosts, prefix, site, native in SITES:
             host_pattern = '(?:' + '|'.join(re.escape(host) for host in hosts) + ')'
             suffix = re.escape(prefix) + '(?:/|$)' if prefix else '/'
-            tag = f'<script src="/.well-known/server-monitor-visitor.js" data-prefix="{prefix}" data-native-rewrite="{int(native)}"></script>'
+            tag = f'<script defer src="/.well-known/server-monitor-visitor.js" data-prefix="{prefix}" data-native-rewrite="{int(native)}"></script>'
             maps.append(f"    ~^{host_pattern}:{suffix} '{tag}';")
         maps.append('}')
         write('/etc/nginx/conf.d/server-monitor-navigation.conf', '\n'.join(maps) + '\n', 0o644)

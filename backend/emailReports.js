@@ -1,5 +1,4 @@
 const db = require('./database');
-const { getLibiJewelryInterest } = require('./jewelryAnalytics');
 
 const TIMEZONE = 'Asia/Jerusalem';
 const DAILY_HOUR = Number(process.env.REPORT_DAILY_HOUR || 8);
@@ -126,9 +125,6 @@ function buildReportData(period) {
         const current = getRangeStats(app.id, period.from, period.to);
         const previous = getRangeStats(app.id, period.previousFrom, period.from);
         const topPage = getTopPage(app.id, period.from, period.to);
-        const jewelryInterest = app.name === 'Libi Diamonds'
-            ? getLibiJewelryInterest(db, app.id, { from: period.from, to: period.to })
-            : null;
         return {
             ...app,
             uniqueCandidates: Number(current.unique_candidates) || 0,
@@ -150,8 +146,7 @@ function buildReportData(period) {
             contactClicks: Number(db.prepare(`SELECT COUNT(*) AS count FROM growth_events
                 WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ?
                 AND automation_hint = 0 AND event_type = 'contact_click'`).get(app.id, period.from, period.to).count),
-            topPage: topPage.path || '—',
-            jewelryInterest
+            topPage: topPage.path || '—'
         };
     });
 }

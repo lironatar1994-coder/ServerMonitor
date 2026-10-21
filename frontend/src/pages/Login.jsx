@@ -79,7 +79,6 @@ export default function Login() {
         {step === "login" ? (
           <>
             <h1>{invitation ? "הצטרפות לצוות" : "כניסה"}</h1>
-            <p className="muted">האתרים, הצוות ופרטי הגישה במקום אחד.</p>
             {error && (
               <p className="banner banner--error" role="alert">
                 {error}

@@ -60,7 +60,9 @@
 - Present PDF Studio product events as anonymous usage estimates: disclose bot filtering, keep file names/content absent, and label heatmaps as coarse viewport positions rather than recordings or proof of people.
 - Keep Miryam Zelig and Seder engagement panels visible before their first measurements, omit PDF-specific tool metrics there, and label sessions, heatmaps, zones, dwell, and scroll reach as anonymous browser signals rather than people.
 - Present successful page views as the primary activity metric. Do not label asset, script, font, API, or failed requests as visitor engagement.
-- The Libi Diamonds deep view must expose a dedicated storefront-interest section with product and category rankings (toggled within one panel), direct storefront links, candidate counts, page views, and the same classification caveat used elsewhere.
+- `TrackingStatus` on a site page shows only that site's browser-check failures (fleet-wide portfolio checks belong to LA webs); the overview shows them all, with the availability list first and no healthy line while sites are down.
+- The site ledger folds sites with no visits in either period and a healthy check behind one `עוד N אתרים ללא פעילות` row when unfiltered and not sorted by name. Zero in both periods reads `ללא פעילות`, not a change.
+- Status words are `זמין`, `לא זמין` and `לא נבדק` everywhere. Infrastructure lists only unavailable services and links to `/services`; its memory rows rank and show the RAM+Swap footprint with RAM and Swap beneath. Hidden tabs pause polling.
 - Service configuration supports full health-check URLs plus separate visitor-analytics and client-report toggles; operational services must not link into visitor analytics.
 - Preserve RTL Hebrew presentation, `he-IL` formatting, and `Asia/Jerusalem` timestamps.
 
@@ -84,7 +86,6 @@
 - Keep desktop tables paired with purpose-built mobile cards and maintain 44px touch targets (see the `pointer: coarse` block in `index.css`), visible focus states, and reduced-motion support.
 - Infrastructure dark mode works by re-declaring the colour tokens on `.page--infrastructure`; style shared components once against the tokens rather than adding dark-mode variants.
 - Isolate byte values and complete RAM/Swap/PID/CPU fragments with explicit LTR `bdi`; label RAM and Swap separately in resource summaries.
-- WhatsApp status follows the running PM2 process: an old READY/QR file cannot imply an active worker. Show `לא פעיל` and disable the manual test-send control while the sender is stopped.
 - Absolutely positioned overlays such as `Hint` bubbles must be `display: none` when hidden — `visibility: hidden` still widens the document scroll area and breaks RTL mobile layout.
 - Avoid editing `dist/` manually; rebuild it from source when production assets need updating.
 

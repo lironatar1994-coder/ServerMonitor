@@ -15,12 +15,13 @@ SITES = [
     ('lawebs.co.il.conf', 'lawebs.co.il', '/Koralevents2', 'https://lawebs.co.il/Koralevents2'),
     ('lawebs.co.il.conf', 'lawebs.co.il', '/Koralevents', 'https://lawebs.co.il/Koralevents'),
     ('lawebs.co.il.conf', 'lawebs.co.il', '/seder', 'https://lawebs.co.il/seder'),
+    ('lawebs.co.il.conf', 'lawebs.co.il', '/pdf-studio', 'https://lawebs.co.il/pdf-studio/'),
+    ('lawebs.co.il.conf', 'lawebs.co.il', '/alenu', 'https://lawebs.co.il/alenu/'),
+    ('lawebs.co.il.conf', 'lawebs.co.il', '/cv', 'https://lawebs.co.il/cv/'),
     ('lawebs.co.il.conf', 'lawebs.co.il', '', 'https://lawebs.co.il/'),
     ('vee-app.co.il.conf', 'vee-app.co.il', '/OnYourWay', 'https://vee-app.co.il/OnYourWay'),
-    ('vee-app.co.il.conf', 'vee-app.co.il', '/pdf-studio', 'https://vee-app.co.il/pdf-studio/'),
     ('vee-app.co.il.conf', 'vee-app.co.il', '', 'https://vee-app.co.il/'),
     ('dfusreuven.co.il.conf', 'dfusreuven.co.il', '', 'https://www.dfusreuven.co.il/'),
-    ('libidiamonds.co.il.conf', 'libidiamonds.co.il', '', 'https://www.libidiamonds.co.il/'),
     ('pinhasratzon.co.il.conf', 'pinhasratzon.co.il', '', 'https://pinhasratzon.co.il/'),
     ('miryamzelig.co.il.conf', 'miryamzelig.co.il', '', 'https://miryamzelig.co.il/'),
     ('sosbaderech.co.il.conf', 'sosbaderech.co.il', '', 'https://sosbaderech.co.il/'),
@@ -44,8 +45,8 @@ def main():
         write(asset / 'growth-tracker.js', (ROOT / 'ops/growth-tracker.js').read_text(), 0o644)
         write(asset / 'portfolio-tracker.js', (ROOT / 'ops/portfolio-tracker.js').read_text(), 0o644)
         maps = ['map "$host:$uri" $monitor_growth_tag {', '    default "";',
-            '    ~*^(www\\.)?vee-app\\.co\\.il:/(maavar|Manager_Site|serve-monitor|DfusReuven|LibiDiamonds2|Miryam_Zelig|api|admin|login|dashboard)(/|$) "";',
-            '    ~*^(www\\.)?lawebs\\.co\\.il:/(PinhasRatzon|admin|login|dashboard)(/|$) "";']
+            '    ~*^(www\\.)?vee-app\\.co\\.il:/(maavar|Manager_Site|serve-monitor|pdf-studio|Miryam_Zelig|api|admin|login|dashboard)(/|$) "";',
+            '    ~*^(www\\.)?lawebs\\.co\\.il:/(PinhasRatzon|admin|login|dashboard|PizzaManager|cv-manager|alenu-crm|maavar|desk|allsee|videos|rc)(/|$) "";']
         for config, host, prefix, site in SITES:
             suffix = re.escape(prefix) + '(?:/|$)' if prefix else '/'
             tag = f'<script defer src="/.well-known/server-monitor-growth.js" data-prefix="{prefix}"></script>'
@@ -106,7 +107,7 @@ def main():
         if validation.returncode:
             raise RuntimeError('Nginx validation failed: ' + validation.stderr[-1800:])
         subprocess.run(['systemctl', 'reload', 'nginx'], check=True)
-        print('Growth coverage installed for 12 canonical sites; backup: '+str(backup))
+        print(f'Growth coverage installed for {len(SITES)} canonical sites; backup: '+str(backup))
     except BaseException:
         for path, original in originals.items():
             if original is None: path.unlink(missing_ok=True)

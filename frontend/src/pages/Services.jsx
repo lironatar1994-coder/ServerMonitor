@@ -175,15 +175,19 @@ const Services = () => {
                       <span className="service-list__meta">
                         <b>
                           {app.pm2_name || app.systemd_unit
-                            ? "מנוהל"
-                            : app.log_path
-                              ? "סטטי"
-                              : "ניטור"}
+                            ? "שירות"
+                            : app.url
+                              ? "אתר"
+                              : "בדיקה"}
                         </b>
                         <small>
-                          {app.pm2_name
-                            ? `${(app.cpu || 0).toFixed(1)}% CPU · ${((app.memory || 0) / 1024 / 1024).toFixed(0)} MB`
-                            : `נבדק ${formatDateTime(app.last_checked)}`}
+                          {state.issue && state.needsCheck ? (
+                            state.issue.title
+                          ) : app.pm2_name || app.systemd_unit ? (
+                            <bdi dir="ltr">{`${(app.cpu || 0).toFixed(1)}% CPU · ${((app.memory || 0) / 1024 / 1024).toFixed(0)} MB`}</bdi>
+                          ) : (
+                            `נבדק ${formatDateTime(app.last_checked)}`
+                          )}
                         </small>
                       </span>
                       <span

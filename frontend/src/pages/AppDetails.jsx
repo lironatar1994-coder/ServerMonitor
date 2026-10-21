@@ -9,7 +9,6 @@ import {
 import { Link, useParams } from "react-router-dom";
 import LiveTerminal from "../components/LiveTerminal";
 import SshSecurityTemplate from "../components/app_templates/SshSecurityTemplate";
-import WhatsAppTemplate from "../components/app_templates/WhatsAppTemplate";
 import { DataState, Panel, PageHead } from "../components/AnalyticsParts";
 import { formatDateTime } from "../lib/format";
 import { apiFetch } from "../lib/api";
@@ -97,11 +96,7 @@ const AppDetails = () => {
                   <span
                     className={`chip ${app.status === "online" ? "is-online" : "is-offline"}`}
                   >
-                    {app.status === "online"
-                      ? app.pm2_name || app.systemd_unit
-                        ? "תהליך פעיל"
-                        : "זמין בבדיקה"
-                      : "לא פעיל"}
+                    {app.status === "online" ? "זמין" : app.status === "unknown" ? "לא נבדק" : "לא זמין"}
                   </span>
                   <span className="muted">
                     בדיקה: {formatDateTime(app.last_checked)}
@@ -128,13 +123,11 @@ const AppDetails = () => {
             )}
             {!operationsError && connection && (
               <div className="banner banner--attention" role="status">
-                <b>{connection.title}</b>
+                <b>{connection.title}</b>{" "}
                 <span>{connection.detail}</span>
               </div>
             )}
-            {owner && app.pm2_name === "vee-whatsapp-worker" ? (
-              <WhatsAppTemplate app={app} />
-            ) : owner && app.name === "SSH Security" ? (
+            {owner && app.name === "SSH Security" ? (
               <SshSecurityTemplate app={app} />
             ) : (
               <div className="grid grid--1-2">
@@ -144,20 +137,26 @@ const AppDetails = () => {
                       <dt>סוג</dt>
                       <dd>
                         {app.pm2_name || app.systemd_unit
-                          ? "שירות מנוהל"
+                          ? "שירות"
                           : "אתר סטטי"}
                       </dd>
                     </div>
-                    <div>
-                      <dt>CPU</dt>
-                      <dd>
-                        {app.cpu == null ? "—" : `${app.cpu.toFixed(1)}%`}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>זיכרון</dt>
-                      <dd>{((app.memory || 0) / 1024 / 1024).toFixed(1)} MB</dd>
-                    </div>
+                    {(app.pm2_name || app.systemd_unit) && (
+                      <>
+                        <div>
+                          <dt>תהליך</dt>
+                          <dd><bdi dir="ltr">{app.pm2_name || app.systemd_unit}</bdi></dd>
+                        </div>
+                        <div>
+                          <dt>CPU</dt>
+                          <dd><bdi dir="ltr">{app.cpu == null ? "—" : `${app.cpu.toFixed(1)}%`}</bdi></dd>
+                        </div>
+                        <div>
+                          <dt>זיכרון</dt>
+                          <dd><bdi dir="ltr">{((app.memory || 0) / 1024 / 1024).toFixed(1)} MB</bdi></dd>
+                        </div>
+                      </>
+                    )}
                     <div>
                       <dt>בדיקת תקינות</dt>
                       <dd dir={healthTarget ? "ltr" : "rtl"}>

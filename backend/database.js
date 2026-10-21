@@ -366,36 +366,64 @@ const veeExcludedPaths = [
     '/DfusReuven', '/dfusreuven', '/sos', '/LibiDiamonds2', '/libidiamonds2', '/maavar'
 ].join('|');
 
+// Other lawebs.co.il applications own these path segments; keep them out of the
+// LA webs portfolio. Each exclusion matches a whole path segment (`/cv` is not `/cv-manager`).
+const lawebsExcludedPaths = [
+    '/seder', '/Koralevents', '/koralevents', '/Koralevents2', '/PinhasRatzon', '/pinhasratzon',
+    '/alenu', '/alenu-crm', '/cv', '/cv-manager', '/desk', '/allsee', '/videos', '/rc',
+    '/PizzaManager', '/pdf-studio', '/maavar'
+].join('|');
+
 const productionApps = [
-    { name: 'LA webs', url: 'https://lawebs.co.il/', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_exclude: '/seder|/Koralevents|/koralevents|/Koralevents2|/PinhasRatzon|/pinhasratzon', health_url: 'https://lawebs.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
+    { name: 'LA webs', url: 'https://lawebs.co.il/', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_exclude: lawebsExcludedPaths, health_url: 'https://lawebs.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Pinhas Ratzon', url: 'https://pinhasratzon.co.il/', log_path: sharedNginxLog, log_host: 'pinhasratzon.co.il|www.pinhasratzon.co.il', health_url: 'https://pinhasratzon.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Pinhas Ratzon Form', pm2_name: 'pinhas-ratzon-form', health_url: 'http://127.0.0.1:3108/health', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Koral Events', url: 'https://lawebs.co.il/Koralevents', systemd_unit: 'koralevents2.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/Koralevents|/koralevents', health_url: 'http://127.0.0.1:3111/Koralevents', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Koral Events 2', url: 'https://lawebs.co.il/Koralevents2', systemd_unit: 'koralevents.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/Koralevents2', health_url: 'http://127.0.0.1:3110/Koralevents2', analytics_enabled: 1, reporting_enabled: 1 },
-    { name: 'Maavar', url: 'https://vee-app.co.il/maavar', systemd_unit: 'maavar.service', health_url: 'http://127.0.0.1:3127/maavar', analytics_enabled: 0, reporting_enabled: 0 },
-    { name: 'Maavar Worker', systemd_unit: 'maavar-worker.service', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'Alenu', url: 'https://lawebs.co.il/alenu/', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/alenu', health_url: 'https://lawebs.co.il/alenu/', analytics_enabled: 1, reporting_enabled: 1 },
+    { name: 'Mila Tova CV', url: 'https://lawebs.co.il/cv/', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/cv', health_url: 'https://lawebs.co.il/cv/', analytics_enabled: 1, reporting_enabled: 1 },
+    // Storefronts only; kitchen/admin/platform routes stay outside visitor analytics.
+    { name: 'Pizza Manager', url: 'https://lawebs.co.il/PizzaManager/', systemd_unit: 'pizza-manager-platform.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/PizzaManager/p', health_url: 'http://127.0.0.1:4180/PizzaManager/p/oven-demo/', analytics_enabled: 1, reporting_enabled: 0 },
+    { name: 'Alenu CRM', url: 'https://lawebs.co.il/alenu-crm', systemd_unit: 'maavar.service', health_url: 'http://127.0.0.1:3127/alenu-crm/api/health', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'Alenu CRM Worker', systemd_unit: 'maavar-worker.service', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'CV Manager', url: 'https://lawebs.co.il/cv-manager', systemd_unit: 'cv-manager.service', health_url: 'http://127.0.0.1:3139/cv-manager', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'Desk', url: 'https://lawebs.co.il/desk/', systemd_unit: 'desk.service', health_url: 'http://127.0.0.1:3150/desk/', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'AllSee', url: 'https://lawebs.co.il/allsee/', systemd_unit: 'allsee.service', health_url: 'http://127.0.0.1:4310/allsee/', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'Video Library', url: 'https://lawebs.co.il/videos/', pm2_name: 'video-library-api', health_url: 'http://127.0.0.1:3192/videos/api/health', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'Claude RC', url: 'https://lawebs.co.il/rc/', pm2_name: 'claude-rc', health_url: 'http://127.0.0.1:3193/rc/', analytics_enabled: 0, reporting_enabled: 0 },
+    { name: 'PostgreSQL', systemd_unit: 'postgresql@16-main.service', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Seder WhatsApp', pm2_name: 'seder-whatsapp', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Seder Calendar', pm2_name: 'seder-calendar', analytics_enabled: 0, reporting_enabled: 0 },
-    { name: 'Libi Diamonds Preview', url: 'https://vee-app.co.il/LibiDiamonds2', pm2_name: 'libi-diamonds-2', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/LibiDiamonds2|/libidiamonds2', health_url: 'http://127.0.0.1:3103/LibiDiamonds2', analytics_enabled: 1, reporting_enabled: 0 },
-    { name: 'Vee Main App', url: 'https://vee-app.co.il/', pm2_name: 'vee-app', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_exclude: veeExcludedPaths, health_url: 'http://127.0.0.1:3001/api/health', analytics_enabled: 1, reporting_enabled: 1 },
-    { name: 'WhatsApp Worker', pm2_name: 'vee-whatsapp-worker', analytics_enabled: 0, reporting_enabled: 0, alerts_enabled: 0 },
+    // The Vee application was retired on 2026-10-20; its static landing page remains.
+    { name: 'Vee Landing', url: 'https://vee-app.co.il/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_exclude: veeExcludedPaths, health_url: 'https://vee-app.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'SSH Security', analytics_enabled: 0, reporting_enabled: 0 },
-    { name: 'PDF Studio', url: 'https://vee-app.co.il/pdf-studio/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/pdf-studio', health_url: 'https://vee-app.co.il/pdf-studio/', analytics_enabled: 1, reporting_enabled: 1 },
+    // PDF Studio moved to lawebs.co.il on 2026-10-15; the old vee-app path redirects there.
+    { name: 'PDF Studio', url: 'https://lawebs.co.il/pdf-studio/', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il|vee-app.co.il|www.vee-app.co.il', log_filter: '/pdf-studio', health_url: 'https://lawebs.co.il/pdf-studio/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'SOS Landing', url: 'https://sosbaderech.co.il/', pm2_name: 'sos-landing-standalone', log_path: sharedNginxLog, log_host: 'sosbaderech.co.il|www.sosbaderech.co.il', health_url: 'http://127.0.0.1:3200/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Cleanup Summary', log_path: '/var/log/server_cleanup_summary.log', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Miryam Zelig', url: 'https://miryamzelig.co.il/', log_path: sharedNginxLog, log_host: 'miryamzelig.co.il|www.miryamzelig.co.il', health_url: 'https://miryamzelig.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
-    { name: 'Libi Diamonds', url: 'https://www.libidiamonds.co.il/', pm2_name: 'libi-diamonds-live', log_path: sharedNginxLog, log_host: 'libidiamonds.co.il|www.libidiamonds.co.il', health_url: 'http://127.0.0.1:3105/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Seder', url: 'https://lawebs.co.il/seder', pm2_name: 'seder-live', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/seder', health_url: 'http://127.0.0.1:3107/seder', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Server Monitor', url: 'https://monitor.vee-app.co.il/', pm2_name: 'server-monitor', health_url: 'http://127.0.0.1:4010/serve-monitor/', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Manager Site', url: 'https://vee-app.co.il/Manager_Site/', pm2_name: 'manager-site', health_url: 'http://127.0.0.1:3027/Manager_Site/', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'On Your Way', url: 'https://vee-app.co.il/OnYourWay', pm2_name: 'on-your-way-frontend', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/OnYourWay|/onyourway', health_url: 'http://127.0.0.1:3101/OnYourWay', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'On Your Way API', pm2_name: 'on-your-way-backend', health_url: 'http://127.0.0.1:3004/health', analytics_enabled: 0, reporting_enabled: 0 },
-    { name: 'Dfus Reuven Preview', url: 'https://vee-app.co.il/DfusReuven', pm2_name: 'dfus-reuven', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/DfusReuven|/dfusreuven', health_url: 'http://127.0.0.1:3104/DfusReuven', analytics_enabled: 1, reporting_enabled: 0 },
     { name: 'Dfus Reuven', url: 'https://www.dfusreuven.co.il/', pm2_name: 'dfus-reuven-live', log_path: sharedNginxLog, log_host: 'dfusreuven.co.il|www.dfusreuven.co.il', health_url: 'http://127.0.0.1:3106/api/health', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Miryam Zelig Preview', url: 'https://vee-app.co.il/Miryam_Zelig/', log_path: sharedNginxLog, log_host: 'vee-app.co.il|www.vee-app.co.il', log_filter: '/miryamzelig2|/Miryam_Zelig|/miryam_zelig', health_url: 'https://vee-app.co.il/miryamzelig2/', analytics_enabled: 1, reporting_enabled: 0 },
 ];
 
-const retiredProductionApps = ['Pixel Dungeon', 'PDF Generator', 'ToDoFast (inactive)', 'Toren Hazak'];
+// Renames keep the record ID, history and client work of an existing app.
+const renamedProductionApps = { 'Maavar': 'Alenu CRM', 'Maavar Worker': 'Alenu CRM Worker', 'Vee Main App': 'Vee Landing' };
+// Libi Diamonds (live and preview), the Dfus preview, the Vee application and its
+// WhatsApp worker were removed from production on 2026-10-20 (archives in /root/retired-20261020).
+const retiredProductionApps = ['Pixel Dungeon', 'PDF Generator', 'ToDoFast (inactive)', 'Toren Hazak',
+    'Libi Diamonds', 'Libi Diamonds Preview', 'Dfus Reuven Preview', 'WhatsApp Worker'];
+
+function renameProductionApps() {
+    const rename = db.prepare('UPDATE apps SET name = ? WHERE name = ? AND NOT EXISTS (SELECT 1 FROM apps WHERE name = ?)');
+    for (const [from, to] of Object.entries(renamedProductionApps)) {
+        if (rename.run(to, from, to).changes) console.log(`Renamed production app monitor: ${from} -> ${to}`);
+    }
+}
 
 function purgeRetiredProductionApps() {
     const findApps = db.prepare('SELECT id FROM apps WHERE name = ?');
@@ -414,6 +442,18 @@ function purgeRetiredProductionApps() {
     })();
 }
 
+function splitPaths(value) {
+    return (value || '').split('|').map((part) => part.trim().replace(/\/$/, '')).filter(Boolean);
+}
+
+function onlyAddedExclusions(existing, next) {
+    const same = ['log_path', 'log_filter', 'log_host', 'analytics_enabled'].every((field) => (existing[field] ?? null) === (next[field] ?? null));
+    const before = splitPaths(existing.log_exclude);
+    const after = splitPaths(next.log_exclude);
+    const added = after.filter((item) => !before.includes(item));
+    return same && added.length && before.every((item) => after.includes(item)) ? added : null;
+}
+
 function syncProductionApps() {
     const fields = ['url', 'systemd_unit', 'pm2_name', 'log_path', 'health_port', 'health_path', 'log_filter', 'log_host', 'log_exclude', 'health_url', 'analytics_enabled', 'reporting_enabled', 'alerts_enabled'];
     const findApp = db.prepare('SELECT * FROM apps WHERE name = ? ORDER BY id ASC LIMIT 1');
@@ -428,6 +468,10 @@ function syncProductionApps() {
         alerts_enabled = @alerts_enabled WHERE id = @id`);
     const clearEvents = db.prepare('DELETE FROM visitor_events WHERE app_id = ?');
     const clearState = db.prepare('DELETE FROM visitor_ingestion_state WHERE app_id = ?');
+    // Server events plus every browser table that records the page path.
+    const pathTables = ['visitor_events', 'browser_signals', 'growth_events', 'engagement_signals', 'engagement_zones', 'engagement_zone_views', 'engagement_heatmap_cells'];
+    const existingTables = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name));
+    const deleteExcluded = pathTables.filter((table) => existingTables.has(table)).map((table) => db.prepare(`DELETE FROM ${table} WHERE app_id = ? AND (path = ? OR substr(path, 1, ?) = ?)`));
 
     db.transaction(() => {
         productionApps.forEach((definition) => {
@@ -442,7 +486,13 @@ function syncProductionApps() {
 
             const visitorConfigChanged = ['log_path', 'log_filter', 'log_host', 'log_exclude', 'analytics_enabled']
                 .some((field) => (existing[field] ?? null) !== (normalized[field] ?? null));
-            if (visitorConfigChanged) {
+            const addedExclusions = onlyAddedExclusions(existing, normalized);
+            if (addedExclusions) {
+                // Narrowing ownership removes only the newly excluded paths and keeps the rest of the history.
+                const removed = addedExclusions.reduce((total, prefix) => total + deleteExcluded.reduce((sum, statement) => sum
+                    + statement.run(existing.id, prefix, prefix.length + 1, prefix + '/').changes, 0), 0);
+                console.log(`Removed ${removed} records now owned by other apps: ${definition.name}`);
+            } else if (visitorConfigChanged) {
                 clearEvents.run(existing.id);
                 clearState.run(existing.id);
                 console.log(`Reset visitor ingestion after configuration change: ${definition.name}`);
@@ -452,6 +502,7 @@ function syncProductionApps() {
     })();
 }
 
+renameProductionApps();
 purgeRetiredProductionApps();
 syncProductionApps();
 require('./growthSchema').initializeGrowth(db);

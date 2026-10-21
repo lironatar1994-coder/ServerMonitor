@@ -91,7 +91,7 @@ a { text-underline-offset: .2em; }
 .stat:last-child { border-inline-end: 0; }
 .stat__label { color: var(--ink-muted); font-size: .8rem; font-weight: 400; gap: .4rem; }
 .stat__label > svg { display: none; }
-.stat__value { color: var(--ink); font-size: 2rem; font-weight: 700; line-height: 1.15; letter-spacing: -.025em; margin-block-start: 0; }
+.stat__value { color: var(--ink); font-size: 2rem; font-weight: 700; line-height: 1.15; letter-spacing: 0; margin-block-start: 0; }
 .page > .stat-row .stat__value { font-size: 2.25rem; }
 .stat--forest .stat__value { color: var(--ink); }
 .stat--vermilion .stat__value { color: var(--vermilion); }
@@ -219,13 +219,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, .search input
 .page--infrastructure .stat--vermilion .stat__value { color: var(--vermilion); }
 .page--infrastructure .hint__bubble { background: #EDF3FA; color: #18283A; }
 .page--infrastructure .service-status-list i.is-online { background: var(--healthy); }
-.panel--terminal .panel__body, .terminal-window, .whatsapp-log { background: #111B29; color: #C0CDDC; }
+.panel--terminal .panel__body, .terminal-window { background: #111B29; color: #C0CDDC; }
+.ssh-metrics, .ssh-terminal { border-radius: var(--panel-radius); }
 .terminal-chrome { background: #1A2939; color: #B2C0D0; border-color: #354B60; letter-spacing: 0; }
 .terminal-empty { color: #B2C0D0; }
 .term-success { color: #96D7B4; } .term-error { color: #F4A4AE; } .term-warning { color: #F1CD8D; } .term-info { color: #C0CDDC; }
-.whatsapp-status-sheet { background: #1A2939; color: #EDF3FA; border-radius: var(--panel-radius); }
-.whatsapp-status-sheet p, .whatsapp-status-sheet .eyebrow { color: #B2C0D0; }
-.whatsapp-metrics, .ssh-metrics, .whatsapp-test, .ssh-terminal { border-radius: var(--panel-radius); }
 
 /* Authentication is part of the product, with the same fields and actions. */
 .login { background: var(--paper); padding: 1.5rem; }

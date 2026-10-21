@@ -4,11 +4,13 @@ const http = require('http');
 const https = require('https');
 const { getSystemdSnapshot } = require('./systemd');
 const { parseNginxLogMetrics } = require('./logParser');
+const { sendAlertEmail } = require('./alerts');
 
 console.log('Background Monitor Started...');
 
 const monitorInterval = 10 * 60 * 1000; // Check once every 10 minutes
 const monitorDataRetentionDays = 90;
+const alertReminderMs = 6 * 60 * 60 * 1000;
 let lastDataPurgeAt = 0;
 
 function purgeExpiredMonitorData() {
@@ -96,36 +98,11 @@ function getFail2banBannedCount() {
     }
 }
 
-function sendWhatsAppAlert(appName, newStatus, isFailureReminder) {
-    const veeDbPath = '/root/Vee/backend/database.sqlite';
-    if (!fs.existsSync(veeDbPath)) {
-        console.warn('Vee Database not found, cannot queue WhatsApp alert.');
-        return;
-    }
-    
-    try {
-        const veeDb = new (require('better-sqlite3'))(veeDbPath);
-        const adminPhone = '0508611888';
-        let message = '';
-        
-        if (isFailureReminder) {
-            message = `⚠️ *התראת שרת Vee: שגיאה*\nהאפליקציה *${appName}* אינה מקוונת (מצב: *${newStatus}*).\nנא לבדוק את השרת.\nזמן: ${new Date().toLocaleString('he-IL')}`;
-        } else {
-            message = `✅ *התראת שרת Vee: תקין*\nהאפליקציה *${appName}* חזרה למצב: *תקינה ומקוונת*.\nזמן: ${new Date().toLocaleString('he-IL')}`;
-        }
-        
-        veeDb.prepare('INSERT INTO whatsapp_outbox (to_phone, message) VALUES (?, ?)').run(adminPhone, message);
-        veeDb.close();
-        console.log(`[Monitor Alert] Queued WhatsApp alert for ${appName} (status: ${newStatus}, failure: ${isFailureReminder})`);
-    } catch (e) {
-        console.error('Failed to queue WhatsApp alert:', e.message);
-    }
-}
-
 async function runMonitorCycle() {
     try {
         const apps = db.prepare('SELECT * FROM apps').all();
         const units = getSystemdSnapshot(apps, true);
+        const alerts = [];
         
         for (const app of apps) {
             let status = 'online';
@@ -192,18 +169,12 @@ async function runMonitorCycle() {
             
             if (oldStatus !== 'unknown' && app.alerts_enabled !== 0) {
                 if (!isNewOnline) {
-                    // Send/repeat warning alert every 1 hour (60 minutes cooldown)
-                    const now = Date.now();
-                    const cooldDownTime = 60 * 60 * 1000; // 1 hour
-                    const shouldAlert = !lastAlertedAt || (now - new Date(lastAlertedAt).getTime() > cooldDownTime);
-                    
-                    if (shouldAlert) {
-                        sendWhatsAppAlert(app.name, status, true);
-                        db.prepare('UPDATE apps SET last_alerted_at = CURRENT_TIMESTAMP WHERE id = ?').run(app.id);
-                    }
-                } else if (!isOldOnline && isNewOnline) {
-                    // Send recovery alert when transitioning back to online
-                    sendWhatsAppAlert(app.name, 'online', false);
+                    // Alert after two consecutive failed cycles, then repeat every six hours.
+                    const due = !isOldOnline && (!lastAlertedAt || Date.now() - new Date(lastAlertedAt.replace(' ', 'T') + 'Z').getTime() > alertReminderMs);
+                    if (due) alerts.push({ id: app.id, name: app.name, status, kind: 'down', reminder: Boolean(lastAlertedAt) });
+                } else if (!isOldOnline && lastAlertedAt) {
+                    // Recovery is reported only for failures that were reported.
+                    alerts.push({ id: app.id, name: app.name, kind: 'up' });
                     db.prepare('UPDATE apps SET last_alerted_at = NULL WHERE id = ?').run(app.id);
                 }
             }
@@ -212,6 +183,12 @@ async function runMonitorCycle() {
             db.prepare('UPDATE apps SET status = ?, last_checked = CURRENT_TIMESTAMP WHERE id = ?').run(status, app.id);
             db.prepare('INSERT INTO metrics (app_id, visitors, requests, attacks, cpu_usage, ram_usage) VALUES (?, ?, ?, ?, ?, ?)')
               .run(app.id, metrics.visitors, metrics.requests, metrics.attacks, appCpu, appMemory);
+        }
+        if (alerts.length) {
+            const { sent } = await sendAlertEmail(alerts);
+            const mark = db.prepare('UPDATE apps SET last_alerted_at = CURRENT_TIMESTAMP WHERE id = ?');
+            // An undelivered failure alert is retried on the next cycle.
+            if (sent) alerts.filter((item) => item.kind === 'down').forEach((item) => mark.run(item.id));
         }
         purgeExpiredMonitorData();
     } catch (err) {

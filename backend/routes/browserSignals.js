@@ -35,8 +35,4 @@ function collectSignal(req, res, fixedSiteUrl = null) {
 
 router.post('/site', (req, res) => collectSignal(req, res));
 
-// Temporary compatibility route for the first Libi deployment. Remove only after
-// the storefront has moved to the generic /site endpoint in production.
-router.post('/libi', (req, res) => collectSignal(req, res, 'https://www.libidiamonds.co.il/'));
-
 module.exports = router;

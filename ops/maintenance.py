@@ -20,7 +20,6 @@ import time
 STATE = Path('/var/lib/lawebs-maintenance')
 BACKUPS = STATE / 'backups'
 DATABASES = {
-    'vee': '/root/Vee/backend/database.sqlite',
     'on-your-way': '/root/OnYourWay/backend/prisma/prod.db',
     'sos': '/root/sos-landing-standalone/data/analytics.db',
     'server-monitor': '/root/ServerMonitor/backend/monitor.db',
@@ -41,22 +40,21 @@ ASSETS = {
 AUTH_KEY = Path('/root/.server-monitor-auth-key')
 AUTH_KEY_BACKUP = Path('/root/server-monitor-key-backups/auth.key')
 SERVICES = ['maavar', 'maavar-worker', 'nginx', 'ssh', 'pm2-root', 'koralevents', 'koralevents2', 'fail2ban']
-URLS = ['https://vee-app.co.il/maavar/api/health', 'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents2/api/health',
+URLS = ['https://lawebs.co.il/alenu-crm/api/health', 'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents2/api/health',
         'https://lawebs.co.il/Koralevents/api/health', 'https://vee-app.co.il/']
-EXPECTED_PM2 = {'dfus-reuven', 'dfus-reuven-live', 'libi-diamonds-2',
-                'libi-diamonds-live', 'manager-site', 'on-your-way-backend',
+EXPECTED_PM2 = {'dfus-reuven-live', 'manager-site', 'on-your-way-backend',
                 'on-your-way-frontend', 'pinhas-ratzon-form', 'seder-live',
-                'seder-whatsapp', 'seder-calendar', 'server-monitor', 'sos-landing-standalone', 'vee-app'}
-TRACKER_URLS = ['https://www.libidiamonds.co.il/', 'https://pinhasratzon.co.il/',
-                'https://www.dfusreuven.co.il/',
+                'seder-whatsapp', 'seder-calendar', 'server-monitor', 'sos-landing-standalone',
+                'video-library-api', 'claude-rc'}
+TRACKER_URLS = ['https://pinhasratzon.co.il/', 'https://www.dfusreuven.co.il/',
                 'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents',
-                'https://lawebs.co.il/Koralevents2', 'https://vee-app.co.il/DfusReuven',
-                'https://vee-app.co.il/LibiDiamonds2']
-GROWTH_URLS = ['https://www.libidiamonds.co.il/', 'https://pinhasratzon.co.il/',
+                'https://lawebs.co.il/Koralevents2', 'https://lawebs.co.il/alenu/', 'https://lawebs.co.il/cv/']
+GROWTH_URLS = ['https://pinhasratzon.co.il/',
                'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents', 'https://lawebs.co.il/Koralevents2',
                'https://lawebs.co.il/seder', 'https://vee-app.co.il/', 'https://vee-app.co.il/OnYourWay',
-               'https://vee-app.co.il/pdf-studio/', 'https://www.dfusreuven.co.il/',
-               'https://miryamzelig.co.il/', 'https://sosbaderech.co.il/']
+               'https://lawebs.co.il/pdf-studio/', 'https://www.dfusreuven.co.il/',
+               'https://miryamzelig.co.il/', 'https://sosbaderech.co.il/',
+               'https://lawebs.co.il/alenu/', 'https://lawebs.co.il/cv/']
 
 def run(args, timeout=60):
     p = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
@@ -161,14 +159,15 @@ def prune_snapshots():
     write_json(STATE / 'retention-status.json', {'checked': time.time(), 'bytes': total,
                'removed': removed, 'over_budget': total > 2 * 1024**3})
 
-RELEASE_BASES = [Path('/opt') / name for name in ('koralevents', 'koralevents2', 'maavar', 'lawebs-portfolio')]
+RELEASE_BASES = [Path('/opt') / name for name in ('koralevents', 'koralevents2', 'maavar', 'lawebs-portfolio',
+                                                  'cv-manager', 'pizza-manager-platform', 'desk', 'allsee')]
 BUILD_ROOTS = [Path(p) for p in (
-    '/root/Vee/frontend', '/root/OnYourWay/frontend', '/root/sos-landing-standalone',
-    '/root/DfusReuven', '/root/DfusReuven-live', '/root/LibiDiamonds-live',
-    '/root/LibiDiamonds2', '/root/Seder', '/root/PDFStudio')]
+    '/root/OnYourWay/frontend', '/root/sos-landing-standalone',
+    '/root/DfusReuven-live', '/root/Seder', '/root/PDFStudio')]
 NPX_ROOT = Path('/root/.npm/_npx')
-RELEASE_NAME = re.compile(r'[0-9a-f]{40}(?:-[A-Za-z0-9-]+)?')
-LIVE_COPY_ROOTS = [Path(p) for p in ('/root/Seder', '/root/LibiDiamonds-live', '/root/DfusReuven-live')]
+# Commit-named releases, or timestamp-named ones (20261017T202728Z, 20261011-162324).
+RELEASE_NAME = re.compile(r'[0-9a-f]{40}(?:-[A-Za-z0-9-]+)?|\d{8}(?:T\d{6}Z|-\d{6})')
+LIVE_COPY_ROOTS = [Path(p) for p in ('/root/Seder', '/root/DfusReuven-live')]
 # Only dated, explicitly named deployment artifacts qualify. Keep three per family,
 # the most recent day, and anything referenced by a process or a current dependency.
 RETENTION_GROUPS = [

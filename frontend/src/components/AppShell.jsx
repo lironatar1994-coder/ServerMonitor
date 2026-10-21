@@ -184,11 +184,7 @@ export default function AppShell() {
             <span>
               <b>{user?.username}</b>
               <small>
-                {user?.role === "owner"
-                  ? "בעלים"
-                  : user?.role === "editor"
-                    ? "עורך"
-                    : "קורא"}
+                {{ owner: "בעלים", editor: "עורך", reader: "קורא" }[user?.role] || ""}
               </small>
             </span>
           </div>

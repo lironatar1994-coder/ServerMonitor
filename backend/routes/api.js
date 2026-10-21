@@ -6,22 +6,11 @@ const fs = require('fs');
 const path = require('path');
 const { getRecentVisitors, getUniqueVisitors, isTargetAppLine } = require('../logParser');
 const { getResourceUsage } = require('../resourceUsage');
-const { normalizeWhatsappStatus, whatsappRuntimeStatus } = require('../whatsappRuntime');
 
 const { UNIT_PATTERN, getSystemdSnapshot } = require('../systemd');
 const router = express.Router();
-const WHATSAPP_STATUS_PATH = process.env.WHATSAPP_STATUS_PATH || '/root/Vee/backend/whatsapp_status.json';
 let pm2SnapshotCache = { fetchedAt: 0, processes: [] };
 let cpuSnapshotCache = { fetchedAt: 0, snapshot: null };
-
-function normalizeWhatsappMessageStatus(rawStatus) {
-    const status = (rawStatus || '').toString().trim().toLowerCase();
-
-    if (['sent', 'success', 'delivered', 'ok', 'complete', 'completed'].includes(status)) return 'sent';
-    if (['failed', 'error', 'rejected', 'unsent'].includes(status)) return 'failed';
-    if (['pending', 'queued', 'sending', 'waiting', 'processing'].includes(status)) return 'pending';
-    return status || 'pending';
-}
 
 function getPm2Snapshot() {
     const { execFileSync } = require('child_process');
@@ -170,7 +159,7 @@ function getMemoryStats() {
     };
 }
 
-function enrichAppStatus(app, includeSensitive = false) {
+function enrichAppStatus(app) {
     if (app?.systemd_unit) {
         const unit = getSystemdSnapshot(db.prepare('SELECT systemd_unit FROM apps WHERE systemd_unit IS NOT NULL').all()).find((item) => item.systemd_unit === app.systemd_unit);
         const failedHealth = Boolean(app.health_url || app.health_port) && ['error', 'offline'].includes(app.status);
@@ -188,18 +177,6 @@ function enrichAppStatus(app, includeSensitive = false) {
         cpu: pm2Data.cpu,
         memory: pm2Data.memory 
     };
-
-    if (includeSensitive && app.pm2_name === 'vee-whatsapp-worker') {
-        try {
-            if (fs.existsSync(WHATSAPP_STATUS_PATH)) {
-                enriched.whatsapp_status = whatsappRuntimeStatus(
-                    JSON.parse(fs.readFileSync(WHATSAPP_STATUS_PATH, 'utf8')), pm2Data.status === 'online'
-                );
-            }
-        } catch (e) {
-            console.error('Failed to read whatsapp_status.json for app details:', e.message);
-        }
-    }
 
     return enriched;
 }
@@ -256,7 +233,7 @@ function getTrafficHistory(appId, days) {
 
 router.use(authenticateToken);
 router.use((req, res, next) => {
-    const sensitive = /\/(logs|whatsapp-status)$/.test(req.path);
+    const sensitive = /\/logs$/.test(req.path);
     if ((!['GET','HEAD'].includes(req.method) || sensitive) && (req.user.role !== 'owner' || req.user.service)) return res.status(403).json({ error: 'נדרשת הרשאת בעלים.' });
     next();
 });
@@ -297,7 +274,7 @@ router.get('/', (req, res) => {
         const trend = db.prepare('SELECT requests, timestamp FROM metrics WHERE app_id = ? ORDER BY timestamp DESC LIMIT 10').all(app.id);
         
         return {
-            ...enrichAppStatus(app, req.user.role === 'owner' && !req.user.service),
+            ...enrichAppStatus(app),
             metrics: latestMetrics || { visitors: 0, requests: 0, attacks: 0 },
             trend: trend.reverse()
         };
@@ -357,7 +334,7 @@ router.get('/:id', (req, res) => {
     const history = db.prepare('SELECT * FROM metrics WHERE app_id = ? ORDER BY timestamp DESC LIMIT 24').all(req.params.id);
     
     res.json({
-        ...enrichAppStatus(app, req.user.role === 'owner' && !req.user.service),
+        ...enrichAppStatus(app),
         history: history.reverse()
     });
 });
@@ -491,53 +468,6 @@ router.get('/:id/visitors', (req, res) => {
     const app = db.prepare('SELECT * FROM apps WHERE id = ?').get(req.params.id);
     if (!app) return res.status(404).json({ error: 'App not found' });
     
-    // Check if the app is the WhatsApp Worker
-    if (app.pm2_name === 'vee-whatsapp-worker') {
-        if(req.user.role !== 'owner' || req.user.service) return res.status(403).json({error:'נדרשת הרשאת בעלים.'});
-        const veeDbPath = '/root/Vee/backend/database.sqlite';
-        if (!fs.existsSync(veeDbPath)) {
-            // Mock data for local development/fallback
-            return res.json({
-                is_whatsapp: true,
-                visitors: [
-                    { id: 1, phone: '0508611888', message: '🔔 בדיקת מערכת התראות מנטור Vee - הודעת הבדיקה נשלחה בהצלחה!', status: 'sent', error: null, created_at: new Date().toISOString() },
-                    { id: 2, phone: '0508611888', message: '⚠️ התראת שרת Vee: שגיאה - האפליקציה vee-app אינה מקוונת', status: 'failed', error: 'Failed to send message', created_at: new Date().toISOString() }
-                ]
-            });
-        }
-        try {
-            const veeDb = new (require('better-sqlite3'))(veeDbPath);
-            const logs = veeDb.prepare(`
-                SELECT id, phone, message, status, error, created_at
-                FROM whatsapp_logs
-            `).all().map(row => ({
-                ...row,
-                status: normalizeWhatsappMessageStatus(row.status)
-            }));
-
-            const outbox = veeDb.prepare(`
-                SELECT id, to_phone AS phone, message, status, NULL AS error, created_at
-                FROM whatsapp_outbox
-            `).all().map(row => ({
-                ...row,
-                status: normalizeWhatsappMessageStatus(row.status)
-            }));
-
-            const combined = [...logs, ...outbox].sort((left, right) => {
-                const leftTime = new Date(left.created_at || 0).getTime();
-                const rightTime = new Date(right.created_at || 0).getTime();
-                if (rightTime !== leftTime) return rightTime - leftTime;
-                return Number(right.id || 0) - Number(left.id || 0);
-            }).slice(0, 100);
-
-            veeDb.close();
-            return res.json({ is_whatsapp: true, visitors: combined });
-        } catch (e) {
-            console.error(e);
-            return res.status(500).json({ error: `Failed to query WhatsApp database: ${e.message}` });
-        }
-    }
-    
     if (!app.log_path || !fs.existsSync(app.log_path)) {
         return res.json({ is_whatsapp: false, visitors: [] });
     }
@@ -562,22 +492,6 @@ router.get('/:id/visitors', (req, res) => {
 router.get('/:id/unique-visitors', (req, res) => {
     const app = db.prepare('SELECT * FROM apps WHERE id = ?').get(req.params.id);
     if (!app) return res.status(404).json({ error: 'App not found' });
-
-    if (app.pm2_name === 'vee-whatsapp-worker') {
-        return res.json({
-            is_whatsapp: true,
-            summary: {
-                total_unique: 0,
-                candidate_unique: 0,
-                bot_unique: 0,
-                mixed_unique: 0,
-                total_requests: 0,
-                candidate_requests: 0,
-                bot_requests: 0
-            },
-            visitors: []
-        });
-    }
 
     if (!app.log_path || !fs.existsSync(app.log_path)) {
         return res.json({
@@ -609,30 +523,6 @@ router.get('/:id/unique-visitors', (req, res) => {
         console.error(e);
         res.status(500).json({ error: e.message });
     }
-});
-
-// GET WhatsApp status and PM2 status
-router.get('/:id/whatsapp-status', (req, res) => {
-    const app = db.prepare('SELECT * FROM apps WHERE id = ?').get(req.params.id);
-    if (!app) return res.status(404).json({ error: 'App not found' });
-    
-    if (app.pm2_name === 'vee-whatsapp-worker') {
-        let statusData = { status: 'UNKNOWN', qr: null, updatedAt: null };
-        
-        if (fs.existsSync(WHATSAPP_STATUS_PATH)) {
-            try {
-                statusData = normalizeWhatsappStatus(JSON.parse(fs.readFileSync(WHATSAPP_STATUS_PATH, 'utf8')));
-            } catch (e) {
-                console.error('Failed to parse whatsapp_status.json:', e.message);
-            }
-        }
-        
-        const isOnline = getLivePm2Metrics(app.pm2_name).status === 'online';
-        res.json(whatsappRuntimeStatus(statusData, isOnline));
-        return;
-    }
-    
-    res.status(400).json({ error: 'This app is not a WhatsApp worker' });
 });
 
 module.exports = router;

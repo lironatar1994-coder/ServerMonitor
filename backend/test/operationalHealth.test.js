@@ -5,7 +5,7 @@ const now = Date.UTC(2026, 9, 7, 19);
 const base = { now, health: { checked: now / 1000, errors: [], warnings: [] }, browser: { checked: now, errors: [] }, backup: { completed: now / 1000, files: { 'db.sqlite': {} } } };
 
 test('health distinguishes missing monitoring coverage, stopped alert delivery and worker connection state', () => {
-  const status = buildOperationalHealth({ ...base, apps: [{id:2,name:'Legacy sender',status:'offline',pm2_name:'vee-whatsapp-worker',alerts_enabled:0},{id:3,name:'Seder WhatsApp',status:'online',pm2_name:'seder-whatsapp'}], discovered: { rows:[{unit:'cv-manager.service',name:'CV Manager'}] }, whatsapp: {status:'DISCONNECTED',updatedAt:new Date(now).toISOString(),qr:'must-never-be-exposed',phone:'private'}, pendingMessages:8922 });
+  const status = buildOperationalHealth({ ...base, apps: [{id:3,name:'Seder WhatsApp',status:'online',pm2_name:'seder-whatsapp'}], discovered: { rows:[{unit:'cv-manager.service',name:'CV Manager'}] }, whatsapp: {status:'DISCONNECTED',updatedAt:new Date(now).toISOString(),qr:'must-never-be-exposed',phone:'private'}, alertsConfigured:false });
   assert.deepEqual(status.issues.map(item => item.id),['alert-delivery','seder-whatsapp','coverage']);
   assert.equal(status.status,'attention');
   assert.equal(status.issues.find(item=>item.id==='seder-whatsapp').appId,3);

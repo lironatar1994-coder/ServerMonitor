@@ -28,7 +28,6 @@ const {
     recordProductEvent,
     validateProductEventBody
 } = require('../browserSignals');
-const { getLibiJewelryInterest, humanizeSlug, inferCategory } = require('../jewelryAnalytics');
 const { getEngagement } = require('../routes/visitorAnalytics');
 
 const humanLine = '1.2.3.4 - - [12/Jul/2026:12:00:00 +0300] "GET /site/ HTTP/1.1" 200 120 "https://google.com" "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"';
@@ -82,36 +81,19 @@ test('requires an exact recorded host when an app has a host boundary', () => {
     ), false);
 });
 
-test('seeds Libi Diamonds with dedicated production hosts and runtime', () => {
-    const app = db.prepare(`
-        SELECT name, url, pm2_name, log_path, log_host, log_filter, log_exclude
-        FROM apps WHERE name = ?
-    `).get('Libi Diamonds');
-    assert.deepEqual(app, {
-        name: 'Libi Diamonds',
-        url: 'https://www.libidiamonds.co.il/',
-        pm2_name: 'libi-diamonds-live',
-        log_path: '/var/log/nginx/monitor_host_access.log',
-        log_host: 'libidiamonds.co.il|www.libidiamonds.co.il',
-        log_filter: null,
-        log_exclude: null
-    });
-
-    const libiLine = '1.2.3.4 - - [12/Jul/2026:12:03:00 +0300] "GET /rings HTTP/1.1" 200 100 "-" "Mozilla/5.0 (Windows NT 10.0)" "www.libidiamonds.co.il"';
-    assert.equal(isTargetAppLine(
-        libiLine,
-        app.name,
-        app.log_filter,
-        app.log_host,
-        app.log_exclude
-    ), true);
-    assert.equal(isTargetAppLine(
-        libiLine,
-        'Vee Main App',
-        null,
-        'vee-app.co.il|www.vee-app.co.il',
-        null
-    ), false);
+test('retires removed production apps and seeds the new lawebs.co.il applications', () => {
+    for (const name of ['Libi Diamonds', 'Libi Diamonds Preview', 'Dfus Reuven Preview', 'WhatsApp Worker', 'Vee Main App', 'Maavar']) {
+        assert.equal(db.prepare('SELECT id FROM apps WHERE name = ?').get(name), undefined, name);
+    }
+    const app = (name) => db.prepare('SELECT * FROM apps WHERE name = ?').get(name);
+    assert.equal(app('Vee Landing').pm2_name, null);
+    assert.equal(app('Alenu CRM').systemd_unit, 'maavar.service');
+    for (const [name, unit] of [['AllSee', 'allsee.service'], ['CV Manager', 'cv-manager.service'], ['Desk', 'desk.service'], ['Pizza Manager', 'pizza-manager-platform.service']]) {
+        assert.equal(app(name).systemd_unit, unit, name);
+    }
+    for (const [name, process] of [['Video Library', 'video-library-api'], ['Claude RC', 'claude-rc']]) assert.equal(app(name).pm2_name, process, name);
+    for (const name of ['Alenu', 'Mila Tova CV', 'Pizza Manager']) assert.equal(app(name).analytics_enabled, 1, name);
+    for (const name of ['Desk', 'AllSee', 'Video Library', 'Claude RC', 'CV Manager', 'Alenu CRM']) assert.equal(app(name).analytics_enabled, 0, name);
 });
 
 test('seeds Seder with exact host, path, runtime, and client reporting ownership', () => {
@@ -179,14 +161,14 @@ test('stores deduplicated first-party browser signals against an exact configure
     };
     assert.equal(isAuthorizedSignal('test-visitor-signal-key'), true);
     assert.equal(isAuthorizedSignal('wrong-key'), false);
-    const siteUrl = 'https://www.libidiamonds.co.il/';
-    assert.equal(findSignalApp(siteUrl).name, 'Libi Diamonds');
+    const siteUrl = 'https://www.dfusreuven.co.il/';
+    assert.equal(findSignalApp(siteUrl).name, 'Dfus Reuven');
     assert.equal(findSignalApp('https://unknown.example/'), null);
     assert.deepEqual(recordBrowserSignal({ body: payload, ip: '1.2.3.4', userAgent: 'Mozilla/5.0', siteUrl }), {
-        accepted: true, duplicate: false, app: 'Libi Diamonds'
+        accepted: true, duplicate: false, app: 'Dfus Reuven'
     });
     assert.deepEqual(recordBrowserSignal({ body: payload, ip: '1.2.3.4', userAgent: 'Mozilla/5.0', siteUrl }), {
-        accepted: true, duplicate: true, app: 'Libi Diamonds'
+        accepted: true, duplicate: true, app: 'Dfus Reuven'
     });
     const stored = db.prepare(`
         SELECT event_id, ip, visitor_hash, session_hash, path, automation_hint
@@ -204,7 +186,7 @@ test('stores deduplicated first-party browser signals against an exact configure
 });
 
 test('stores privacy-safe PDF Studio product, visibility, and heatmap events while filtering automation', () => {
-    const siteUrl = 'https://vee-app.co.il/pdf-studio/';
+    const siteUrl = 'https://lawebs.co.il/pdf-studio/';
     const common = {
         visitor_id: 'visitor_product_1234567890',
         session_id: 'session_product_1234567890',
@@ -274,11 +256,12 @@ test('stores privacy-safe PDF Studio product, visibility, and heatmap events whi
 
 test('resolves every supported public site for first-party browser signals', () => {
     const canonicalSites = new Map([
-        ['https://vee-app.co.il/', 'Vee Main App'],
-        ['https://vee-app.co.il/pdf-studio/', 'PDF Studio'],
+        ['https://vee-app.co.il/', 'Vee Landing'],
+        ['https://lawebs.co.il/pdf-studio/', 'PDF Studio'],
         ['https://sosbaderech.co.il/', 'SOS Landing'],
         ['https://miryamzelig.co.il/', 'Miryam Zelig'],
-        ['https://www.libidiamonds.co.il/', 'Libi Diamonds'],
+        ['https://lawebs.co.il/alenu/', 'Alenu'],
+        ['https://lawebs.co.il/cv/', 'Mila Tova CV'],
         ['https://lawebs.co.il/seder', 'Seder'],
         ['https://vee-app.co.il/OnYourWay', 'On Your Way'],
         ['https://www.dfusreuven.co.il/', 'Dfus Reuven']
@@ -286,6 +269,7 @@ test('resolves every supported public site for first-party browser signals', () 
     canonicalSites.forEach((name, url) => assert.equal(findSignalApp(url)?.name, name));
     assert.equal(findSignalApp('https://vee-app.co.il/text-to-pdf'), null);
     assert.equal(findSignalApp('https://vee-app.co.il/pixel-dungeon/'), null);
+    assert.equal(findSignalApp('https://www.libidiamonds.co.il/'), null);
 });
 
 test('separates page views from assets, API calls, errors, and non-navigation methods', () => {
@@ -366,42 +350,7 @@ test('reclassifies stored automation and page views when rules change', () => {
     assert.equal(db.prepare("SELECT is_page_view FROM visitor_events WHERE source_file_id = 'stale-page-rule'").get().is_page_view, 0);
 });
 
-test('ranks Libi products and collections from canonical candidate page views', () => {
-    const app = db.prepare('SELECT id FROM apps WHERE name = ?').get('Libi Diamonds');
-    const insert = db.prepare(`INSERT INTO visitor_events (
-        app_id, source_file_id, source_offset, occurred_at, ip, method, path,
-        status, user_agent, is_bot, is_page_view
-    ) VALUES (?, 'jewelry-test', ?, ?, ?, 'GET', ?, 200, 'Mozilla/5.0', ?, ?)`);
-    const rows = [
-        [1, '2026-08-02T09:00:00.000Z', '1.1.1.1', '/product/aura-solitaire-ring', 0, 1],
-        [2, '2026-08-02T09:05:00.000Z', '1.1.1.1', '/product/aura-solitaire-ring?metal=white', 0, 1],
-        [3, '2026-08-03T10:00:00.000Z', '2.2.2.2', '/product/aria-oval-studs/', 0, 1],
-        [4, '2026-08-03T10:01:00.000Z', '3.3.3.3', '/jewelry/rings', 0, 1],
-        [5, '2026-07-28T10:00:00.000Z', '4.4.4.4', '/product/aura-solitaire-ring', 0, 1],
-        [6, '2026-08-03T10:02:00.000Z', '5.5.5.5', '/product/aura-solitaire-ring', 1, 1],
-        [7, '2026-08-03T10:03:00.000Z', '6.6.6.6', '/product/aura-solitaire-ring', 0, 0]
-    ];
-    rows.forEach((row) => insert.run(app.id, ...row));
-
-    const interest = getLibiJewelryInterest(db, app.id, {
-        from: '2026-08-01T00:00:00.000Z',
-        to: '2026-08-08T00:00:00.000Z'
-    });
-    assert.equal(interest.summary.product_page_views, 3);
-    assert.equal(interest.summary.unique_product_candidates, 2);
-    assert.equal(interest.summary.products_viewed, 2);
-    assert.equal(interest.products[0].slug, 'aura-solitaire-ring');
-    assert.equal(interest.products[0].page_views, 2);
-    assert.equal(interest.products[0].unique_candidates, 1);
-    assert.equal(interest.products[0].previous_page_views, 1);
-    assert.equal(interest.collections[0].category, 'rings');
-    assert.equal(interest.collections[0].page_views, 1);
-    assert.equal(inferCategory('aria-oval-studs'), 'earrings');
-    assert.equal(humanizeSlug('new-diamond-pendant'), 'New Diamond Pendant');
-});
-
-
-test('path segment ownership isolates Koral routes, LA webs and Maavar', () => {
+test('path segment ownership isolates Koral routes, LA webs and its sibling apps', () => {
     const matches = (name, host, path) => {
         const app = db.prepare('SELECT * FROM apps WHERE name = ?').get(name);
         return isTargetAppLine('', name, app.log_filter, app.log_host, app.log_exclude, { host, path });
@@ -414,9 +363,18 @@ test('path segment ownership isolates Koral routes, LA webs and Maavar', () => {
     assert.equal(matches('LA webs', 'lawebs.co.il', '/seder'), false);
     assert.equal(matches('LA webs', 'lawebs.co.il', '/Koralevents2'), false);
     assert.equal(matches('LA webs', 'lawebs.co.il', '/'), true);
-    assert.equal(matches('Vee Main App', 'vee-app.co.il', '/maavar/documents'), false);
+    for (const path of ['/alenu/', '/cv/', '/cv-manager/login', '/desk/', '/allsee/', '/videos/', '/rc/', '/PizzaManager/p/oven-demo/', '/pdf-studio/', '/alenu-crm']) {
+        assert.equal(matches('LA webs', 'lawebs.co.il', path), false, path);
+    }
+    assert.equal(matches('LA webs', 'lawebs.co.il', '/work/koral/'), true);
+    assert.equal(matches('Mila Tova CV', 'lawebs.co.il', '/cv/'), true);
+    assert.equal(matches('Mila Tova CV', 'lawebs.co.il', '/cv-manager/'), false);
+    assert.equal(matches('Alenu', 'lawebs.co.il', '/alenu-crm/'), false);
+    assert.equal(matches('Pizza Manager', 'lawebs.co.il', '/PizzaManager/p/oven-demo/'), true);
+    assert.equal(matches('Pizza Manager', 'lawebs.co.il', '/PizzaManager/admin/'), false);
+    assert.equal(matches('Vee Landing', 'vee-app.co.il', '/maavar/documents'), false);
     assert.equal(matches('Seder', 'lawebs.co.il', '/seder-other'), false);
-    assert.equal(db.prepare('SELECT analytics_enabled FROM apps WHERE name = ?').get('Maavar').analytics_enabled, 0);
+    assert.equal(db.prepare('SELECT analytics_enabled FROM apps WHERE name = ?').get('Alenu CRM').analytics_enabled, 0);
 });
 
 

@@ -63,15 +63,20 @@ const ResourceRows = ({ items, kind }) => {
               ? item.bytes
               : item.footprint_bytes || item.rss_bytes,
           ) || 0;
-        const displayedBytes =
-          kind === "applications" ? Number(item.memory_bytes) || 0 : bytes;
         const isProcess = kind === "processes";
         const subtitle =
           kind === "applications" ? (
             <>
-              {formatNumber(item.process_count)} תהליכים ·{" "}
-              <bdi dir="ltr">{formatBytes(item.child_memory_bytes)}</bdi>{" "}
-              בתהליכי־משנה
+              {Number(item.process_count) === 1
+                ? "תהליך אחד"
+                : `${formatNumber(item.process_count)} תהליכים`}
+              {Number(item.child_memory_bytes) > 0 && (
+                <>
+                  {" · "}
+                  <bdi dir="ltr">{formatBytes(item.child_memory_bytes)}</bdi>{" "}
+                  בתהליכי־משנה
+                </>
+              )}
             </>
           ) : kind === "storage" ? (
             <>
@@ -103,14 +108,12 @@ const ResourceRows = ({ items, kind }) => {
             </span>
             <span className="resource-list__value">
               <strong>
-                <bdi dir="ltr">{formatBytes(displayedBytes)}</bdi>
+                <bdi dir="ltr">{formatBytes(bytes)}</bdi>
               </strong>
               {kind === "applications" && (
                 <small>
-                  <bdi dir="ltr">Swap {formatBytes(item.swap_bytes)}</bdi> ·{" "}
-                  <bdi dir="ltr">
-                    RAM {Number(item.memory_percent || 0).toFixed(1)}%
-                  </bdi>
+                  <bdi dir="ltr">RAM {formatBytes(item.memory_bytes)}</bdi> ·{" "}
+                  <bdi dir="ltr">Swap {formatBytes(item.swap_bytes)}</bdi>
                 </small>
               )}
               {kind === "storage" && (
@@ -167,7 +170,10 @@ const Infrastructure = () => {
 
   useEffect(() => {
     const initial = window.setTimeout(fetchData, 0);
-    const interval = window.setInterval(fetchData, 15000);
+    // Hidden tabs stop polling so an idle dashboard adds no load to the server.
+    const interval = window.setInterval(() => {
+      if (document.visibilityState !== "hidden") fetchData();
+    }, 15000);
     return () => {
       window.clearTimeout(initial);
       window.clearInterval(interval);
@@ -235,9 +241,9 @@ const Infrastructure = () => {
           <Stat
             icon={Cpu}
             label="מעבד"
-            value={load.toFixed(2)}
+            value={`${Math.round(loadPercent)}%`}
             tone={toneFor(loadPercent)}
-            foot={`עומס דקה · ${formatNumber(cores)} ליבות`}
+            foot={`עומס ממוצע ${load.toFixed(2)} · ${formatNumber(cores)} ליבות`}
           />
           <Stat
             icon={HardDrive}
@@ -328,15 +334,15 @@ const Infrastructure = () => {
           <ResourceRows items={selectedItems} kind={resourceView} />
         </Panel>
 
-        <Panel title="שירותים" bleed>
-          {apps.length ? (
+        <Panel
+          title="שירותים לא זמינים"
+          action={<Link className="crumb" to="/services">כל השירותים <ChevronLeft aria-hidden="true" /></Link>}
+          bleed
+        >
+          {apps.some((app) => app.status !== "online") ? (
             <ul className="service-status-list">
-              {[...apps]
-                .sort(
-                  (a, b) =>
-                    Number(a.status === "online") -
-                    Number(b.status === "online"),
-                )
+              {apps
+                .filter((app) => app.status !== "online")
                 .map((app) => (
                   <li key={app.id}>
                     <Link to={`/services/${app.id}`}>
@@ -355,11 +361,7 @@ const Infrastructure = () => {
                       <span
                         className={`chip ${app.status === "online" ? "is-online" : "is-offline"}`}
                       >
-                        {app.status === "online"
-                          ? "פעיל"
-                          : app.status === "offline"
-                            ? "לא פעיל"
-                            : "לא ידוע"}
+                        {app.status === "unknown" ? "לא נבדק" : "לא זמין"}
                       </span>
                       <ChevronLeft aria-hidden="true" />
                     </Link>
@@ -367,7 +369,7 @@ const Infrastructure = () => {
                 ))}
             </ul>
           ) : (
-            <Empty text="אין שירותים מוגדרים" />
+            <Empty text={apps.length ? `כל ${formatNumber(apps.length)} השירותים זמינים` : "אין שירותים מוגדרים"} />
           )}
         </Panel>
       </DataState>

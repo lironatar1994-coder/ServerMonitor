@@ -4,7 +4,6 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch, rangeQuery } from '../lib/api';
 import { useRange } from '../lib/useRange';
 import { DataState, Empty, Panel, PageHead, RangePicker, RankedList, Stat, StatRow, Tabs } from '../components/AnalyticsParts';
-import JewelryInterest from '../components/JewelryInterest';
 import ProductAnalytics from '../components/ProductAnalytics';
 import TrackingStatus from '../components/TrackingStatus';
 import PageInsights from '../components/PageInsights';
@@ -14,7 +13,7 @@ import { previousRange, rangeSearch } from '../lib/dailyCheck';
 import { pageName } from '../lib/analyticsLabels';
 import { formatDateTime, formatNumber } from '../lib/format';
 
-import { VISITOR_HINT as BROWSER_SIGNAL_HINT, CONNECTION_HINT as CANDIDATE_HINT, PAGE_HINT as PAGE_VIEW_HINT } from '../lib/analyticsLabels';
+import { CONNECTION_HINT as CANDIDATE_HINT, PAGE_HINT as PAGE_VIEW_HINT } from '../lib/analyticsLabels';
 
 const BREAKDOWN_TABS = [
   { id: 'locations', label: 'מיקומים' },
@@ -152,7 +151,7 @@ const VisitorDetail = () => {
             <Link className="crumb" to={`/visitors${rangeSearch(data?.range || resolveRange())}`}><ChevronRight aria-hidden="true" /> אתרים</Link>
             {data?.app && (
               <span className={`chip ${data.app.status === 'online' ? 'is-online' : 'is-offline'}`}>
-                {data.app.status === 'online' ? 'פעיל' : 'דורש בדיקה'}
+                {data.app.status === 'online' ? 'זמין' : 'לא זמין'}
               </span>
             )}
             {data?.app?.url && (
@@ -175,8 +174,8 @@ const VisitorDetail = () => {
       </PageHead>
 
       <DataState loading={loading && !data} error={error} onRetry={fetchAnalytics}>
-        <TrackingStatus health={data?.tracking_health} />
-        {data?.app?.status && data.app.status !== 'online' && <div className="attention-list"><Link to={`/services/${id}`}>האתר דורש בדיקת זמינות <ChevronLeft /></Link></div>}
+        <TrackingStatus health={data?.tracking_health} site={data?.app?.name} />
+        {data?.app?.status && data.app.status !== 'online' && <div className="attention-list"><Link to={`/services/${id}`}>האתר לא זמין בבדיקה האחרונה <ChevronLeft aria-hidden="true" /></Link></div>}
         <StatRow>
           <Stat icon={Users} label="מבקרים משוערים" value={summary.browser_signal_visitors} previous={data?.comparison?.previous?.browser_signal_visitors} tone="forest" />
           <Stat icon={Activity} label="ביקורים" value={summary.browser_signal_sessions} previous={data?.comparison?.previous?.browser_signal_sessions} />
@@ -186,7 +185,7 @@ const VisitorDetail = () => {
         {view === 'overview' && <>
           {!summary.browser_signal_page_views && <p className="status-line is-attention">לא נמדדה פעילות בטווח הזה.</p>}
           <TrafficChart data={data} previous={previous} comparisonError={comparisonError} />
-          <Panel title="עמודים מובילים" hint={`${PAGE_VIEW_HINT} ${BROWSER_SIGNAL_HINT} ביקורים וצפיות כוללים חזרות.`}><RankedList items={data?.pages} max={5} onSelect={setSelectedPath} labelFor={value => pageName(value, data?.app?.name)} /></Panel>
+          <Panel title="עמודים מובילים" hint={`הספירה לפי פתיחות עמודים שנרשמו בשרת, ולכן עשויה להיות גבוהה מהצפיות שנמדדו בדפדפן. ${PAGE_VIEW_HINT}`}><RankedList items={data?.pages} max={5} onSelect={setSelectedPath} labelFor={value => pageName(value, data?.app?.name)} /></Panel>
         </>}
         {view === 'audience' && <Panel title="מקורות וקהל" hint="פילוח לפי פתיחות עמודים שנרשמו בשרת; מיקום משוער לפי כתובת רשת." action={<Tabs tabs={BREAKDOWN_TABS} value={breakdown} onChange={setBreakdown} />}><RankedList items={data?.[breakdown]} color={breakdownMeta.color} empty={breakdownMeta.empty} /></Panel>}
         {view === 'pages' && <>
@@ -196,7 +195,6 @@ const VisitorDetail = () => {
           </Panel>
           {selectedPath && data?.app && <PageInsights key={`${id}:${selectedPath}:${days}:${custom?.from}`} app={data.app} path={selectedPath} resolveRange={resolveRange} onClose={() => setSelectedPath(null)} onSelect={setSelectedPath} />}
         </div>
-        <JewelryInterest interest={data?.jewelry_interest} siteUrl={data?.app?.url} />
         <details className="measurement-details"><summary>מעורבות</summary>
         {engagementError && <div className="banner banner--error" role="alert">מדידת השימוש לא נטענה. {engagementError}<button className="btn" onClick={fetchAnalytics}>ניסיון נוסף</button></div>}
         {(data?.app?.name === 'PDF Studio' || data?.app?.name === 'LA webs' || data?.app?.name === 'Miryam Zelig' || data?.app?.name === 'Seder' || Boolean(engagement?.engagement_samples) || Boolean(engagement?.product?.summary?.sessions)) && (
@@ -205,7 +203,7 @@ const VisitorDetail = () => {
         </details>
 
         </>}
-        <details className="measurement-details"><summary>אבחון</summary>
+        <details className="measurement-details"><summary>אבחון מדידה</summary>
         <StatRow>
           <Stat label="כתובות רשת שונות" value={summary.unique_candidates} previous={data?.comparison?.previous?.unique_candidates} hint={CANDIDATE_HINT} />
           <Stat label="פתיחות עמודים לפי השרת" value={summary.page_views} previous={data?.comparison?.previous?.page_views} hint={PAGE_VIEW_HINT} />

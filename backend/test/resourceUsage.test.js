@@ -47,7 +47,7 @@ test('collects descendants and attributes complete process-tree resources to PM2
         { name: 'unmapped-worker', pid: 300, monit: { memory: 90 * 1024 * 1024 }, pm2_env: { status: 'online' } }
     ], [
         { id: 9, name: 'Libi Diamonds', pm2_name: 'libi-diamonds-live' },
-        { id: 3, name: 'Vee Main App', pm2_name: 'vee-app' }
+        { id: 3, name: 'Video Library', pm2_name: 'vee-app' }
     ], processes, 2 * 1024 * 1024 * 1024);
 
     assert.equal(usage[0].name, 'Libi Diamonds');
@@ -59,5 +59,5 @@ test('collects descendants and attributes complete process-tree resources to PM2
     assert.equal(usage[0].dominant_process, 'next-server (v15.5.20)');
     assert.equal(usage[1].name, 'unmapped-worker');
     assert.equal(usage[1].app_id, null);
-    assert.equal(usage[2].name, 'Vee Main App');
+    assert.equal(usage[2].name, 'Video Library');
 });
