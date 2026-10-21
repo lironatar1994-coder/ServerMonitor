@@ -105,7 +105,7 @@ let browser;
     const sent = r.request().postDataJSON(); assert.equal(sent.project, 'miryam'); assert.equal(sent.placement, 'contact');
   });
   await page.setViewportSize({ width: 1365, height: 900 });
-  for (const project of ['koral', 'miryam', 'pinhas', 'libi', 'reuven', 'sos', 'seder', 'pdf']) await check(`portfolio-project-${project}`, async () => {
+  for (const project of ['koral', 'miryam', 'pinhas', 'reuven', 'sos', 'seder', 'pdf', 'pizza']) await check(`portfolio-project-${project}`, async () => {
     const response = await page.goto(`https://lawebs.co.il/work/${project}/`); assert.equal(response.status(), 200);
     await page.locator('h1').waitFor();
     assert.equal(await page.locator('img').evaluateAll(images => images.filter(i => i.complete && !i.naturalWidth).length), 0);

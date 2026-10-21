@@ -48,7 +48,8 @@ EXPECTED_PM2 = {'dfus-reuven-live', 'manager-site', 'on-your-way-backend',
                 'video-library-api', 'claude-rc'}
 TRACKER_URLS = ['https://pinhasratzon.co.il/', 'https://www.dfusreuven.co.il/',
                 'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents',
-                'https://lawebs.co.il/Koralevents2', 'https://lawebs.co.il/alenu/', 'https://lawebs.co.il/cv/']
+                'https://lawebs.co.il/Koralevents2', 'https://lawebs.co.il/alenu/', 'https://lawebs.co.il/cv/',
+                'https://lawebs.co.il/PizzaManager/p/oven-demo/']
 GROWTH_URLS = ['https://pinhasratzon.co.il/',
                'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents', 'https://lawebs.co.il/Koralevents2',
                'https://lawebs.co.il/seder', 'https://vee-app.co.il/', 'https://vee-app.co.il/OnYourWay',
@@ -336,6 +337,31 @@ def cleanup(apply=False, releases=True):
                     errors.append(str(exc))
     return {'applied': apply, 'bytes': sum(p['bytes'] for p in candidates), 'files': candidates, 'errors': errors}
 
+DEPENDENCY_DIRS = ('node_modules', '.next/node_modules', '.next/standalone/node_modules')
+
+def dedupe_release_dependencies(apply=True):
+    """Hard-link identical files across the immutable dependency trees of retained releases."""
+    if not shutil.which('hardlink'):
+        return [{'skipped': 'hardlink unavailable'}]
+    results = []
+    for base in RELEASE_BASES:
+        root = base / 'releases'
+        if not root.is_dir() or root.is_symlink():
+            continue
+        targets = [release / name for release in sorted(root.iterdir())
+                   if RELEASE_NAME.fullmatch(release.name) and release.is_dir() and not release.is_symlink()
+                   for name in DEPENDENCY_DIRS
+                   if (release / name).is_dir() and not (release / name).is_symlink()]
+        if len(targets) < 2:
+            continue
+        args = ['nice', '-n', '19', 'ionice', '-c3', 'hardlink', '--ignore-time', '--quiet', *(['--dry-run'] if not apply else []), *map(str, targets)]
+        try:
+            run(args, timeout=900)
+            results.append({'base': str(base), 'ok': True})
+        except Exception as exc:
+            results.append({'base': str(base), 'ok': False, 'error': str(exc)})
+    return results
+
 def housekeeping():
     results = []
     commands = [(['journalctl', '--rotate'], 30), (['journalctl', '--vacuum-time=7d', '--vacuum-size=200M'], 60), (['apt-get', 'clean'], 60)]
@@ -386,11 +412,12 @@ def daily():
     routine = housekeeping()
     location = snapshot()
     post = cleanup(True, releases=True)
+    dedupe = dedupe_release_dependencies()
     result = {'completed': time.time(), 'backup': location, 'pre_cleanup': pre,
-              'cleanup': post, 'housekeeping': routine,
+              'cleanup': post, 'housekeeping': routine, 'dependency_dedupe': dedupe,
               'net_freed_bytes': shutil.disk_usage('/').free - before}
     write_json(STATE / 'daily-status.json', result)
-    errors = pre['errors'] + post['errors'] + [x['error'] for x in routine if not x['ok']]
+    errors = pre['errors'] + post['errors'] + [x['error'] for x in routine if not x['ok']] + [x['error'] for x in dedupe if 'error' in x]
     if errors:
         raise RuntimeError('Maintenance partially failed: ' + '; '.join(errors))
     (STATE / 'daily-failure.json').unlink(missing_ok=True)

@@ -28,7 +28,7 @@ function recordGrowthSignal({ body, ip, userAgent, siteUrl }) {
     }
     const label = ['whatsapp', 'phone', 'email', 'form', 'link'].includes(body.label) ? body.label : '';
     const placement = app.name === 'LA webs' && ['header', 'hero', 'floating', 'contact', 'footer', 'content'].includes(body.placement) ? body.placement : '';
-    const project = app.name === 'LA webs' && ['koral', 'miryam', 'pinhas', 'libi', 'reuven', 'sos', 'seder', 'pdf'].includes(body.project) ? body.project : '';
+    const project = app.name === 'LA webs' && ['koral', 'miryam', 'pinhas', 'reuven', 'sos', 'seder', 'pdf', 'pizza'].includes(body.project) ? body.project : '';
     boundedRate(app.id, address);
     const result = db.prepare(`INSERT OR IGNORE INTO growth_events
         (app_id,event_id,occurred_at,session_hash,event_type,path,label,source,medium,campaign,device,automation_hint,placement,project)

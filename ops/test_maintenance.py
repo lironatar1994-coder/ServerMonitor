@@ -333,5 +333,20 @@ class BrowserHealth(unittest.TestCase):
                 self.assertTrue(m.browser_health(force=True))
             self.assertEqual(json.loads((m.STATE / 'browser-check.json').read_text())['errors'], ['missing tracking receipt'])
 
+    def test_dependency_dedupe_links_only_release_dependency_trees(self):
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder) / 'app'
+            for name in ('20261001T000000Z', '20261002T000000Z', 'scratch'):
+                (base / 'releases' / name / 'node_modules').mkdir(parents=True)
+            (base / 'releases' / '20261002T000000Z' / '.next/standalone/node_modules').mkdir(parents=True)
+            with patch.object(m, 'RELEASE_BASES', [base]), patch.object(m.shutil, 'which', return_value='/usr/bin/hardlink'), patch.object(m, 'run') as run:
+                self.assertEqual(m.dedupe_release_dependencies(), [{'base': str(base), 'ok': True}])
+            args = run.call_args[0][0]
+            self.assertIn('--ignore-time', args)
+            self.assertNotIn('--dry-run', args)
+            linked = [a for a in args if a.startswith(str(base))]
+            self.assertEqual(len(linked), 3)
+            self.assertFalse(any('scratch' in a for a in linked))
+
 if __name__ == '__main__':
     unittest.main()

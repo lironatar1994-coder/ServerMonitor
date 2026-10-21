@@ -14,11 +14,13 @@ SITES = [
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/Koralevents', 'https://lawebs.co.il/Koralevents', False),
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/alenu', 'https://lawebs.co.il/alenu/', False),
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/cv', 'https://lawebs.co.il/cv/', False),
+    # Customer storefronts only; kitchen, admin and platform routes stay untagged.
+    ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/PizzaManager/p', 'https://lawebs.co.il/PizzaManager/', False),
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '', 'https://lawebs.co.il/', False),
 ]
 # Native collectors (Seder, PDF Studio) and internal or unmeasured apps under lawebs.co.il
 # must not inherit the LA webs portfolio tag.
-LAWEBS_UNTRACKED = 'seder|PinhasRatzon|pinhasratzon|pdf-studio|PizzaManager|cv-manager|alenu-crm|maavar|desk|allsee|videos|rc'
+LAWEBS_UNTRACKED = 'seder|PinhasRatzon|pinhasratzon|pdf-studio|PizzaManager(?!/p(?:/|$))|cv-manager|alenu-crm|maavar|desk|allsee|videos|rc'
 
 def server_blocks(text):
     # Track braces while ignoring quoted strings/comments in the Nginx syntax.

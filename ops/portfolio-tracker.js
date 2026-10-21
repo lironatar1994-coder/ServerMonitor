@@ -1,6 +1,6 @@
 /* LA webs only: bounded anonymous engagement, never text, forms or recordings. */
 (() => {
-  if (!/^(www\.)?lawebs\.co\.il$/.test(location.hostname) || !/^\/(?:work\/(?:koral|miryam|pinhas|libi|reuven|sos|seder|pdf)\/?)?$/.test(location.pathname)) return;
+  if (!/^(www\.)?lawebs\.co\.il$/.test(location.hostname) || !/^\/(?:work\/(?:koral|miryam|pinhas|reuven|sos|seder|pdf|pizza)\/?)?$/.test(location.pathname)) return;
   if (document.cookie.split(';').some(c => c.trim() === 'monitor_internal=1')) return;
   if (window.__portfolioEngagement) return;
   window.__portfolioEngagement = true;

@@ -100,6 +100,7 @@ cd ..
 bash "$APP_ROOT/ops/install-maintenance.sh"
 python3 "$APP_ROOT/ops/install-visitor-coverage.py"
 python3 "$APP_ROOT/ops/install-growth-coverage.py"
+bash "$APP_ROOT/ops/install-retired-sites.sh"
 
 if [ -r "$GEOIP_DB_PATH" ]; then
   echo "[INFO] GeoIP city database found at $GEOIP_DB_PATH"

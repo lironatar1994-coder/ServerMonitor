@@ -6,8 +6,8 @@
   const prefix = script?.dataset.prefix || '';
   const endpoint = `${prefix}/.well-known/vee-growth-signal`;
   const portfolio = /^(www\.)?lawebs\.co\.il$/.test(location.hostname) && !prefix;
-  const liveSites = { koral: 'https://lawebs.co.il/koralevents', miryam: 'https://miryamzelig.co.il', pinhas: 'https://pinhasratzon.co.il', libi: 'https://www.libidiamonds.co.il', reuven: 'https://www.dfusreuven.co.il', sos: 'https://sosbaderech.co.il', seder: 'https://lawebs.co.il/seder', pdf: 'https://vee-app.co.il/pdf-studio' };
-  const projects = new Set(['koral', 'miryam', 'pinhas', 'libi', 'reuven', 'sos', 'seder', 'pdf']);
+  const liveSites = { koral: 'https://lawebs.co.il/koralevents', miryam: 'https://miryamzelig.co.il', pinhas: 'https://pinhasratzon.co.il', reuven: 'https://www.dfusreuven.co.il', sos: 'https://sosbaderech.co.il', seder: 'https://lawebs.co.il/seder', pdf: 'https://lawebs.co.il/pdf-studio', pizza: 'https://lawebs.co.il/PizzaManager' };
+  const projects = new Set(['koral', 'miryam', 'pinhas', 'reuven', 'sos', 'seder', 'pdf', 'pizza']);
   const projectAt = path => { const name = path.match(/^\/work\/([^/]+)\/?$/)?.[1]; return projects.has(name) ? name : ''; };
   const placementAt = el => el?.closest('.wa-float') ? 'floating' : el?.closest('header') ? 'header' : el?.closest('footer') ? 'footer' : el?.closest('#contact') ? 'contact' : el?.closest('.hero') ? 'hero' : 'content';
   const storageKey = `vee.growth:${prefix || '/'}`;
