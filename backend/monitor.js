@@ -8,6 +8,7 @@ const { parseNginxLogMetrics } = require('./logParser');
 const { sendAlertEmail } = require('./alerts');
 const { recordStatus, recordRuntimeStarts, silentTrackers } = require('./observability');
 const { MAINTENANCE_APP, SSH_APP } = require('./catalogNames');
+const { runInsights } = require('./insights');
 
 console.log('Background Monitor Started...');
 
@@ -17,6 +18,7 @@ const alertReminderMs = 6 * 60 * 60 * 1000;
 const slowResponseMs = 4000;
 let lastDataPurgeAt = 0;
 let lastSilentCheckAt = 0;
+let lastInsightsAt = 0;
 
 function purgeExpiredMonitorData() {
     const now = Date.now();
@@ -27,6 +29,8 @@ function purgeExpiredMonitorData() {
     db.prepare("DELETE FROM web_vitals WHERE occurred_at < ?").run(new Date(now - 90 * 86400000).toISOString());
     db.prepare("DELETE FROM status_events WHERE started_at < ? AND id NOT IN (SELECT MAX(id) FROM status_events GROUP BY app_id)")
         .run(new Date(now - 400 * 86400000).toISOString());
+    db.prepare('DELETE FROM insight_notifications WHERE created_at < ?').run(new Date(now - 90 * 86400000).toISOString());
+    db.prepare('DELETE FROM push_deliveries WHERE sent_at < ?').run(new Date(now - 30 * 86400000).toISOString());
     lastDataPurgeAt = now;
 }
 
@@ -234,6 +238,11 @@ async function runMonitorCycle() {
                 alerts.filter((item) => item.kind === 'down').forEach((item) => mark.run(item.id));
                 alerts.filter((item) => item.metaKey).forEach((item) => metadata.set(item.metaKey, Date.now()));
             }
+        }
+        // Every 30 minutes: insights for subscribed devices (each insight is pushed once).
+        if (Date.now() - lastInsightsAt > 30 * 60000) {
+            lastInsightsAt = Date.now();
+            try { await runInsights(db); } catch (error) { console.error('[Insights] failed:', error.message); }
         }
         purgeExpiredMonitorData();
     } catch (err) {

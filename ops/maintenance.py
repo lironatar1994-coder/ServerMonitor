@@ -448,6 +448,14 @@ def visitor_health(db_path=Path('/root/ServerMonitor/backend/monitor.db'), now=N
                 errors.append(f'Visitor ingestion not initialized: {name}')
             elif now - dt.datetime.strptime(last, '%Y-%m-%d %H:%M:%S').replace(tzinfo=dt.timezone.utc).timestamp() > 300:
                 errors.append(f'Visitor ingestion stalled: {name}')
+        # Browsers reach the site but the shared log records no page: a server block is
+        # writing to its own access log only (see ops/ensure-monitor-logging.py).
+        week = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=7)).isoformat()
+        with closing(sqlite3.connect(db_path.as_uri() + '?mode=ro', uri=True)) as db:
+            gaps = db.execute('''SELECT a.name FROM apps a WHERE a.analytics_enabled = 1
+                AND (SELECT COUNT(*) FROM browser_signals b WHERE b.app_id = a.id AND b.automation_hint = 0 AND b.occurred_at >= ?) >= 20
+                AND NOT EXISTS (SELECT 1 FROM visitor_events e WHERE e.app_id = a.id AND e.is_page_view = 1 AND e.occurred_at >= ?)''', (week, week)).fetchall()
+        errors.extend(f'Server log records no pages: {name}' for (name,) in gaps)
     except Exception as exc:
         errors.append(f'Visitor ingestion check failed: {exc}')
     return errors

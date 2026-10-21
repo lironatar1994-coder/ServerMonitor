@@ -78,6 +78,7 @@
 - Service actions live in a separate administration disclosure, retaining confirmation. Mobile navigation labels are `אתרים`, `לקוחות`, `כספת`, `שרת`, `עוד`; More opens settings in a native modal, with safe-area spacing and 44px targets.
 - `OpsTabs` joins `/infrastructure`, `/services`, `/operations/availability` and `/operations/backups` into one graphite operations workspace behind one navigation destination. Services group into a pinned `דורש בדיקה` group, then sites, systems, background processes and infrastructure. Resource rankings show the top eight with an expander.
 - The site page adds `SpeedPanel` (p75 Core Web Vitals with Google's thresholds), `NotFoundPanel` and `ChartNotes` (notes plus runtime starts, drawn as `TrafficChart` reference lines); per-connection diagnostics live on `/visitors/:id/diagnostics` and load only there.
+- `PushSettings` also edits the device's categories, quiet hours and daily cap, lists recent insights, and offers app installation from the `beforeinstallprompt` event captured in `main.jsx`.
 - `PushSettings` subscribes a device through `public/sw.js` (push and notification clicks only, never fetch caching) and the installable `manifest.webmanifest`; iOS requires adding to the home screen first.
 
 ## Work Guidance

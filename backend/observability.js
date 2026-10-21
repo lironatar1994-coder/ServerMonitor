@@ -32,7 +32,29 @@ function initializeObservability(db) {
             p256dh TEXT NOT NULL, auth TEXT NOT NULL, created_at TEXT NOT NULL, last_error TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_metrics_app_time ON metrics(app_id, timestamp DESC);
+        CREATE TABLE IF NOT EXISTS insight_notifications (
+            id INTEGER PRIMARY KEY, key TEXT NOT NULL UNIQUE, category TEXT NOT NULL, app_id INTEGER,
+            title TEXT NOT NULL, body TEXT NOT NULL, url TEXT NOT NULL, created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS insight_notifications_time ON insight_notifications(created_at);
     `);
+    // Push devices: per-device categories, quiet hours (Israel time) and a daily insight cap.
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL, auth TEXT NOT NULL, created_at TEXT NOT NULL, last_error TEXT
+    );
+    CREATE TABLE IF NOT EXISTS push_deliveries (
+    id INTEGER PRIMARY KEY, subscription_id INTEGER NOT NULL REFERENCES push_subscriptions(id) ON DELETE CASCADE,
+    category TEXT NOT NULL, notification_key TEXT NOT NULL DEFAULT '', sent_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS push_deliveries_sub_time ON push_deliveries(subscription_id, sent_at);
+    `);
+    const columns = db.pragma('table_info(push_subscriptions)').map((column) => column.name);
+    if (!columns.includes('categories')) db.exec("ALTER TABLE push_subscriptions ADD COLUMN categories TEXT NOT NULL DEFAULT ''");
+    if (!columns.includes('quiet_start')) db.exec('ALTER TABLE push_subscriptions ADD COLUMN quiet_start INTEGER NOT NULL DEFAULT 22');
+    if (!columns.includes('quiet_end')) db.exec('ALTER TABLE push_subscriptions ADD COLUMN quiet_end INTEGER NOT NULL DEFAULT 7');
+    if (!columns.includes('daily_cap')) db.exec('ALTER TABLE push_subscriptions ADD COLUMN daily_cap INTEGER NOT NULL DEFAULT 5');
     if (!db.pragma('table_info(metrics)').some((column) => column.name === 'response_ms')) {
         db.exec('ALTER TABLE metrics ADD COLUMN response_ms INTEGER');
     }

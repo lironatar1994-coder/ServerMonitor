@@ -60,7 +60,9 @@ async function sendPushAlert(changes, subject) {
     try {
         const first = changes.find((item) => item.kind !== 'up') || changes[0];
         const { delivered } = await require('./push').sendPush({ title: subject, body: changes.map((item) => `${item.name}: ${describe(item)}`).join('\n').slice(0, 300),
-            url: link(first).replace('https://monitor.vee-app.co.il', '') });
+            url: link(first).replace('https://monitor.vee-app.co.il', '') },
+            // A service going down reaches devices even in their quiet hours.
+            { category: 'outage', urgent: changes.some((item) => item.kind === 'down') });
         return delivered > 0;
     } catch (error) {
         console.error('[Monitor Alert] Push delivery failed:', error.message);
