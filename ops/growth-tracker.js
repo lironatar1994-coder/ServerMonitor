@@ -64,6 +64,7 @@
   const interactionEvents = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
   const interacted = () => {
     interactionEvents.forEach(type => removeEventListener(type, interacted, true));
+    if (document.cookie.split(';').some(c => c.trim() === 'monitor_internal=1')) return;
     fetch(endpoint, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: 'interaction', scope: 'growth', event_id: crypto.randomUUID(), session_id: session, webdriver: navigator.webdriver === true }) }).catch(() => {});
   };
