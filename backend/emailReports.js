@@ -218,4 +218,4 @@ function startEmailReports() {
     schedulerTimer = setInterval(checkSchedules, CHECK_INTERVAL_MS);
 }
 
-module.exports = { buildOperationsData, buildPeriod, buildReportData, checkSchedules, renderEmail, sendReport, startEmailReports };
+module.exports = { buildOperationsData, buildPeriod, buildReportData, checkSchedules, getMailerConfig, renderEmail, sendReport, startEmailReports };
