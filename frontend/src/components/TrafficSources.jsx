@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { Check, Copy, Plus, QrCode, Trash2 } from 'lucide-react';
 import { Empty, IconAction, Panel } from './AnalyticsParts';
+import LinkGuide from './LinkGuide';
 import { apiFetch, rangeQuery } from '../lib/api';
 import { formatNumber } from '../lib/format';
 import { getSessionSnapshot } from '../lib/session';
@@ -155,6 +156,7 @@ export function LinksPanel({ appId, siteUrl }) {
       {error && <p className="status-line is-attention" role="alert">{error}</p>}
       {data.links.length ? <ul className="link-list">{data.links.map((link) => <LinkRow key={link.id} link={link} canEdit={canEdit} onRemove={remove} />)}</ul>
         : !form && <Empty text="עדיין אין קישורים למעקב" />}
+      {!form && <div className="link-guide-entry"><LinkGuide siteUrl={siteUrl} /></div>}
     </Panel>
   );
 }
