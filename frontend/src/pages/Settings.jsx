@@ -11,11 +11,13 @@ import {
 import { Panel, PageHead, Tabs } from "../components/AnalyticsParts";
 import { apiFetch } from "../lib/api";
 import { getSessionSnapshot } from "../lib/session";
+import InternalVisits from "../components/InternalVisits";
 const tabs = [
   { id: "account", label: "חשבון" },
   { id: "security", label: "אבטחה" },
   { id: "team", label: "צוות" },
   { id: "notifications", label: "התראות" },
+  { id: "internal", label: "ביקורים פנימיים" },
 ];
 export default function Settings() {
   const user = getSessionSnapshot(),
@@ -185,7 +187,9 @@ export default function Settings() {
         {tab === "notifications" && (
           <Panel title="דוחות והתראות">
             <p>
-              דוחות ההשוואה היומיים והשבועיים ממשיכים להישלח לפי הגדרות השרת.
+              דוח השוואה יומי ב־08:00 ושבועי ביום שני. שירות שלא זמין בשתי
+              בדיקות רצופות שולח התראה בדוא״ל, עם תזכורת כל שש שעות והודעה
+              כשהוא חוזר לפעול.
             </p>
             <p className="muted">תוכן הכספת אינו נכלל בדוחות.</p>
             {user.role === "owner" && (
@@ -195,6 +199,7 @@ export default function Settings() {
             )}
           </Panel>
         )}
+        {tab === "internal" && <InternalVisits />}
       </div>
     </div>
   );

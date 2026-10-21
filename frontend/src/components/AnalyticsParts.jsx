@@ -153,7 +153,24 @@ const CustomRange = ({ onApply, active, onClear }) => {
   );
 };
 
-export const RangePicker = ({ days, onChange, loading, onRefresh, onCustom, customActive = false, updatedAt, range }) => (
+// Typing in a field or an open dialog keeps keys for themselves.
+const isTypingTarget = (event) => event.ctrlKey || event.metaKey || event.altKey
+  || Boolean(document.querySelector('dialog[open]'))
+  || /^(INPUT|TEXTAREA|SELECT)$/.test(event.target?.tagName || '') || event.target?.isContentEditable;
+
+export const RangePicker = ({ days, onChange, loading, onRefresh, onCustom, customActive = false, updatedAt, range }) => {
+  // Keys 1-4 pick the period and R refreshes, matching the button order.
+  useEffect(() => {
+    const keys = (event) => {
+      if (isTypingTarget(event)) return;
+      const option = RANGE_OPTIONS[Number(event.key) - 1];
+      if (option) { event.preventDefault(); onChange(option.days); }
+      else if (event.key.toLowerCase() === 'r' && onRefresh && !loading) { event.preventDefault(); onRefresh(); }
+    };
+    window.addEventListener('keydown', keys);
+    return () => window.removeEventListener('keydown', keys);
+  }, [onChange, onRefresh, loading]);
+  return (
   <div className="range-picker">
     <div className="range-picker__segments" role="group" aria-label="טווח זמן">
       {RANGE_OPTIONS.map((option) => (
@@ -163,6 +180,7 @@ export const RangePicker = ({ days, onChange, loading, onRefresh, onCustom, cust
           aria-pressed={!customActive && days === option.days}
           className={!customActive && days === option.days ? 'is-active' : ''}
           onClick={() => onChange(option.days)}
+          title={`מקש ${RANGE_OPTIONS.indexOf(option) + 1}`}
         >
           {option.label}
         </button>
@@ -170,14 +188,15 @@ export const RangePicker = ({ days, onChange, loading, onRefresh, onCustom, cust
     </div>
     {onCustom && <CustomRange onApply={onCustom} active={customActive} onClear={() => onChange(days || 7)} />}
     {onRefresh && (
-      <button type="button" className="range-picker__refresh" onClick={onRefresh} disabled={loading} aria-label="רענון נתונים">
+      <button type="button" className="range-picker__refresh" onClick={onRefresh} disabled={loading} aria-label="רענון נתונים" title="רענון (R)">
         <RefreshCw className={loading ? 'is-spinning' : ''} aria-hidden="true" />
       </button>
     )}
     {updatedAt && <time className="range-updated" dateTime={updatedAt} aria-label={`עודכן ${formatDateTime(updatedAt)}`} title="עדכון נתונים אחרון"><Clock3 aria-hidden="true" />{formatDateTime(updatedAt)}</time>}
     {customActive && range && <span className="range-dates">{formatDateTime(range.from)} – {formatDateTime(range.to)}</span>}
   </div>
-);
+  );
+};
 
 export const RankedList = ({ items = [], empty = 'אין נתונים בטווח הזה', color = 'forest', max = 8, onSelect, labelFor = value => value, selected }) => {
   const rows = items.slice(0, max);

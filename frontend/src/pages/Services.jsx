@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ExternalLink, Plus, Search, X } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import AddAppModal from "../components/AddAppModal";
+import SiteLink from "../components/SiteLink";
 import {
   DataState,
   Empty,
@@ -181,7 +182,9 @@ const Services = () => {
                               : "בדיקה"}
                         </b>
                         <small>
-                          {state.issue && state.needsCheck ? (
+                          {app.status !== "online" && app.status_changed_at ? (
+                            `${state.label} מאז ${formatDateTime(app.status_changed_at)}`
+                          ) : state.issue && state.needsCheck ? (
                             state.issue.title
                           ) : app.pm2_name || app.systemd_unit ? (
                             <bdi dir="ltr">{`${(app.cpu || 0).toFixed(1)}% CPU · ${((app.memory || 0) / 1024 / 1024).toFixed(0)} MB`}</bdi>
@@ -198,15 +201,13 @@ const Services = () => {
                       <ChevronLeft aria-hidden="true" />
                     </Link>
                     {app.url ? (
-                      <a
+                      <SiteLink
                         className="icon-btn"
                         href={app.url}
-                        target="_blank"
-                        rel="noreferrer"
                         aria-label={`פתיחת ${app.name}`}
                       >
                         <ExternalLink aria-hidden="true" />
-                      </a>
+                      </SiteLink>
                     ) : (
                       <span className="icon-btn icon-btn--placeholder" aria-hidden="true" />
                     )}

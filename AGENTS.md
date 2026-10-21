@@ -80,7 +80,7 @@ When the user requests a durable behavior change, record it here or in the relev
 
 - Visitor screens must use plain Hebrew for nontechnical readers: estimated visitors, measured visits, page views and contact actions. Keep browser/IP methodology in hints and expandable diagnostics; never turn estimates into confirmed people.
 - Page rankings must open a useful drill-down with friendly names, recorded next pages and later contact/outbound actions within the same anonymous visit. Keep low samples explicit and distinguish observed sequences from causes or confirmed inquiries.
-- LA webs must measure project/button attribution and bounded engagement, offer explicit per-browser internal-visit exclusion, and keep contacted/qualified/won business outcomes separate from clicks. Run recurring browser and telemetry checks through the existing health scheduler.
+- LA webs must measure project/button attribution and bounded engagement, and keep contacted/qualified/won business outcomes separate from clicks. Run recurring browser and telemetry checks through the existing health scheduler.
 - Keep lightweight health checks every 15 minutes and full browser checks every six hours plus after deployment. Bound browser CPU, memory and runtime so verification cannot crowd out production websites.
 - Report emails use natural, professional Hebrew with minimal instructions; avoid patronizing prompts such as `גלה עוד`. Prioritize useful comparisons and observed actions, and link each app directly to its own Server Monitor page.
 - Daily and weekly emails must be compact on a phone: quiet colors, one aligned site table with column labels once, short visit changes, positive contact counts and concise measurement notes. Keep repeated explanations, full URLs and per-site server diagnostics in the linked detailed views.
@@ -124,6 +124,8 @@ When the user requests a durable behavior change, record it here or in the relev
 - Require MFA for human sessions, a separate vault passphrase, an offline recovery key, and automatic locking. Never send vault passphrases, decrypted entries or plaintext vault keys to the server. Do not send team invitations automatically.
 - Prefer Google Authenticator for a simple second login step: QR setup once, clear same-phone instructions, a six-digit code on later logins, and separately saved one-use backup codes. Keep mandatory MFA and the separate vault passphrase.
 
+- Internal browsing is never measured on any monitored site. `?monitor_internal=1` marks a browser per host (`=0` clears it); monitor links to public sites mark on an ordinary click while keeping a clean shareable href, and Settings → `ביקורים פנימיים` marks each domain. Flagged browsers are excluded from the access log and dropped by the signal endpoint, including native collectors.
+- Daily-use shortcuts: keys 1–4 pick the period, R refreshes, `/` focuses search, Ctrl/Cmd+K switches. The tab title and the server destination show the count of unavailable services; service screens say since when a service is down.
 - Keep navigation and operational issues actionable, preserve exact date context when opening another site, and distinguish a running messaging process from a verified connection. Missing monitoring coverage must stay visible rather than being implied healthy by existing registered-app checks.
 
 ## Child DOX Index

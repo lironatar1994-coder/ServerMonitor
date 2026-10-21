@@ -32,18 +32,20 @@ const operations = [
   { to: "/services", label: "שירותים", icon: Wrench },
 ];
 const settings = { to: "/settings", label: "הגדרות", icon: Settings };
-const NavItem = ({ item, onClick }) => {
+const NavItem = ({ item, onClick, badge = 0 }) => {
   const Icon = item.icon;
+  const label = badge ? `${item.label}, ${badge} לא זמינים` : item.label;
   return (
     <NavLink
       to={item.to}
       onClick={onClick}
-      title={item.label}
-      aria-label={item.label}
+      title={label}
+      aria-label={label}
       className={({ isActive }) => `rail-link ${isActive ? "is-active" : ""}`}
     >
       <Icon aria-hidden="true" />
       <span>{item.label}</span>
+      {badge > 0 && <b className="rail-badge" aria-hidden="true">{badge}</b>}
     </NavLink>
   );
 };
@@ -52,7 +54,8 @@ export default function AppShell() {
       () => localStorage.getItem("vee-monitor.rail-collapsed") === "1",
     ),
     [more, setMore] = useState(false),
-    [switching, setSwitching] = useState(false);
+    [switching, setSwitching] = useState(false),
+    [down, setDown] = useState(0);
   const user = useSyncExternalStore(subscribeSession, getSessionSnapshot),
     navigate = useNavigate(),
     location = useLocation(),
@@ -71,6 +74,28 @@ export default function AppShell() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [location.pathname]);
+  // Unavailable services show in the tab title and on the server destination.
+  useEffect(() => {
+    let alive = true;
+    const poll = () => {
+      if (document.visibilityState === "hidden") return;
+      apiFetch("/apps")
+        .then((apps) => alive && setDown(apps.filter((app) => app.status !== "online" && app.alerts_enabled !== 0).length))
+        .catch(() => {});
+    };
+    poll();
+    const timer = setInterval(poll, 60000);
+    document.addEventListener("visibilitychange", poll);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", poll);
+    };
+  }, []);
+  useEffect(() => {
+    const base = document.title.replace(/^\(\d+\) /, "");
+    document.title = down ? `(${down}) ${base}` : base;
+  }, [down, location.pathname]);
   useEffect(() => {
     const channel = new BroadcastChannel("monitor-session");
     channel.onmessage = (event) => {
@@ -125,6 +150,18 @@ export default function AppShell() {
       ) {
         event.preventDefault();
         setSwitching(true);
+      } else if (
+        event.key === "/" &&
+        !event.ctrlKey && !event.metaKey && !event.altKey &&
+        !document.querySelector("dialog[open]") &&
+        !/^(INPUT|TEXTAREA|SELECT)$/.test(event.target?.tagName || "")
+      ) {
+        // "/" jumps to the current page's search field.
+        const field = document.querySelector(".page .search input, .page .growth-search input");
+        if (field) {
+          event.preventDefault();
+          field.focus();
+        }
       }
     };
     window.addEventListener("keydown", shortcut);
@@ -174,7 +211,7 @@ export default function AppShell() {
           ))}
           <span className="rail-section rail-section--operations">תפעול</span>
           {operations.map((item) => (
-            <NavItem key={item.to} item={item} />
+            <NavItem key={item.to} item={item} badge={item.to === "/infrastructure" ? down : 0} />
           ))}
         </nav>
         <div className="rail-foot">
@@ -217,7 +254,7 @@ export default function AppShell() {
       </main>
       <nav className="bottom-nav" aria-label="ניווט נייד">
         {[...main, { ...operations[0], label: "שרת" }].map((item) => (
-          <NavItem key={item.to} item={item} />
+          <NavItem key={item.to} item={item} badge={item.to === "/infrastructure" ? down : 0} />
         ))}
         <button
           className={

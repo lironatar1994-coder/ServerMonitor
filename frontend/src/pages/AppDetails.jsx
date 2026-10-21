@@ -14,6 +14,7 @@ import { formatDateTime } from "../lib/format";
 import { apiFetch } from "../lib/api";
 import { getSessionSnapshot } from "../lib/session";
 import Modal from "../components/Modal";
+import SiteLink from "../components/SiteLink";
 
 const ACTION_LABEL = { start: "הפעלה", stop: "עצירה", restart: "הפעלה מחדש" };
 
@@ -99,18 +100,14 @@ const AppDetails = () => {
                     {app.status === "online" ? "זמין" : app.status === "unknown" ? "לא נבדק" : "לא זמין"}
                   </span>
                   <span className="muted">
+                    {app.status !== "online" && app.status_changed_at
+                      ? `מאז ${formatDateTime(app.status_changed_at)} · `
+                      : ""}
                     בדיקה: {formatDateTime(app.last_checked)}
                   </span>
-                  {app.url && (
-                    <a
-                      className="crumb"
-                      href={app.url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      פתיחה <ExternalLink aria-hidden="true" />
-                    </a>
-                  )}
+                  <SiteLink className="crumb" href={app.url}>
+                    פתיחה <ExternalLink aria-hidden="true" />
+                  </SiteLink>
                 </>
               }
             ></PageHead>

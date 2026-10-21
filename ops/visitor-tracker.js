@@ -3,13 +3,12 @@
   const script = document.currentScript;
   const prefix = script?.dataset.prefix || '';
   const endpoint = `${prefix}/.well-known/vee-visitor-signal`;
-  if (/^(www\.)?lawebs\.co\.il$/.test(location.hostname) && !prefix) {
-    const internal = new URLSearchParams(location.search).get('monitor_internal');
-    if (internal === '1' || internal === '0') {
-      document.cookie = `monitor_internal=${internal}; Path=/; Max-Age=${internal === '1' ? 31536000 : 0}; Secure; SameSite=Lax`;
-    }
-    if (document.cookie.split(';').some(c => c.trim() === 'monitor_internal=1')) return;
+  // ?monitor_internal=1 marks this browser internal for the whole host; =0 clears it.
+  const internal = new URLSearchParams(location.search).get('monitor_internal');
+  if (internal === '1' || internal === '0') {
+    document.cookie = `monitor_internal=${internal}; Path=/; Max-Age=${internal === '1' ? 31536000 : 0}; Secure; SameSite=Lax`;
   }
+  if (document.cookie.split(';').some(c => c.trim() === 'monitor_internal=1')) return;
   if (script?.dataset.nativeRewrite === '1') {
     // The legacy Libi preview bundle hard-codes the root API. Keep its existing
     // IDs/navigation logic, but route only this telemetry request to its own site.

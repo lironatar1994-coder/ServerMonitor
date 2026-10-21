@@ -180,7 +180,9 @@ async function runMonitorCycle() {
             }
             
             // Save to DB
-            db.prepare('UPDATE apps SET status = ?, last_checked = CURRENT_TIMESTAMP WHERE id = ?').run(status, app.id);
+            db.prepare(`UPDATE apps SET status = ?, last_checked = CURRENT_TIMESTAMP,
+                status_changed_at = CASE WHEN status IS NOT ? OR status_changed_at IS NULL THEN CURRENT_TIMESTAMP ELSE status_changed_at END
+                WHERE id = ?`).run(status, status, app.id);
             db.prepare('INSERT INTO metrics (app_id, visitors, requests, attacks, cpu_usage, ram_usage) VALUES (?, ?, ?, ?, ?, ?)')
               .run(app.id, metrics.visitors, metrics.requests, metrics.attacks, appCpu, appMemory);
         }

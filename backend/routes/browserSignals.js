@@ -18,6 +18,10 @@ function collectSignal(req, res, fixedSiteUrl = null) {
     if (!isAuthorizedSignal(req.get('x-visitor-signal-key'))) {
         return res.status(401).json({ error: 'Unauthorized browser signal integration' });
     }
+    // Bridges forward the visitor's own cookies: a browser marked internal is never measured.
+    if (/(?:^|;\s*)monitor_internal=1(?:;|$)/.test(req.get('cookie') || '')) {
+        return res.status(202).json({ accepted: false, internal: true });
+    }
     try {
         // The Nginx bridge exposes one path, so the payload selects the signal kind.
         const record = SIGNAL_RECORDERS[req.body?.kind] || recordBrowserSignal;

@@ -28,22 +28,11 @@ import {
 } from "../components/AnalyticsParts";
 import { formatAgo, formatDateTime, formatNumber } from "../lib/format";
 import TrackingStatus from "../components/TrackingStatus";
+import SiteLink from "../components/SiteLink";
 import TrafficChart from "../components/TrafficChart";
 import { previousRange, rangeSearch } from "../lib/dailyCheck";
 import { VISITOR_HINT, CONNECTION_HINT } from "../lib/analyticsLabels";
 
-const safeSite = (value) => {
-  try {
-    const u = new URL(value);
-    return ["http:", "https:"].includes(u.protocol) &&
-      !u.username &&
-      !u.password
-      ? u.href
-      : null;
-  } catch {
-    return null;
-  }
-};
 const siteLocation = (value) => {
   try {
     const u = new URL(value);
@@ -408,18 +397,14 @@ const VisitorOverview = () => {
                   </span>
                   <ChevronLeft className="comparison-open" aria-hidden="true" />
                 </Link>
-                {safeSite(site.url) && (
-                  <a
-                    className="site-open-link"
-                    href={safeSite(site.url)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`פתיחת האתר ${site.name}`}
-                    title={`פתיחת ${site.name}`}
-                  >
-                    <ExternalLink aria-hidden="true" />
-                  </a>
-                )}
+                <SiteLink
+                  className="site-open-link"
+                  href={site.url}
+                  aria-label={`פתיחת האתר ${site.name}`}
+                  title={`פתיחת ${site.name} (ביקור פנימי, לא נספר)`}
+                >
+                  <ExternalLink aria-hidden="true" />
+                </SiteLink>
               </li>
             ))}
           </ol>

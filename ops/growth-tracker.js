@@ -6,6 +6,11 @@
   const prefix = script?.dataset.prefix || '';
   const endpoint = `${prefix}/.well-known/vee-growth-signal`;
   const portfolio = /^(www\.)?lawebs\.co\.il$/.test(location.hostname) && !prefix;
+  // Native collectors share this host-wide flag; the monitor also drops flagged requests server-side.
+  const internalParam = new URLSearchParams(location.search).get('monitor_internal');
+  if (internalParam === '1' || internalParam === '0') {
+    document.cookie = `monitor_internal=${internalParam}; Path=/; Max-Age=${internalParam === '1' ? 31536000 : 0}; Secure; SameSite=Lax`;
+  }
   const liveSites = { koral: 'https://lawebs.co.il/koralevents', miryam: 'https://miryamzelig.co.il', pinhas: 'https://pinhasratzon.co.il', reuven: 'https://www.dfusreuven.co.il', sos: 'https://sosbaderech.co.il', seder: 'https://lawebs.co.il/seder', pdf: 'https://lawebs.co.il/pdf-studio', pizza: 'https://lawebs.co.il/PizzaManager' };
   const projects = new Set(['koral', 'miryam', 'pinhas', 'reuven', 'sos', 'seder', 'pdf', 'pizza']);
   const projectAt = path => { const name = path.match(/^\/work\/([^/]+)\/?$/)?.[1]; return projects.has(name) ? name : ''; };
@@ -34,7 +39,7 @@
     && !/(?:^|\/)(?:admin|login|dashboard|account|checkout)(?:\/|$)/i.test(location.pathname);
   function send(type, label = '', element = null, project = '') {
     if (!validPath()) return;
-    if (portfolio && document.cookie.split(';').some(c => c.trim() === 'monitor_internal=1')) return;
+    if (document.cookie.split(';').some(c => c.trim() === 'monitor_internal=1')) return;
     const placement = portfolio ? placementAt(element) : '';
     const signature = `${type}:${label}:${location.pathname}:${placement}:${project}`;
     if (Date.now() - (last.get(signature) || 0) < 1000) return;

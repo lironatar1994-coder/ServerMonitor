@@ -359,6 +359,11 @@ if (!db.pragma('table_info(apps)').some((column) => column.name === 'systemd_uni
     db.exec('ALTER TABLE apps ADD COLUMN systemd_unit TEXT');
 }
 
+// When the current status began, so screens can say how long a service has been down.
+if (!db.pragma('table_info(apps)').some((column) => column.name === 'status_changed_at')) {
+    db.exec('ALTER TABLE apps ADD COLUMN status_changed_at DATETIME');
+}
+
 const sharedNginxLog = '/var/log/nginx/monitor_host_access.log';
 const veeExcludedPaths = [
     '/text-to-pdf', '/pdf-studio', '/serve-monitor', '/pixel-dungeon', '/OnYourWay', '/onyourway',

@@ -9,6 +9,7 @@ import TrackingStatus from '../components/TrackingStatus';
 import PageInsights from '../components/PageInsights';
 import TrafficChart from '../components/TrafficChart';
 import SiteSwitcher from '../components/SiteSwitcher';
+import SiteLink from '../components/SiteLink';
 import { previousRange, rangeSearch } from '../lib/dailyCheck';
 import { pageName } from '../lib/analyticsLabels';
 import { formatDateTime, formatNumber } from '../lib/format';
@@ -155,7 +156,7 @@ const VisitorDetail = () => {
               </span>
             )}
             {data?.app?.url && (
-              <a className="icon-btn" href={data.app.url} target="_blank" rel="noreferrer" aria-label="פתיחת האתר" title="פתיחת האתר"><ExternalLink aria-hidden="true" /></a>
+              <SiteLink className="icon-btn" href={data.app.url} aria-label="פתיחת האתר" title="פתיחת האתר (ביקור פנימי, לא נספר)"><ExternalLink aria-hidden="true" /></SiteLink>
             )}
           </>
         }

@@ -25,6 +25,8 @@
 
 ## Local Contracts
 
+- `SiteLink` (with `lib/siteLinks.js`) is the only way to link a public site: a clean href for copying and an ordinary click that opens it with `?monitor_internal=1`. `InternalVisits` lists monitored domains in Settings with mark/clear actions.
+- `RangePicker` binds keys 1–4 and R outside fields and dialogs; `AppShell` binds `/` to the page search and polls `/apps` every minute while visible for the tab-title count and the server-destination badge.
 - `QuickSwitch.jsx` owns global Ctrl/Cmd+K navigation, keyboard selection, app/domain matching and explicit-date preservation. Fetch only the monitoring catalog; never search decrypted vault content. Reuse the native modal and keep the shortcut inactive while another dialog is open.
 - The site ledger supports all/activity/attention filters and distinct detail versus direct-public-site links; opening a site never supplies stored credentials. Every repeated external link has a contextual accessible label and 44px target.
 - `OperationalStatus.jsx` owns server attention and source-check timestamps from `/apps/operational-health`. Keep these issues in infrastructure/services. A running messaging process and an actual connection are separate states; missing/stale sources stay unverified.

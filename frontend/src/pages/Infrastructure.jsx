@@ -19,7 +19,7 @@ import {
   StatRow,
   Tabs,
 } from "../components/AnalyticsParts";
-import { formatNumber, formatTime } from "../lib/format";
+import { formatDateTime, formatNumber, formatTime } from "../lib/format";
 
 const RESOURCE_TABS = [
   { id: "applications", label: "זיכרון", icon: MemoryStick },
@@ -356,8 +356,9 @@ const Infrastructure = () => {
                       />
                       <span className="service-status-list__name">
                         <b>{app.name}</b>
-                        <small dir="ltr">
-                          {app.pm2_name || app.systemd_unit}
+                        <small>
+                          <bdi dir="ltr">{app.pm2_name || app.systemd_unit || app.url}</bdi>
+                          {app.status_changed_at ? ` · מאז ${formatDateTime(app.status_changed_at)}` : ""}
                         </small>
                       </span>
                       <span
