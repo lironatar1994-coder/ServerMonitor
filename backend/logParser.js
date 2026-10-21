@@ -2,7 +2,7 @@ const fs = require('fs');
 
 const DEFAULT_TAIL_BYTES = 65536;
 const VISITOR_TAIL_BYTES = 2097152;
-const CLASSIFICATION_RULESET_VERSION = '2026-10-07.1';
+const CLASSIFICATION_RULESET_VERSION = '2026-10-21.1';
 
 const botUserAgentPatterns = [
     /bot/i,
@@ -58,7 +58,21 @@ const botUserAgentPatterns = [
     /infrawatch/i,
     /google-read-aloud/i,
     /cyberconvoyscout/i,
-    /\bodin\b/i
+    /\bodin\b/i,
+    // Our own health checks and review sessions, scripts and the Claude desktop browser.
+    /servermonitor-/i,
+    /^node$/i,
+    /node-fetch|undici/i,
+    /powershell/i,
+    /\bclaude\/\d/i,
+    // Verification, inventory and preview services that render pages like a browser.
+    /googleother/i,
+    /site-verification/i,
+    /dataprovider/i,
+    /builtwith/i,
+    /visionheight/i,
+    /websiphon/i,
+    /^mozilla\/5\.0 \(compatible\)$/i
 ];
 
 const distributedAutomationFingerprints = [

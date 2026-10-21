@@ -88,6 +88,7 @@
 - A unique candidate must have at least one successful page view. `visitor_events.is_page_view` excludes assets, API calls, robots/sitemaps, failed responses, and non-navigation methods; raw requests remain available for bot and diagnostic totals.
 - Version bot and page-view rules through `monitor_metadata`, and reclassify stored events when the ruleset changes so historical dashboards and emails do not keep stale classifications.
 - Exclude API and Next.js paths at any application prefix, certificate/infrastructure paths, web manifests and malformed inline-image requests from page views; retain their raw requests for diagnostics.
+- Our own `ServerMonitor-*` checks, scripts (`node`, PowerShell), the Claude desktop browser and page-rendering services (GoogleOther, site verification, Dataprovider, BuiltWith, bare `Mozilla/5.0 (compatible)`) are automation. Bump `CLASSIFICATION_RULESET_VERSION` with any rule change so history is reclassified.
 - Bot classification has three explicit outcomes: `bot`, `likely_bot`, and `candidate`. Only strong signatures or observed hosting-network fingerprints may become `likely_bot`; ordinary cloud/VPN use alone is insufficient.
 - `/browser-signals/site` answers 202 and stores nothing when the forwarded visitor cookie carries `monitor_internal=1`.
 - `apps.status_changed_at` records when the current status began; the monitor cycle sets it only on a status change.

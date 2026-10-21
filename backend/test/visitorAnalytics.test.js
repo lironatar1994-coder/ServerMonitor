@@ -123,6 +123,18 @@ test('keeps the Manager Site Miryam URL mapped to the preview monitor', () => {
     assert.equal(app.reporting_enabled, 0);
 });
 
+test('treats our own checks, scripts and page-rendering services as automation', () => {
+    const line = (ua) => parseNginxAccessLine(`1.1.1.1 - - [21/Oct/2026:12:00:00 +0300] "GET / HTTP/1.1" 200 10 "-" "${ua}" "www.dfusreuven.co.il"`);
+    for (const ua of ['ServerMonitor-Health/1.0', 'node', 'Mozilla/5.0 (compatible)', 'Mozilla/5.0 (compatible; Dataprovider.com)',
+        'Mozilla/5.0 (Windows NT 10.0; Microsoft Windows 10.0.26200; en-IL) PowerShell/7.6.5',
+        'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0 Mobile Safari/537.36 (compatible; GoogleOther)',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/3.1623.0 Chrome/152.0 Safari/537.36 MSIX']) {
+        assert.equal(getBotReason(line(ua)), 'bot user agent', ua);
+    }
+    // Reduced Chrome on Android is how real phones identify themselves.
+    assert.equal(getBotReason(line('Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36')), '');
+});
+
 test('catches production scanner signatures previously counted as candidates', () => {
     const gobuster = parseNginxAccessLine(
         '5.5.5.5 - - [12/Jul/2026:12:04:00 +0300] "GET /.git/config HTTP/1.1" 404 10 "-" "gobuster/3.8.2" "vee-app.co.il"'
