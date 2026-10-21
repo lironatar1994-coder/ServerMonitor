@@ -2,7 +2,7 @@ const fs = require('fs');
 
 const DEFAULT_TAIL_BYTES = 65536;
 const VISITOR_TAIL_BYTES = 2097152;
-const CLASSIFICATION_RULESET_VERSION = '2026-10-21.1';
+const CLASSIFICATION_RULESET_VERSION = '2026-10-21.2';
 
 const botUserAgentPatterns = [
     /bot/i,
@@ -82,7 +82,9 @@ const distributedAutomationFingerprints = [
             '43.130.', '43.131.', '43.134.', '43.135.', '43.153.', '43.155.',
             '43.156.', '43.157.', '43.159.', '43.160.', '43.161.', '43.162.',
             '43.164.', '43.165.', '43.166.', '43.167.', '49.51.', '124.156.',
-            '162.14.', '170.106.'
+            '162.14.', '170.106.',
+            // Further Tencent Cloud ranges seen with the same fingerprint (2026-10).
+            '1.12.', '1.13.', '43.154.', '43.158.', '43.163.', '101.32.', '119.28.', '129.226.', '139.155.', '150.109.'
         ],
         reason: 'distributed hosting fingerprint'
     },
