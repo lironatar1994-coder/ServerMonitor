@@ -31,6 +31,7 @@ export default function InternalVisits() {
   return (
     <Panel title="ביקורים פנימיים" hint="סימון פותח את האתר פעם אחת ושומר בדפדפן הזה סימון לשנה. ביקורים מהדפדפן המסומן לא נספרים, גם לא ביומן השרת. אפשר לבטל בכל רגע. קישורי 'פתיחת האתר' במוניטור כבר מסמנים אוטומטית.">
       {error && <div className="banner banner--error" role="alert">{error}</div>}
+      {!domains && !error && <p className="muted">טוען…</p>}
       {domains && !domains.length && <Empty text="אין אתרים במדידה" />}
       {domains?.length > 0 && (
         <ul className="internal-domains">

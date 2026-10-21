@@ -523,7 +523,7 @@ dialog.mobile-more { margin-block-start: auto; margin-block-end: 80px; inset: 0;
 .internal-domains { display: grid; margin: 0; padding: 0; list-style: none; }
 .internal-domains li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem 1rem; padding: .7rem 0; border-top: 1px solid var(--line); }
 .internal-domains li:first-child { border-top: 0; }
-.internal-domains li > span:first-child { display: grid; gap: .15rem; min-width: 0; }
+.internal-domains li > span:first-child { display: grid; gap: .15rem; min-width: 0; flex: 1 1 16rem; }
 .internal-domains small { color: var(--ink-muted); font-size: .76rem; }
 @media (max-width: 760px) { .internal-domains .btn-group { width: 100%; } }
 
