@@ -768,7 +768,11 @@ dialog.mobile-more { margin-block-start: auto; margin-block-end: 80px; inset: 0;
 @keyframes guide-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes guide-rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
 @keyframes guide-caret { 50% { opacity: 0; } }
+.guide-canvas.is-follow { transition: transform .8s cubic-bezier(.3, .7, .3, 1); }
+@media (max-width: 560px) {
+  .app-modal.guide-modal { width: calc(100% - 12px); padding: 12px; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .guide-cursor, .guide-device__link, .guide-input { transition: none; }
+  .guide-cursor, .guide-device__link, .guide-input, .guide-canvas.is-follow { transition: none; }
   .guide-row, .guide-qr, .guide-sources, .guide-scrim, .guide-device, .guide-site, .guide-paste, .guide-press, .guide-caret { animation: none; }
 }

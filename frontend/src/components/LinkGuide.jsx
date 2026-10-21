@@ -145,9 +145,15 @@ function Stage({ scene, host, step, t, qr, still = false }) {
   const visits = Math.round(9 * counting);
   const device = step === 6 || step === 7;
   const cursor = still ? { ...REST, press: false } : pointer(scene, step, t);
+  // Narrow frames zoom in and follow the action so the miniature stays readable.
+  const zoom = !still && scale && scale < 0.85 ? 1.7 : 1;
+  const focus = step === 8 ? { x: 330, y: 170 } : device ? { x: 320, y: 200 } : cursor;
+  const clamp = (value, max) => Math.min(Math.max(value, 0), max);
+  const originX = zoom > 1 ? clamp(focus.x - W / (2 * zoom), W - W / zoom) : 0;
+  const originY = zoom > 1 ? clamp(focus.y - 180 / zoom, 360 - 360 / zoom) : 0;
   return (
     <div className="guide-stage" ref={frame} aria-hidden="true">
-      <div className="guide-canvas" style={{ transform: `scale(${scale})`, visibility: scale ? 'visible' : 'hidden' }}>
+      <div className={zoom > 1 ? 'guide-canvas is-follow' : 'guide-canvas'} style={{ transform: `scale(${scale * zoom}) translate(${-originX}px, ${-originY}px)`, visibility: scale ? 'visible' : 'hidden' }}>
         <div className="guide-panel">
           <div className="guide-panel__head">
             <b>קישורים למעקב</b>
