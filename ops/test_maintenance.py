@@ -2,6 +2,7 @@ import importlib.util
 from pathlib import Path
 import sqlite3
 import tempfile
+import time
 import unittest
 import datetime as dt
 import json
@@ -299,6 +300,26 @@ class VisitorHealth(unittest.TestCase):
             now = dt.datetime(2026, 9, 18, 6, 1, tzinfo=dt.timezone.utc).timestamp()
             self.assertEqual(m.visitor_health(db_path, now), [])
             self.assertIn('stalled', m.visitor_health(db_path, now + 600)[0])
+
+    def test_browser_visits_without_logged_pages_mean_a_logging_gap(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            log = root / 'access.log'
+            log.write_text('')
+            db_path = root / 'monitor.sqlite'
+            recent = dt.datetime.now(dt.timezone.utc).isoformat()
+            with sqlite3.connect(db_path) as db:
+                db.executescript('''CREATE TABLE apps(id INTEGER, name TEXT, log_path TEXT, analytics_enabled INTEGER);
+                    CREATE TABLE visitor_ingestion_state(app_id INTEGER, last_ingested_at TEXT);
+                    CREATE TABLE browser_signals(app_id INTEGER, automation_hint INTEGER, occurred_at TEXT);
+                    CREATE TABLE visitor_events(app_id INTEGER, is_page_view INTEGER, occurred_at TEXT);''')
+                db.execute('INSERT INTO apps VALUES(1, ?, ?, 1)', ('Own log only', str(log)))
+                db.execute('INSERT INTO visitor_ingestion_state VALUES(1, ?)', (time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime()),))
+                db.executemany('INSERT INTO browser_signals VALUES(1, 0, ?)', [(recent,)] * 20)
+            self.assertEqual(m.visitor_health(db_path), ['Server log records no pages: Own log only'])
+            with sqlite3.connect(db_path) as db:
+                db.execute('INSERT INTO visitor_events VALUES(1, 1, ?)', (recent,))
+            self.assertEqual(m.visitor_health(db_path), [])
 
 class BrowserHealth(unittest.TestCase):
     def test_six_hour_schedule_and_forced_deployment_check(self):
