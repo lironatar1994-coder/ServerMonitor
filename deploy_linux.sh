@@ -39,6 +39,8 @@ umask 077
 if [ ! -e "$AUTH_KEY_FILE" ]; then openssl rand 32 > "$AUTH_KEY_FILE"; fi
 test "$(wc -c < "$AUTH_KEY_FILE")" -eq 32 || { echo '[ERROR] Invalid authentication key file'; exit 1; }
 chmod 600 "$AUTH_KEY_FILE"
+# Server-only settings hold mail and API secrets; keep them root-only.
+if [ -f "$BACKEND_DIR/.env" ]; then chmod 600 "$BACKEND_DIR/.env"; fi
 # Authentication secret backup is separate from the ciphertext-only SQLite snapshots.
 install -d -m 0700 /root/server-monitor-key-backups
 install -m 0600 "$AUTH_KEY_FILE" /root/server-monitor-key-backups/auth.key
