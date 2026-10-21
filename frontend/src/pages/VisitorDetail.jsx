@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChartNoAxesCombined, ChevronLeft, ChevronRight, ExternalLink, Eye, Activity, Globe, MapPin, MonitorSmartphone, PanelsTopLeft, Search, Users, X } from 'lucide-react';
+import { ChartNoAxesCombined, Link2, ChevronLeft, ChevronRight, ExternalLink, Eye, Activity, Globe, MapPin, MonitorSmartphone, PanelsTopLeft, Search, Users, X } from 'lucide-react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch, rangeQuery } from '../lib/api';
 import { useRange } from '../lib/useRange';
@@ -11,6 +11,7 @@ import TrafficChart from '../components/TrafficChart';
 import SiteSwitcher from '../components/SiteSwitcher';
 import SiteLink from '../components/SiteLink';
 import { ChartNotes, NotFoundPanel, SpeedPanel } from '../components/SiteInsights';
+import { LinksPanel, SourcesPanel } from '../components/TrafficSources';
 import { previousRange, rangeSearch } from '../lib/dailyCheck';
 import { pageName } from '../lib/analyticsLabels';
 import { formatDateTime, formatNumber } from '../lib/format';
@@ -189,7 +190,7 @@ const VisitorDetail = ({ diagnostics = false }) => {
           <Stat icon={Activity} label="ביקורים" value={summary.browser_signal_sessions} previous={data?.comparison?.previous?.browser_signal_sessions} />
           <Stat icon={Eye} label="צפיות" value={summary.browser_signal_page_views} previous={data?.comparison?.previous?.browser_signal_page_views} />
         </StatRow>
-        <div className="workspace-tabs"><Tabs label="תצוגת אתר" tabs={[{ id: 'overview', label: 'סקירה', icon: ChartNoAxesCombined }, { id: 'pages', label: 'עמודים', icon: PanelsTopLeft }, { id: 'audience', label: 'קהל', icon: Globe }]} value={view} onChange={value => { const next = new URLSearchParams(query); next.set('view', value); next.delete('page'); setQuery(next); }} /></div>
+        <div className="workspace-tabs"><Tabs label="תצוגת אתר" tabs={[{ id: 'overview', label: 'סקירה', icon: ChartNoAxesCombined }, { id: 'pages', label: 'עמודים', icon: PanelsTopLeft }, { id: 'sources', label: 'מקורות', icon: Link2 }, { id: 'audience', label: 'קהל', icon: Globe }]} value={view} onChange={value => { const next = new URLSearchParams(query); next.set('view', value); next.delete('page'); setQuery(next); }} /></div>
         {view === 'overview' && <>
           {!summary.browser_signal_page_views && <p className="status-line is-attention">לא נמדדה פעילות בטווח הזה.</p>}
           <TrafficChart data={data} previous={previous} comparisonError={comparisonError} marks={marks} />
@@ -197,7 +198,11 @@ const VisitorDetail = ({ diagnostics = false }) => {
           <Panel title="עמודים מובילים" hint={`הספירה לפי פתיחות עמודים שנרשמו בשרת, ולכן עשויה להיות גבוהה מהצפיות שנמדדו בדפדפן. ${PAGE_VIEW_HINT}`}><RankedList items={data?.pages} max={5} onSelect={setSelectedPath} labelFor={value => pageName(value, data?.app?.name)} /></Panel>
           {data?.range && <SpeedPanel appId={id} range={data.range} />}
         </>}
-        {view === 'audience' && <Panel title="מקורות וקהל" hint="פילוח לפי פתיחות עמודים שנרשמו בשרת; מיקום משוער לפי כתובת רשת." action={<Tabs tabs={BREAKDOWN_TABS} value={breakdown} onChange={setBreakdown} />}><RankedList items={data?.[breakdown]} color={breakdownMeta.color} empty={breakdownMeta.empty} /></Panel>}
+        {view === 'sources' && data?.range && <>
+          <SourcesPanel appId={id} range={data.range} />
+          <LinksPanel appId={Number(id)} siteUrl={data.app?.url} />
+        </>}
+        {view === 'audience' && <Panel title="קהל ואתרים מפנים לפי השרת" hint="פילוח לפי פתיחות עמודים שנרשמו בשרת; מיקום משוער לפי כתובת רשת." action={<Tabs tabs={BREAKDOWN_TABS} value={breakdown} onChange={setBreakdown} />}><RankedList items={data?.[breakdown]} color={breakdownMeta.color} empty={breakdownMeta.empty} /></Panel>}
         {view === 'pages' && <>
         <div className={`page-explorer ${selectedPath ? 'has-selection' : ''}`}>
           <Panel title="עמודים שנצפו" hint={PAGE_VIEW_HINT}>

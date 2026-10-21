@@ -80,6 +80,10 @@ def main():
             content += ['location = /.well-known/server-monitor-growth.js {',
                 '    alias /var/lib/server-monitor/growth-tracker.js;', '    default_type application/javascript;',
                 '    add_header Cache-Control "no-cache";', '}']
+            # Tracked short links (`/l/<code>`) redirect to the site with campaign tags.
+            content += ['location ^~ /l/ {', '    limit_except GET { deny all; }',
+                '    proxy_pass http://127.0.0.1:4010/serve-monitor/api/go/;',
+                '    proxy_set_header X-Link-Host $host;', '    proxy_set_header X-Visitor-IP $remote_addr;', '}']
             if config == 'lawebs.co.il.conf':
                 content += ['location = /.well-known/server-monitor-portfolio.js {',
                     '    alias /var/lib/server-monitor/portfolio-tracker.js;',

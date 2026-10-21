@@ -6,6 +6,7 @@
 ## Ownership
 
 - `ensure-monitor-logging.py` (run by deployment) adds the filtered monitor access log to every server block that declares its own `access_log`, upgrades unfiltered monitor lines, validates and rolls back. Health reports `Server log records no pages` when a site has 20+ browser visits in a week but no logged page. `backfill-site-log.cjs` recovers such a gap once from the site's own combined log (host appended, only lines before the fix time).
+- `update-asn-db.sh` (run by deployment) refreshes the DB-IP ASN Lite database when missing or older than 35 days and only warns on failure. The growth installer also routes `/l/` on every site host to the tracked-link redirect.
 - `install-retired-sites.sh` (run by deployment) gives each retired domain that still resolves here a 410 page from `retired-site.html`, restores its archived certificate renewal and rolls back on failed Nginx validation.
 - `portfolio-tracker.js` owns LA webs engagement on `/` and the eight known `/work/:project/` pages (koral, miryam, pinhas, reuven, sos, seder, pdf, pizza). `browser-check.cjs` verifies portfolio flows, live signal receipts, internal exclusion and authenticated monitor routes on desktop/mobile.
 

@@ -709,6 +709,42 @@ router.get('/apps/:id/not-found', (req, res) => {
     } catch (error) { respondError(res, error); }
 });
 
+router.get('/apps/:id/sources', (req, res) => {
+    try {
+        const app = assertApp(req.params.id);
+        const range = parseRange(req.query);
+        res.json(require('../sources').sourcesSummary(db, app.id, range.from, range.to));
+    } catch (error) { respondError(res, error); }
+});
+
+// Tracked short links: anyone can read; editors and owners create and remove.
+const canEdit = (req) => !req.user.service && ['owner', 'editor'].includes(req.user.role);
+router.get('/links', (req, res) => {
+    try {
+        const sources = require('../sources');
+        const appId = req.query.app_id ? Number(req.query.app_id) : null;
+        res.json({ links: sources.listLinks(db, Number.isInteger(appId) ? appId : null), channels: sources.LINK_CHANNELS.map((id) => ({ id, label: sources.CHANNELS[id] })),
+            suggestion: appId && req.query.channel ? sources.suggestCode(db, appId, req.query.channel) : null });
+    } catch (error) { respondError(res, error); }
+});
+
+router.post('/links', (req, res) => {
+    try {
+        if (!canEdit(req)) return res.status(403).json({ error: 'נדרשת הרשאת עריכה.' });
+        const link = require('../sources').validateLink(db, req.body);
+        db.prepare(`INSERT INTO tracked_links (app_id, host, code, channel, campaign, path, created_by, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(link.app.id, link.host, link.code, link.channel, link.campaign, link.path, req.user.username, new Date().toISOString());
+        res.status(201).json({ links: require('../sources').listLinks(db, link.app.id) });
+    } catch (error) { respondError(res, error); }
+});
+
+router.delete('/links/:id', (req, res) => {
+    if (!canEdit(req)) return res.status(403).json({ error: 'נדרשת הרשאת עריכה.' });
+    const result = db.prepare('DELETE FROM tracked_links WHERE id = ?').run(req.params.id);
+    if (!result.changes) return res.status(404).json({ error: 'הקישור לא נמצא.' });
+    res.json({ ok: true });
+});
+
 // Chart notes and recorded runtime starts for one site, or the whole fleet.
 router.get('/annotations', (req, res) => {
     try {

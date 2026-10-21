@@ -59,6 +59,14 @@
   }
   const visitor = identifier(localStorage, `${key}:visitor`, 30 * 86400000);
   const session = identifier(sessionStorage, `${key}:session`, 86400000);
+  // First real interaction on this page: lets visits from hosting networks (VPNs, offices) count.
+  const interactionEvents = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+  const interacted = () => {
+    interactionEvents.forEach(type => removeEventListener(type, interacted, true));
+    fetch(endpoint, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'interaction', event_id: crypto.randomUUID(), session_id: session, webdriver: navigator.webdriver === true }) }).catch(() => {});
+  };
+  interactionEvents.forEach(type => addEventListener(type, interacted, { capture: true, passive: true }));
   let lastPath = '';
   function navigation() {
     const path = location.pathname;

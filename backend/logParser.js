@@ -2,7 +2,7 @@ const fs = require('fs');
 
 const DEFAULT_TAIL_BYTES = 65536;
 const VISITOR_TAIL_BYTES = 2097152;
-const CLASSIFICATION_RULESET_VERSION = '2026-10-21.2';
+const CLASSIFICATION_RULESET_VERSION = '2026-10-21.3';
 
 const botUserAgentPatterns = [
     /bot/i,
@@ -259,6 +259,11 @@ function getBotClassification(entry, rawLine = '') {
     );
     if (fingerprint) {
         return { classification: 'likely_bot', confidence: 95, reason: fingerprint.reason };
+    }
+    // Data-centre networks rarely carry people; browsers can still prove themselves by interacting.
+    const network = require('./networks').hostingNetwork(entry?.ip);
+    if (network) {
+        return { classification: 'likely_bot', confidence: 80, reason: 'hosting network' };
     }
 
     return { classification: 'candidate', confidence: 0, reason: null };

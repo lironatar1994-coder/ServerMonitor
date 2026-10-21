@@ -37,6 +37,16 @@ function initializeObservability(db) {
             title TEXT NOT NULL, body TEXT NOT NULL, url TEXT NOT NULL, created_at TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS insight_notifications_time ON insight_notifications(created_at);
+        CREATE TABLE IF NOT EXISTS tracked_links (
+            id INTEGER PRIMARY KEY, app_id INTEGER NOT NULL REFERENCES apps(id) ON DELETE CASCADE, host TEXT NOT NULL,
+            code TEXT NOT NULL, channel TEXT NOT NULL, campaign TEXT NOT NULL DEFAULT '', path TEXT NOT NULL,
+            created_by TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, UNIQUE(host, code)
+        );
+        CREATE TABLE IF NOT EXISTS link_clicks (
+            id INTEGER PRIMARY KEY, link_id INTEGER NOT NULL REFERENCES tracked_links(id) ON DELETE CASCADE,
+            occurred_at TEXT NOT NULL, automation_hint INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS link_clicks_link_time ON link_clicks(link_id, occurred_at);
     `);
     // Push devices: per-device categories, quiet hours (Israel time) and a daily insight cap.
     db.exec(`

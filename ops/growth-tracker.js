@@ -60,6 +60,14 @@
     addEventListener('visibilitychange', flush);
     addEventListener('pagehide', () => { if (document.visibilityState !== 'hidden') return; flush(); });
   }
+  // First real interaction on this page: lets visits from hosting networks (VPNs, offices) count.
+  const interactionEvents = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+  const interacted = () => {
+    interactionEvents.forEach(type => removeEventListener(type, interacted, true));
+    fetch(endpoint, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'interaction', scope: 'growth', event_id: crypto.randomUUID(), session_id: session, webdriver: navigator.webdriver === true }) }).catch(() => {});
+  };
+  interactionEvents.forEach(type => addEventListener(type, interacted, { capture: true, passive: true }));
   const started = new WeakSet();
   const last = new Map();
   const validPath = () => (!prefix || location.pathname === prefix || location.pathname.startsWith(prefix + '/'))

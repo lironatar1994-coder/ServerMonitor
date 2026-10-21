@@ -406,3 +406,40 @@ test('restores older rotated and compressed logs once without replaying existing
     assert.equal(backfillArchivedLogs(app), 0);
     assert.equal(db.prepare('SELECT COUNT(*) AS n FROM visitor_events WHERE app_id = ?').get(id).n, 3);
 });
+
+test('hosting networks are likely automation, consumer ISPs and privacy relays are not', () => {
+    const networks = require('../networks');
+    const table = { '34.140.1.1': { autonomous_system_number: 396982, autonomous_system_organization: 'Google LLC' },
+        '5.29.1.1': { autonomous_system_number: 12849, autonomous_system_organization: 'Hot-Net internet services Ltd.' },
+        '9.9.9.9': { autonomous_system_number: 64500, autonomous_system_organization: 'Example Hosting Ltd' },
+        '172.226.1.1': { autonomous_system_number: 36183, autonomous_system_organization: 'Akamai Technologies, Inc.' } };
+    networks._setReaderForTests({ get: (ip) => table[ip] || null });
+    try {
+        const line = (ip) => parseNginxAccessLine(`${ip} - - [21/Oct/2026:12:00:00 +0300] "GET / HTTP/1.1" 200 10 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36" "www.dfusreuven.co.il"`);
+        assert.equal(getBotReason(line('34.140.1.1')), 'hosting network');
+        assert.equal(getBotReason(line('9.9.9.9')), 'hosting network');
+        assert.equal(getBotReason(line('5.29.1.1')), '');
+        assert.equal(getBotReason(line('172.226.1.1')), '');
+    } finally {
+        networks._setReaderForTests(null);
+    }
+});
+
+test('a pending hosting-network session counts only after its own interaction', () => {
+    const networks = require('../networks');
+    networks._setReaderForTests({ get: (ip) => ip === '34.140.1.1' ? { autonomous_system_number: 396982, autonomous_system_organization: 'Google LLC' } : null });
+    try {
+        const { recordInteraction } = require('../browserSignals');
+        const siteUrl = 'https://www.dfusreuven.co.il/';
+        const body = { event_id: 'event_vpn_1234567890abcd', visitor_id: 'visitor_vpn_1234567890ab', session_id: 'session_vpn_1234567890ab', path: '/' };
+        recordBrowserSignal({ body, ip: '34.140.1.1', userAgent: 'Mozilla/5.0 Chrome/131.0', siteUrl });
+        const hint = () => db.prepare('SELECT automation_hint FROM browser_signals WHERE event_id = ?').get(body.event_id).automation_hint;
+        assert.equal(hint(), 2);
+        assert.equal(recordInteraction({ body: { event_id: 'event_vpnbot_1234567890a', session_id: body.session_id, webdriver: true }, ip: '34.140.1.1', userAgent: 'Mozilla/5.0', siteUrl }).released, 0);
+        assert.equal(hint(), 2);
+        assert.equal(recordInteraction({ body: { event_id: 'event_vpnhit_1234567890a', session_id: body.session_id }, ip: '34.140.1.1', userAgent: 'Mozilla/5.0 Chrome/131.0', siteUrl }).released, 1);
+        assert.equal(hint(), 0);
+    } finally {
+        networks._setReaderForTests(null);
+    }
+});

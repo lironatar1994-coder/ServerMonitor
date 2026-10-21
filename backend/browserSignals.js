@@ -167,7 +167,9 @@ function getAutomationHint({ body, ip, userAgent, path }) {
         method: 'GET',
         status: 200
     });
-    return classification.classification === 'candidate' ? 0 : 1;
+    if (classification.classification === 'candidate') return 0;
+    // 2 = hosting network, pending: counted once the same session shows real interaction.
+    return classification.reason === 'hosting network' ? 2 : 1;
 }
 
 /* Engagement is a second, later beacon for the same page view. It must never
@@ -347,6 +349,40 @@ function recordBrowserSignal({ body, ip, userAgent, siteUrl }) {
     return { accepted: true, duplicate: result.changes === 0, app: app.name };
 }
 
+/**
+ * A first pointer, key, touch or scroll in a session. Signals from hosting networks wait as
+ * automation_hint 2 and count only once their own session interacts; scripted browsers
+ * (bot user agents, webdriver) never release them.
+ */
+function recordInteraction({ body, ip, userAgent, siteUrl }) {
+    const key = getSignalKey();
+    const normalizedIp = normalizeIp(ip);
+    const sessionId = String(body?.session_id || '').trim();
+    if (!key || !normalizedIp || !ID_PATTERN.test(sessionId) || !ID_PATTERN.test(String(body?.event_id || ''))) {
+        const error = new Error('Invalid interaction');
+        error.status = 400;
+        throw error;
+    }
+    const app = findSignalApp(siteUrl);
+    if (!app) {
+        const error = new Error('Browser signal site is not configured');
+        error.status = 400;
+        throw error;
+    }
+    if (getAutomationHint({ body, ip: normalizedIp, userAgent, path: '/' }) === 1) return { accepted: true, released: 0, app: app.name };
+    let released = 0;
+    if (body.scope === 'growth') {
+        const hash = crypto.createHmac('sha256', key).update(`${app.id}:growth:${sessionId}`).digest('hex');
+        released += db.prepare('UPDATE growth_events SET automation_hint = 0 WHERE app_id = ? AND session_hash = ? AND automation_hint = 2').run(app.id, hash).changes;
+    } else {
+        const hash = hashIdentifier(`${app.id}:${sessionId}`, key);
+        for (const table of ['browser_signals', 'engagement_signals']) {
+            released += db.prepare(`UPDATE ${table} SET automation_hint = 0 WHERE app_id = ? AND session_hash = ? AND automation_hint = 2`).run(app.id, hash).changes;
+        }
+    }
+    return { accepted: true, released, app: app.name };
+}
+
 /** One page's Core Web Vitals (LCP, INP, CLS, TTFB); no identifiers beyond the event ID. */
 function recordWebVitals({ body, ip, userAgent, siteUrl }) {
     const normalizedIp = normalizeIp(ip);
@@ -378,6 +414,7 @@ function recordWebVitals({ body, ip, userAgent, siteUrl }) {
 }
 
 module.exports = {
+    recordInteraction,
     recordWebVitals,
     getAutomationHint,
     getSignalKey,
