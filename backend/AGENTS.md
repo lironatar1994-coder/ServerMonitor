@@ -14,6 +14,7 @@
 - `server.js` owns middleware, API mounting, frontend static serving, and process startup.
 - `database.js` owns schema creation, migrations, explicit bootstrap accounts, and seed monitor records.
 - `monitor.js` owns background health, PM2, log, metric, and alert collection.
+- `httpHealth.js` owns fresh-connection HTTP probes with a five-second total deadline per attempt (ten for public URL probes), one transport-failure retry, and error codes for failed checks. HTTP failures remain visible immediately; recovered latency includes the failed attempt.
 - `logParser.js` owns host-aware Nginx access-log filtering, visitor parsing, and heuristic bot classification.
 - `visitorAnalytics.js` owns cursor-based access-log ingestion, initial bounded backfill, GeoIP enrichment, and raw-event retention.
 - `browserSignals.js` owns authenticated first-party browser-signal site matching, validation, identifier hashing, path/IP normalization, bot filtering, deduplication, and persistence for navigation, engagement, heatmap, and product-use events.
@@ -68,7 +69,7 @@
 - Keep schema migrations idempotent and safe against existing production databases.
 - Treat the production app catalog in `database.js` as declarative configuration: update matching named records without deleting user-created records, and reset visitor ingestion only when a catalog app's log ownership/filter changes.
 - Keep `Pixel Dungeon` and `PDF Generator` in the explicit retired-app purge list so legacy metrics, visitor events, browser signals, ingestion state, and catalog rows cannot reappear after a restart.
-- Register PDF Studio as the static canonical site at `https://vee-app.co.il/pdf-studio/`, with exact `/pdf-studio` log ownership and no PM2 dependency.
+- Register PDF Studio as the static canonical site at `https://lawebs.co.il/pdf-studio/`, with exact `/pdf-studio` log ownership on the canonical and redirect hosts and no PM2 dependency.
 - Register Seder as the canonical app at `https://lawebs.co.il/seder`, tied to PM2 process `seder-live`, exact `lawebs.co.il|www.lawebs.co.il` host ownership, and the `/seder` path.
 - Register `Seder Calendar` as operational-only through `seder-calendar`, alongside `Seder WhatsApp`. Do not restart a message sender as part of monitoring maintenance.
 - Do not hard-code local-only paths into server monitoring logic unless they are explicitly production paths.

@@ -1,7 +1,6 @@
 const fs = require('fs');
 const db = require('./database');
-const http = require('http');
-const https = require('https');
+const { checkHttp } = require('./httpHealth');
 const { execFile } = require('child_process');
 const { getSystemdSnapshot } = require('./systemd');
 const { parseNginxLogMetrics } = require('./logParser');
@@ -58,31 +57,6 @@ function pm2Status(processes, pm2Name) {
         memory: match?.monit?.memory || 0,
         startedAt: match?.pm2_env?.pm_uptime ? new Date(match.pm2_env.pm_uptime).toISOString() : null
     } : { status: 'offline', cpu: 0, memory: 0, startedAt: null };
-}
-
-/** Status plus time to the response headers, the latency a visitor waits for first bytes. */
-function checkHttp(target, timeout = 5000) {
-    return new Promise((resolve) => {
-        let url;
-        try {
-            url = new URL(target);
-        } catch {
-            resolve({ status: 'error', ms: null });
-            return;
-        }
-        const started = process.hrtime.bigint();
-        const client = url.protocol === 'https:' ? https : http;
-        const req = client.get(url, { timeout, headers: { 'User-Agent': 'ServerMonitor-Health/1.0' } }, (res) => {
-            const ms = Number((process.hrtime.bigint() - started) / 1000000n);
-            res.resume();
-            resolve({ status: res.statusCode >= 200 && res.statusCode < 400 ? 'online' : 'error', ms });
-        });
-        req.on('error', () => resolve({ status: 'offline', ms: null }));
-        req.on('timeout', () => {
-            req.destroy();
-            resolve({ status: 'offline', ms: null });
-        });
-    });
 }
 
 function getFail2banBannedCount() {
@@ -156,7 +130,7 @@ async function runMonitorCycle() {
                 responseMs = health.ms;
                 if (health.status !== 'online') {
                     status = health.status;
-                    console.warn(`[Monitor] Health check failed for ${app.name} at ${healthUrl}: ${health.status}`);
+                    console.warn(`[Monitor] Health check failed for ${app.name}: ${health.status} (${health.error}, ${health.attempts} attempts)`);
                 }
             }
             if (app.url && status === 'online' && app.url !== healthUrl) {
