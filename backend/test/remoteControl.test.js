@@ -78,30 +78,50 @@ test("a queued job reaches a waiting agent, and its report completes the job", a
   assert.equal(state.agent.host, "PC");
 });
 
-test("screenshots upload as images and are served only to owners", async () => {
+test("screenshots answer a screenshot job and are served only to owners", async () => {
   const owner = identity("rc-owner-3", "owner"),
     reader = identity("rc-reader", "reader");
   const image = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+  const polling = agent("/poll?host=PC-S&v=2.1.0").then((r) => r.json());
+  await new Promise((r) => setTimeout(r, 100));
+  const { job } = await (await human(owner, "/jobs", "POST", { type: "screenshot", pc: "PC-S" })).json();
+  assert.equal((await polling).jobs[0].id, job.id);
   assert.equal((await agent("/screenshot", { method: "POST", headers: { "Content-Type": "text/plain" }, body: "x" })).status, 415);
-  assert.equal((await agent("/screenshot", { method: "POST", headers: { "Content-Type": "image/jpeg" }, body: image })).status, 200);
-  assert.equal((await human(reader, "/screenshot")).status, 403);
-  const shot = await human(owner, "/screenshot");
+  // An upload that answers no job is refused.
+  assert.equal((await agent("/screenshot?job=0000000000000000", { method: "POST", headers: { "Content-Type": "image/jpeg" }, body: image })).status, 404);
+  assert.equal((await agent(`/screenshot?job=${job.id}`, { method: "POST", headers: { "Content-Type": "image/jpeg" }, body: image })).status, 200);
+  assert.equal((await human(reader, "/screenshot?pc=PC-S")).status, 403);
+  const shot = await human(owner, "/screenshot?pc=PC-S");
   assert.equal(shot.headers.get("content-type"), "image/jpeg");
   assert.deepEqual(Buffer.from(await shot.arrayBuffer()), image);
+  assert.equal((await human(owner, "/screenshot?pc=PC")).status, 404);
 });
 
-test("two connected PCs keep their own waits and the most recent poll takes the job", async () => {
+test("each PC keeps its own wait, jobs and sessions", async () => {
   const owner = identity("rc-owner-4", "owner");
-  const abort = new AbortController();
-  let firstAnswered = false;
-  const first = agent("/poll?host=PC-A&v=2.1.0", { signal: abort.signal }).then(() => { firstAnswered = true; }).catch(() => {});
+  const abortB = new AbortController();
+  let bAnswered = false;
+  const pollA = agent("/poll?host=PC-A&v=2.1.0").then((r) => r.json());
   await new Promise((r) => setTimeout(r, 100));
-  const second = agent("/poll?host=PC-B&v=2.1.0", {}, SECOND_TOKEN).then((r) => r.json());
+  const pollB = agent("/poll?host=PC-B&v=2.1.0", { signal: abortB.signal }, SECOND_TOKEN).then(() => { bAnswered = true; }).catch(() => {});
   await new Promise((r) => setTimeout(r, 100));
-  assert.equal(firstAnswered, false, "a second PC must not end the first PC's wait");
-  const { job } = await (await human(owner, "/jobs", "POST", { type: "status" })).json();
-  assert.equal((await second).jobs[0].id, job.id);
-  assert.equal(firstAnswered, false);
-  abort.abort();
-  await first;
+  // PC-B polled last, but the job names PC-A.
+  const { job } = await (await human(owner, "/jobs", "POST", { type: "list", pc: "PC-A" })).json();
+  assert.equal(job.pc, "PC-A");
+  assert.equal((await pollA).jobs[0].id, job.id);
+  assert.equal(bAnswered, false, "another PC's wait is untouched");
+  await agent("/report", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jobId: job.id, ok: true, result: { count: 1 }, sessions: [{ title: "Only on A" }], current: null }) });
+  const a = await (await human(owner, "/state?pc=PC-A")).json();
+  const b = await (await human(owner, "/state?pc=PC-B")).json();
+  assert.equal(a.pc, "PC-A");
+  assert.deepEqual(a.sessions.map((x) => x.title), ["Only on A"]);
+  assert.equal(b.pc, "PC-B");
+  assert.equal(b.sessions.length, 0);
+  assert.equal(b.agent.online, true);
+  assert.ok(a.jobs.some((j) => j.id === job.id) && !b.jobs.some((j) => j.id === job.id));
+  assert.ok(["PC-A", "PC-B"].every((host) => a.pcs.some((pc) => pc.host === host)));
+  assert.equal((await human(owner, "/jobs", "POST", { type: "list", pc: "Unknown-PC" })).status, 400);
+  abortB.abort();
+  await pollB;
 });

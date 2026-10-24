@@ -7,7 +7,6 @@ const remote = require('../remoteControl');
 const agent = express.Router();
 agent.use((req, res, next) => {
     if (!remote.agentAuthorized(req.headers.authorization)) return res.status(401).json({ error: 'Unauthorized' });
-    remote.seen();
     res.set('Cache-Control', 'no-store');
     next();
 });
@@ -22,18 +21,19 @@ agent.post('/report', express.json({ limit: '512kb' }), (req, res) => {
 });
 agent.post('/screenshot', express.raw({ type: ['image/jpeg', 'image/png'], limit: '3mb' }), (req, res) => {
     if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(415).json({ error: 'Expected an image' });
-    remote.screenshot(req.body, req.get('content-type'), req.query.job);
+    // Accepted only as the answer to a screenshot job, which names the PC it belongs to.
+    if (!remote.screenshot(req.body, req.get('content-type'), req.query.job)) return res.status(404).json({ error: 'Unknown job' });
     res.json({ ok: true });
 });
 
 // Controlling the PC is owner-only: monitor service sessions and other roles are refused.
 const panel = express.Router();
 panel.use(authenticateToken, security.owner);
-panel.get('/state', (req, res) => res.json(remote.publicState()));
+panel.get('/state', (req, res) => res.json(remote.publicState(req.query.pc)));
 panel.post('/jobs', (req, res) => {
     try {
-        const job = remote.enqueue(String(req.body?.type || ''), req.body?.args);
-        res.json({ job, agentOnline: remote.agentOnline() });
+        const job = remote.enqueue(String(req.body?.type || ''), req.body?.args, req.body?.pc);
+        res.json({ job, agentOnline: remote.agentOnline(job.pc) });
     } catch (error) {
         res.status(error.status || 500).json({ error: error.status ? error.message : 'הפעולה נכשלה.' });
     }
@@ -43,7 +43,7 @@ panel.get('/jobs/:id', (req, res) => {
     return job ? res.json({ job }) : res.status(404).json({ error: 'הפעולה לא נמצאה.' });
 });
 panel.get('/screenshot', (req, res) => {
-    const shot = remote.latestScreenshot();
+    const shot = remote.latestScreenshot(req.query.pc);
     if (!shot) return res.status(404).json({ error: 'אין עדיין צילום מסך.' });
     res.set({ 'Content-Type': shot.type, 'Cache-Control': 'no-store, private' });
     res.send(shot.buf);

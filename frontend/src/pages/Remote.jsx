@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronLeft, Copy, ExternalLink, Monitor, Play, Power, RefreshCw, Search, X } from 'lucide-react';
-import { DataState, Empty, IconAction, PageHead, Panel } from '../components/AnalyticsParts';
+import { DataState, Empty, IconAction, PageHead, Panel, Tabs } from '../components/AnalyticsParts';
 import Modal from '../components/Modal';
 import { apiFetch } from '../lib/api';
 import { getSessionSnapshot } from '../lib/session';
@@ -20,6 +20,8 @@ const ago = (ts, now) => {
   if (s < 86400) return `לפני ${Math.round(s / 3600)} ש׳`;
   return `לפני ${Math.round(s / 86400)} ימים`;
 };
+const PC_KEY = 'monitor.remote-pc';
+const savedPc = () => { try { return localStorage.getItem(PC_KEY) || ''; } catch { return ''; } };
 const statusTone = (status) => /running|working|responding/i.test(status) ? 'is-running' : !status || /idle/i.test(status) ? '' : 'is-attention';
 
 export default function Remote() {
@@ -29,15 +31,17 @@ export default function Remote() {
   const [dismissed, setDismissed] = useState(null);
   const [shot, setShot] = useState(null); // { job } while the screen viewer is open
   const [notice, setNotice] = useState('');
+  const [pc, setPc] = useState(savedPc); // chosen computer; the server falls back to the latest one
+  const pcRef = useRef(pc);
   const timer = useRef(null);
-  const lastAutoList = useRef(0);
+  const lastAutoList = useRef({}); // per computer
   const owner = getSessionSnapshot()?.role === 'owner';
 
   const jobs = useMemo(() => state?.jobs || [], [state]);
   const active = useCallback((type) => jobs.find((job) => job.type === type && ACTIVE.has(job.status)) || null, [jobs]);
 
   const queue = useCallback(async (type, args) => {
-    const { job, agentOnline } = await apiFetch('/remote/jobs', { method: 'POST', body: JSON.stringify({ type, args }) });
+    const { job, agentOnline } = await apiFetch('/remote/jobs', { method: 'POST', body: JSON.stringify({ type, args, pc: pcRef.current || undefined }) });
     setState((current) => current && ({ ...current, jobs: [job, ...current.jobs.filter((item) => item.id !== job.id)] }));
     if (!agentOnline && type !== 'list') setNotice('המחשב לא מחובר. הפעולה תרוץ כשיתחבר, עד 90 שניות.');
     return job;
@@ -54,15 +58,20 @@ export default function Remote() {
       if (document.hidden) return;
       let next = 3000;
       try {
-        const data = await apiFetch('/remote/state');
-        if (!alive) return;
+        const asked = pcRef.current;
+        const data = await apiFetch(`/remote/state${asked ? `?pc=${encodeURIComponent(asked)}` : ''}`);
+        // A switch to another computer while this was in flight starts its own poll.
+        if (!alive || pcRef.current !== asked) return;
+        // Jobs and sessions belong to the computer the server answered for.
+        pcRef.current = data.pc || '';
         setState(data);
         setError('');
         if (data.jobs.some((job) => ACTIVE.has(job.status))) next = 1000;
         // A fresh list whenever the screen is open; the agent reads it in about a second.
         const stale = !data.sessionsAt || data.now - data.sessionsAt > 30e3;
-        if (data.agent.online && stale && !data.jobs.some((job) => job.type === 'list' && ACTIVE.has(job.status)) && Date.now() - lastAutoList.current > 30e3) {
-          lastAutoList.current = Date.now();
+        const listedAt = lastAutoList.current[data.pc] || 0;
+        if (data.agent.online && stale && !data.jobs.some((job) => job.type === 'list' && ACTIVE.has(job.status)) && Date.now() - listedAt > 30e3) {
+          lastAutoList.current[data.pc] = Date.now();
           queue('list').catch(() => {});
         }
       } catch (e) { if (!alive) return; setError(e.message); next = 10000; }
@@ -75,6 +84,15 @@ export default function Remote() {
     return () => { alive = false; clearTimeout(start); clearTimeout(timer.current); document.removeEventListener('visibilitychange', resume); };
   }, [owner, queue]);
   const tick = () => poller.current();
+  const choosePc = (host) => {
+    pcRef.current = host;
+    setPc(host);
+    try { localStorage.setItem(PC_KEY, host); } catch { /* the choice just isn't remembered */ }
+    setDismissed(null);
+    setShot(null);
+    setState((current) => current && ({ ...current, pc: host, sessions: [], links: {}, jobs: [], sessionsAt: null }));
+    tick();
+  };
 
   useEffect(() => {
     if (!notice) return undefined;
@@ -121,6 +139,12 @@ export default function Remote() {
         <IconAction icon={RefreshCw} label="רענון רשימת השיחות" onClick={() => queue('list').catch(fail)} className={`icon-btn${listing ? ' is-busy' : ''}`} />
         <IconAction icon={Monitor} label="צילום מסך המחשב" onClick={openShot} />
       </PageHead>
+      {state?.pcs?.length > 1 && (
+        <div className="remote-pcs">
+          <Tabs label="בחירת מחשב" value={state.pc || pc} onChange={choosePc}
+            tabs={state.pcs.map((item) => ({ id: item.host, label: <><i className={`remote-pc-dot${item.online ? ' is-on' : ''}`} role="img" aria-label={item.online ? 'מחובר' : 'לא מחובר'} /><bdi>{item.host}</bdi></> }))} />
+        </div>
+      )}
 
       <DataState loading={!state && !error} error={state ? '' : error} onRetry={tick}>
         {state && (
@@ -215,7 +239,7 @@ export default function Remote() {
             </div>
           </div>
           <div className="remote-shot__body">
-            {state?.screenshotAt ? <img src={`/serve-monitor/api/remote/screenshot?t=${state.screenshotAt}`} alt="צילום מסך המחשב" /> : null}
+            {state?.screenshotAt ? <img src={`/serve-monitor/api/remote/screenshot?pc=${encodeURIComponent(state.pc || '')}&t=${state.screenshotAt}`} alt="צילום מסך המחשב" /> : null}
           </div>
         </Modal>
       )}

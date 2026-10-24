@@ -1,6 +1,10 @@
 /* Remote control of the owner's PC: one session list, one result card, a screen viewer. */
 .page--remote { max-width: 760px; }
 .page--remote .icon-btn.is-busy svg { animation: spin 1s linear infinite; }
+.remote-pcs { margin-bottom: 1rem; }
+.remote-pcs .tabs button { display: inline-flex; align-items: center; gap: .4rem; }
+.remote-pc-dot { width: .45rem; height: .45rem; border-radius: 50%; background: var(--line-strong); }
+.remote-pc-dot.is-on { background: var(--healthy); }
 .remote-banner { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
 
 .remote-result { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: .75rem; margin-bottom: 1rem; padding: .85rem 1rem; border: 1px solid var(--line); border-radius: var(--panel-radius, 12px); background: var(--paper-light); }
