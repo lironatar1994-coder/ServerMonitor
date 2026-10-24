@@ -18,24 +18,24 @@ const stateFile = () => process.env.RC_STATE_FILE || path.join(__dirname, '.remo
 
 const failure = (status, message) => Object.assign(new Error(message), { status });
 
-// The PC installs only the SHA-256 of its token here; re-read when the file changes.
-let tokenCache = { mtime: 0, hash: null };
-function agentTokenHash() {
+// One SHA-256 per line, one per installed agent; re-read when the file changes.
+let tokenCache = { mtime: 0, hashes: [] };
+function agentTokenHashes() {
     try {
         const stat = fs.statSync(tokenFile());
         if (stat.mtimeMs !== tokenCache.mtime) {
-            const hex = fs.readFileSync(tokenFile(), 'utf8').trim();
-            tokenCache = { mtime: stat.mtimeMs, hash: /^[0-9a-f]{64}$/.test(hex) ? Buffer.from(hex, 'hex') : null };
+            const hashes = fs.readFileSync(tokenFile(), 'utf8').split(/\s+/).filter((hex) => /^[0-9a-f]{64}$/.test(hex));
+            tokenCache = { mtime: stat.mtimeMs, hashes: hashes.slice(0, 5).map((hex) => Buffer.from(hex, 'hex')) };
         }
-    } catch { tokenCache = { mtime: 0, hash: null }; }
-    return tokenCache.hash;
+    } catch { tokenCache = { mtime: 0, hashes: [] }; }
+    return tokenCache.hashes;
 }
 
 function agentAuthorized(header) {
     const match = /^Bearer (\S{20,200})$/.exec(header || '');
-    const want = agentTokenHash();
-    if (!match || !want) return false;
-    return crypto.timingSafeEqual(crypto.createHash('sha256').update(match[1]).digest(), want);
+    if (!match) return false;
+    const got = crypto.createHash('sha256').update(match[1]).digest();
+    return agentTokenHashes().reduce((ok, want) => crypto.timingSafeEqual(got, want) || ok, false);
 }
 
 const state = {
@@ -181,7 +181,8 @@ function cleanSessions(list) {
         index,
         title: String(session.title ?? '').slice(0, 300),
         status: String(session.status ?? '').slice(0, 40),
-        section: String(session.section ?? '').slice(0, 80),
+        // A collapsed sidebar group is named after its expander ("Show 5 more in Older").
+        section: String(session.section ?? '').replace(/^Show \d+ more in /i, '').slice(0, 80),
         occurrence: Math.max(0, Math.min(50, Number(session.occurrence) || 0)),
         current: Boolean(session.current),
     }));

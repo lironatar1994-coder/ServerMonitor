@@ -121,18 +121,24 @@ class ClaudeUI:
         self._win = None
 
     # ---- window ---------------------------------------------------------
-    def _find_window(self):
-        root = auto.GetRootControl()
-        for w in root.GetChildren():
+    def _find_windows(self):
+        """Every top-level window of the Claude desktop app (not Claude Code CLI windows)."""
+        found = []
+        for w in auto.GetRootControl().GetChildren():
             if w.ClassName == WINDOW_CLASS and w.Name == 'Claude' and w.ControlTypeName == 'WindowControl':
                 try:
-                    pid = w.ProcessId
-                    exe = _process_path(pid)
+                    exe = _process_path(w.ProcessId)
                 except Exception:
                     exe = ''
                 if 'Claude' in exe and 'claude-code' not in exe:
-                    return w
-        return None
+                    found.append(w)
+        return found
+
+    def _find_window(self):
+        windows = self._find_windows()
+        # Prefer a window that is actually shown over a hidden or zero-size helper window.
+        windows.sort(key=lambda w: (not _user32.IsWindowVisible(w.NativeWindowHandle), w.BoundingRectangle.width() <= 0))
+        return windows[0] if windows else None
 
     def window(self, launch=True):
         w = self._find_window()
@@ -145,27 +151,39 @@ class ClaudeUI:
             time.sleep(5)
         if not w:
             raise ClaudeUIError('Claude desktop is not running')
-        hwnd = w.NativeWindowHandle
-        if _user32.IsIconic(hwnd):
-            _user32.ShowWindow(hwnd, 9)  # SW_RESTORE - a minimized Chromium window stops updating
-            time.sleep(1.0)
+        self._show(w)
         self._win = w
         return w
 
+    def _show(self, w):
+        # A minimized or hidden Chromium window stops exposing its page. SW_SHOWNOACTIVATE
+        # restores it behind whatever is in front, without taking focus from the user.
+        hwnd = w.NativeWindowHandle
+        if _user32.IsIconic(hwnd) or not _user32.IsWindowVisible(hwnd):
+            self.log('Restoring the Claude window')
+            _user32.ShowWindow(hwnd, 4)
+            time.sleep(1.5)
+
     def _document(self):
         """The web document that holds the app UI (the one with the sidebar)."""
-        w = self.window()
-        for _ in range(3):
-            docs = []
-            for d in _descendant_docs(w):
-                if d.Name and d.BoundingRectangle.width() > 0:
-                    docs.append(d)
-            for d in docs:
-                n = snapshot(d)
-                if n.find(lambda x: x.name == 'Sidebar' and 'dframe-sidebar' in x.cls) or n.find(lambda x: x.name == 'Mode'):
-                    return d, n
-            time.sleep(1.5)  # first query switches Chromium accessibility on; give it a moment
-        raise ClaudeUIError('Could not read the Claude window (is it on the Code tab?)')
+        self.window()
+        seen = []
+        for attempt in range(5):
+            seen = []
+            for w in self._find_windows():
+                self._show(w)
+                for d in _descendant_docs(w):
+                    width = d.BoundingRectangle.width()
+                    seen.append(f"{(d.Name or '-')[:40]} ({width}px)")
+                    if not d.Name or width <= 0:
+                        continue
+                    n = snapshot(d)
+                    if n.find(lambda x: x.name == 'Sidebar' and 'dframe-sidebar' in x.cls) or n.find(lambda x: x.name == 'Mode'):
+                        self._win = w
+                        return d, n
+            time.sleep(1.5 if attempt < 2 else 3)  # the first query switches Chromium accessibility on
+        detail = '; '.join(seen) or 'no page inside the window'
+        raise ClaudeUIError(f'Could not read the Claude window ({len(self._find_windows())} window(s): {detail})')
 
     def ensure_code_mode(self, doc_node):
         mode = doc_node.find(lambda x: x.name == 'Mode' and x.type == auto.ControlType.GroupControl)

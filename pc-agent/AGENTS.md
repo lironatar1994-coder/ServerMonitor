@@ -7,9 +7,9 @@
 ## Ownership
 
 - `agent.py` long-polls `<server>/agent/poll`, runs one job at a time and reports to `<server>/agent/report` or `<server>/agent/screenshot`. The default server is `https://monitor.vee-app.co.il/serve-monitor/api/remote`; a config still pointing at `https://lawebs.co.il/rc` is moved to it.
-- `claude_ui.py` drives Claude desktop through Windows UI Automation only (no mouse or keyboard input), so it works with the window covered.
+- `claude_ui.py` drives Claude desktop through Windows UI Automation only (no mouse or keyboard input), so it works with the window covered. It checks every Claude window, restores a minimized or hidden one without taking focus, and on failure reports the windows and pages it saw.
 - `rc.py` and `rc.cmd` are the local command-line equivalent (list, connect, status).
-- `install.ps1` installs packages and the `Claude Remote Agent` scheduled task (logon start, five-minute watchdog), stops any older agent copy, and creates `config.json` with a new token whose SHA-256 it writes to `/root/.server-monitor-rc-agent.sha256` over SSH (`-NewToken` rotates it, `-Uninstall` removes the task).
+- `install.cmd` (double-click) runs `install.ps1`, which installs packages and the `Claude Remote Agent` scheduled task (logon start, five-minute watchdog) and stops any older agent copy. An existing `config.json` is used as is; without one it creates a token and appends its SHA-256 to `/root/.server-monitor-rc-agent.sha256` over SSH. `-NewToken` replaces every stored hash (revoking other agents); `-Uninstall` removes the task.
 
 ## Local Contracts
 

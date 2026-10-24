@@ -17,7 +17,7 @@ from logging.handlers import RotatingFileHandler
 import requests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-VERSION = '2.0.0'
+VERSION = '2.1.0'
 SERVER = 'https://monitor.vee-app.co.il/serve-monitor/api/remote'
 # Configs written before the move into Server Monitor point at the retired panel.
 LEGACY_SERVERS = {'https://lawebs.co.il/rc'}

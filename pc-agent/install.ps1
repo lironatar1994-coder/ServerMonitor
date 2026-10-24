@@ -1,9 +1,9 @@
 # Installs the Claude Remote agent for Server Monitor's owner-only remote screen:
 # Python packages + a scheduled task that starts it hidden at logon (and revives it within 5 minutes).
-#   .\install.ps1              install / update and (re)start; creates config.json on first run
-#   .\install.ps1 -NewToken    issue a new agent token (the previous one stops working)
-#   .\install.ps1 -Uninstall   stop and remove the task
-# The server keeps only the token's SHA-256 in /root/.server-monitor-rc-agent.sha256.
+#   install.cmd / .\install.ps1  install / update and (re)start; an existing config.json needs no SSH
+#   .\install.ps1 -NewToken      issue a new token and revoke every other agent token
+#   .\install.ps1 -Uninstall     stop and remove the task
+# The server keeps one SHA-256 per agent token in /root/.server-monitor-rc-agent.sha256.
 param([switch]$Uninstall, [switch]$NewToken, [string]$SSHHost = 'root@vee-app.co.il')
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
@@ -30,14 +30,15 @@ if ($Uninstall) {
 $config = if (Test-Path $configFile) { Get-Content $configFile -Raw | ConvertFrom-Json } else { [pscustomobject]@{ keepAwake = $true } }
 $config | Add-Member -Force server 'https://monitor.vee-app.co.il/serve-monitor/api/remote'
 if ($NewToken -or -not $config.token) {
+    $redirect = if ($NewToken) { '>' } else { '>>' }
     $bytes = New-Object byte[] 32
     [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
     $config | Add-Member -Force token ([Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_'))
     $sha = [Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($config.token))
     $hash = -join ($sha | ForEach-Object { $_.ToString('x2') })
-    & ssh -o BatchMode=yes -o ConnectTimeout=15 $SSHHost "umask 077 && printf '%s\n' $hash > /root/.server-monitor-rc-agent.sha256"
+    & ssh -o BatchMode=yes -o ConnectTimeout=15 $SSHHost "umask 077 && printf '%s\n' $hash $redirect /root/.server-monitor-rc-agent.sha256"
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "Could not reach $SSHHost. From a PC with the server key run:`n  ssh $SSHHost `"umask 077 && printf '%s\n' $hash > /root/.server-monitor-rc-agent.sha256`""
+        Write-Warning "Could not reach $SSHHost. From a PC with the server key run:`n  ssh $SSHHost `"umask 077 && printf '%s\n' $hash $redirect /root/.server-monitor-rc-agent.sha256`""
     }
 }
 [IO.File]::WriteAllText($configFile, ($config | ConvertTo-Json) + "`n")

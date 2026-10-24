@@ -11,7 +11,10 @@ process.env.RC_AGENT_TOKEN_FILE = path.join(dir, "agent.sha256");
 process.env.RC_STATE_FILE = path.join(dir, "remote-state.json");
 process.env.NODE_ENV = "test";
 const AGENT_TOKEN = crypto.randomBytes(32).toString("base64url");
-fs.writeFileSync(process.env.RC_AGENT_TOKEN_FILE, crypto.createHash("sha256").update(AGENT_TOKEN).digest("hex") + "\n");
+const SECOND_TOKEN = crypto.randomBytes(32).toString("base64url");
+const sha = (value) => crypto.createHash("sha256").update(value).digest("hex");
+// One hash per installed agent: an older install keeps working beside a new one.
+fs.writeFileSync(process.env.RC_AGENT_TOKEN_FILE, `${sha(AGENT_TOKEN)}\n${sha(SECOND_TOKEN)}\n`);
 const db = require("../database"),
   s = require("../security");
 s.initSecurity(db);
@@ -48,6 +51,7 @@ test("only owners reach the remote panel and only the agent token reaches agent 
   assert.equal((await agent("/report", { method: "POST" }, "wrong-token-wrong-token-1234")).status, 401);
   // A human session cookie never authenticates the agent.
   assert.equal((await fetch(base + "/agent/report", { method: "POST", headers: { Cookie: `monitor-session=${owner.token}` } })).status, 401);
+  assert.equal((await agent("/screenshot", { method: "POST", headers: { "Content-Type": "text/plain" }, body: "x" }, SECOND_TOKEN)).status, 415);
   const reject = await human(owner, "/jobs", "POST", { type: "format-disk" });
   assert.equal(reject.status, 400);
 });
@@ -63,13 +67,14 @@ test("a queued job reaches a waiting agent, and its report completes the job", a
   const done = await agent("/report", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jobId: job.id, ok: true, result: { title: "My session", link: "https://claude.ai/code/abc", enabled: true }, sessions: [{ title: "My session", status: "Idle" }], current: "My session" }),
+    body: JSON.stringify({ jobId: job.id, ok: true, result: { title: "My session", link: "https://claude.ai/code/abc", enabled: true }, sessions: [{ title: "My session", status: "Idle", section: "Show 5 more in Older" }], current: "My session" }),
   });
   assert.equal(done.status, 200);
   const state = await (await human(owner, "/state")).json();
   assert.equal(state.jobs.find((j) => j.id === job.id).status, "done");
   assert.equal(state.links["My session"].link, "https://claude.ai/code/abc");
   assert.equal(state.sessions[0].title, "My session");
+  assert.equal(state.sessions[0].section, "Older");
   assert.equal(state.agent.host, "PC");
 });
 
