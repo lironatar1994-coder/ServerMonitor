@@ -80,10 +80,11 @@ if pm2 describe claude-rc >/dev/null 2>&1; then
   pm2 save --force >/dev/null
   echo "[INFO] Stopped the standalone claude-rc process"
 fi
-for path in /opt/claude-rc /var/lib/claude-rc /opt/claude-rc.lock; do
+for entry in /opt/claude-rc:opt-claude-rc /var/lib/claude-rc:var-lib-claude-rc /opt/claude-rc.lock:opt-claude-rc.lock; do
+  path="${entry%%:*}"
   if [ -e "$path" ]; then
     install -d -m 0700 "$RETIRED"
-    mv "$path" "$RETIRED/$(basename "$path")"
+    mv -T "$path" "$RETIRED/${entry#*:}"
   fi
 done
 echo "[INFO] Remote control relay: https://monitor.vee-app.co.il/serve-monitor/remote"
