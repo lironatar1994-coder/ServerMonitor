@@ -163,7 +163,7 @@ test('expanded daily and weekly coverage separates traffic from operational inve
         }
         assert.equal(rows.some((row) => row.name === 'Alenu CRM'), false);
         const operations = buildOperationsData();
-        for (const name of ['Alenu CRM', 'Alenu CRM · עיבוד מסמכים', 'Seder WhatsApp', 'Pinhas Ratzon · טופס פניות', 'Desk', 'Claude RC']) {
+        for (const name of ['Alenu CRM', 'Alenu CRM · עיבוד מסמכים', 'Seder WhatsApp', 'Pinhas Ratzon · טופס פניות', 'Desk']) {
             assert.ok(operations.some((row) => row.name === name), name);
         }
         const rendered = renderEmail(type, period, rows, [...operations, { name: 'Worker <unsafe>', status: 'offline' }]);

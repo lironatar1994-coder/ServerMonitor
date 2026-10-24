@@ -149,6 +149,7 @@ else
     pm2 start "backend/server.js" --name "$APP_NAME" --cwd "$(pwd)" --update-env
 fi
 pm2 save > /dev/null
+bash "$APP_ROOT/ops/install-remote-relay.sh"
 
 echo "[INFO] Verifying production through the resource-limited browser service..."
 curl --silent --show-error --fail --retry 10 --retry-connrefused --retry-delay 1 --max-time 5 \

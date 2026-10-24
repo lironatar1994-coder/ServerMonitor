@@ -91,9 +91,10 @@ test('retires removed production apps and seeds the new lawebs.co.il application
     for (const [name, unit] of [['AllSee', 'allsee.service'], ['CV Manager', 'cv-manager.service'], ['Desk', 'desk.service'], ['Pizza Manager', 'pizza-manager-platform.service']]) {
         assert.equal(app(name).systemd_unit, unit, name);
     }
-    for (const [name, process] of [['Video Library', 'video-library-api'], ['Claude RC', 'claude-rc']]) assert.equal(app(name).pm2_name, process, name);
+    assert.equal(app('Video Library').pm2_name, 'video-library-api');
+    assert.equal(app('Claude RC'), undefined);
     for (const name of ['Alenu', 'Mila Tova CV', 'Pizza Manager']) assert.equal(app(name).analytics_enabled, 1, name);
-    for (const name of ['Desk', 'AllSee', 'Video Library', 'Claude RC', 'CV Manager', 'Alenu CRM']) assert.equal(app(name).analytics_enabled, 0, name);
+    for (const name of ['Desk', 'AllSee', 'Video Library', 'CV Manager', 'Alenu CRM']) assert.equal(app(name).analytics_enabled, 0, name);
 });
 
 test('seeds Seder with exact host, path, runtime, and client reporting ownership', () => {

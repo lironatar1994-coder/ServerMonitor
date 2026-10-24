@@ -45,7 +45,7 @@ URLS = ['https://lawebs.co.il/alenu-crm/api/health', 'https://lawebs.co.il/', 'h
 EXPECTED_PM2 = {'dfus-reuven-live', 'manager-site', 'on-your-way-backend',
                 'on-your-way-frontend', 'pinhas-ratzon-form', 'seder-live',
                 'seder-whatsapp', 'seder-calendar', 'server-monitor', 'sos-landing-standalone',
-                'video-library-api', 'claude-rc'}
+                'video-library-api'}
 TRACKER_URLS = ['https://pinhasratzon.co.il/', 'https://www.dfusreuven.co.il/',
                 'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents',
                 'https://lawebs.co.il/Koralevents2', 'https://lawebs.co.il/alenu/', 'https://lawebs.co.il/cv/',

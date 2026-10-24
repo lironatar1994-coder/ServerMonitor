@@ -28,6 +28,7 @@
 - `catalogNames.js` names the catalog records the monitor treats specially (`תחזוקה לילית`, `אבטחת SSH`); renames go through `renamedProductionApps` so IDs and history stay.
 - `emailReports.js` owns daily and weekly client comparison reports, Resend delivery, scheduling, and delivery deduplication.
 - `emailReportTemplate.js` owns shared Hebrew HTML/plain-text report presentation and app-specific monitor links.
+- `remoteControl.js` owns the Claude Remote relay: in-memory job queue, agent long-poll, last screenshot and the persisted session list (`RC_STATE_FILE`, default `backend/.remote-state.json`). `routes/remote.js` exposes `/remote/agent/*` to the PC agent and owner-only `/remote/state`, `/remote/jobs` and `/remote/screenshot`.
 - `routes/` owns HTTP route handlers and request/response contracts.
 - `monitor.db` is runtime state and must not be treated as a source schema definition.
 
@@ -48,6 +49,7 @@
 - Grant access only after owner verification of the member public-key fingerprint. Invites are hashed, single-use, expire after 24 hours and are manually copied. MFA recency is five minutes for key/member/invite/rotation/permanent-delete changes. Prevent removal of the last active owner with a vault key.
 - Entry writes use optimistic content versions; rotation validates the full entry/member set and global revision in one SQLite transaction. Revocation deletes sessions/member envelopes and freezes writes until rotation. Keep a 1,000-entry/8 MiB ciphertext quota, 128 KiB ordinary requests and 16 MiB authenticated rotation requests.
 - Trash remains recoverable for 30 days; purge on vault requests, at most hourly. Audit contains event type, account ID, opaque item ID and timestamp, retained 90 days; a secret fetch is not proof of copy or reveal.
+- Remote control is owner-only for human sessions (never the read-only monitor session). The agent authenticates only with a bearer token compared against the SHA-256 in `RC_AGENT_TOKEN_FILE` (production `/root/.server-monitor-rc-agent.sha256`, re-read on change); human cookies never authenticate the agent and the agent token never reaches panel routes. Agent routes mount before the global JSON parser (512 KB reports, 3 MB JPEG/PNG screenshots) and are kept out of request logs. Job types are an allow-list (`list`, `connect`, `disconnect`, `status`, `screenshot`, `launch`); queued jobs expire after 90 seconds and running jobs after 150. Only `https://claude.ai/` links are stored. Alias hosts may reach only `/remote/agent/`.
 - The app invokes the existing system PM2 executable; keep the unused npm `pm2` dependency absent.
 
 
@@ -76,7 +78,7 @@
 - Avoid logging secrets or authentication tokens.
 - For web apps, `metrics.visitors` and `metrics.requests` are candidate traffic that was not identified as bot traffic. Never describe this heuristic remainder as confirmed human activity; bot-looking traffic remains visible as `agent: "Bot"`.
 - Website attribution must use `log_host` against the hostname appended by `nginx-monitor-host-log.conf`. `log_filter` includes paths and `log_exclude` removes paths; do not infer a domain from referrers or a shared hostless access log.
-- `retiredProductionApps` purges Libi Diamonds, Libi Diamonds Preview, Dfus Reuven Preview and the Vee WhatsApp Worker; `renamedProductionApps` keeps IDs and history for `Maavar`→`Alenu CRM`, `Maavar Worker`→`Alenu CRM Worker` and `Vee Main App`→`Vee Landing`.
+- `retiredProductionApps` purges Libi Diamonds, Libi Diamonds Preview, Dfus Reuven Preview, the Vee WhatsApp Worker and the standalone Claude RC service; `renamedProductionApps` keeps IDs and history for `Maavar`→`Alenu CRM`, `Maavar Worker`→`Alenu CRM Worker` and `Vee Main App`→`Vee Landing`.
 - When a catalog change only adds `log_exclude` paths, delete just those paths' rows from `visitor_events` and the browser/growth/engagement tables instead of resetting ingestion. Any other ownership change resets and re-backfills that app.
 - LA webs excludes every path segment owned by a sibling `lawebs.co.il` app (Seder, Koral, Pinhas, Alenu, Alenu CRM, CV, CV Manager, Desk, AllSee, Videos, RC, PizzaManager, PDF Studio).
 - `/apps/:id/unique-visitors` groups the current access-log tail by IP and reports first seen, last seen, request counts, top paths, statuses, and human/bot/mixed classification; it is a bounded log-window view, not a permanent analytics ledger.
@@ -133,6 +135,7 @@
 - `test/vaultCrypto.test.js` exercises identity/recovery, wrong passwords, authenticated envelope tampering, recipient sharing, new-key isolation, fresh nonces and safe URLs. `test/vaultSecurity.test.js` verifies cookies/MFA/CSRF/origin, roles, service isolation, invites, conflicts, last owner, revocation, atomic rotation and a decryptable SQLite restore.
 
 
+- `test/remoteControl.test.js` verifies owner-only panel access, agent-token isolation, long-poll job delivery with report completion and owner-only screenshots.
 - `test/pageInsights.test.js` verifies ordered visit attribution, site/automation isolation, separate lead outcomes, engagement delta aggregation and the indexed history lookup. `test/apiClient.test.js` verifies client timeouts and invalid-response handling.
 
 - Run backend syntax checks with `node --check <file>` for touched backend JavaScript files.

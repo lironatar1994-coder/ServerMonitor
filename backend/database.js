@@ -397,7 +397,6 @@ const productionApps = [
     { name: 'Desk', url: 'https://lawebs.co.il/desk/', systemd_unit: 'desk.service', health_url: 'http://127.0.0.1:3150/desk/', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'AllSee', url: 'https://lawebs.co.il/allsee/', systemd_unit: 'allsee.service', health_url: 'http://127.0.0.1:4310/allsee/', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Video Library', url: 'https://lawebs.co.il/videos/', pm2_name: 'video-library-api', health_url: 'http://127.0.0.1:3192/videos/api/health', analytics_enabled: 0, reporting_enabled: 0 },
-    { name: 'Claude RC', url: 'https://lawebs.co.il/rc/', pm2_name: 'claude-rc', health_url: 'http://127.0.0.1:3193/rc/', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'מסד נתונים PostgreSQL', systemd_unit: 'postgresql@16-main.service', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Seder WhatsApp', pm2_name: 'seder-whatsapp', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Seder Calendar', pm2_name: 'seder-calendar', analytics_enabled: 0, reporting_enabled: 0 },
@@ -427,7 +426,9 @@ const renamedProductionApps = {
 // Libi Diamonds (live and preview), the Dfus preview, the Vee application and its
 // WhatsApp worker were removed from production on 2026-10-20 (archives in /root/retired-20261020).
 const retiredProductionApps = ['Pixel Dungeon', 'PDF Generator', 'ToDoFast (inactive)', 'Toren Hazak',
-    'Libi Diamonds', 'Libi Diamonds Preview', 'Dfus Reuven Preview', 'WhatsApp Worker'];
+    'Libi Diamonds', 'Libi Diamonds Preview', 'Dfus Reuven Preview', 'WhatsApp Worker',
+    // Claude Remote now runs inside the monitor itself (`/serve-monitor/remote`).
+    'Claude RC'];
 
 function renameProductionApps() {
     const rename = db.prepare('UPDATE apps SET name = ? WHERE name = ? AND NOT EXISTS (SELECT 1 FROM apps WHERE name = ?)');

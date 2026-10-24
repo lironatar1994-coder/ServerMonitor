@@ -25,14 +25,17 @@ app.use(helmet({
 }));
 app.use((req,res,next) => {
     if (security.production() && req.hostname !== new URL(security.origin()).hostname) {
-        if (/^\/serve-monitor\/api\/(auth|vault)(\/|$)/.test(req.path)) return res.status(403).json({ error: 'יש להשתמש בכתובת הניטור הראשית.' });
+        // Older PC agents reach the remote relay through lawebs.co.il/rc/api/agent/.
+        if (/^\/serve-monitor\/api\/(auth|vault|remote(?!\/agent\/))(\/|$)/.test(req.path)) return res.status(403).json({ error: 'יש להשתמש בכתובת הניטור הראשית.' });
         if (req.path.startsWith('/serve-monitor') && !req.path.startsWith('/serve-monitor/api/')) return res.redirect(302, security.origin() + req.originalUrl);
     }
     next();
 });
 app.use('/serve-monitor/api/vault/rotate', authRoutes.authenticateToken, security.owner, (req,res,next)=>security.limit(require('./database'),req,res,'rotation-body',5)?next():undefined, express.json({ limit: '16mb' }));
+app.use(morgan(':method :url :status :response-time ms', { skip: req => /^\/serve-monitor\/api\/(auth|vault|remote\/agent)/.test(req.originalUrl) }));
+// The PC agent sends larger reports and screenshots with its own parsers and bearer token.
+app.use('/serve-monitor/api/remote/agent', require('./routes/remote').agent);
 app.use(express.json({ limit: '128kb' }));
-app.use(morgan(':method :url :status :response-time ms', { skip: req => /^\/serve-monitor\/api\/(auth|vault)/.test(req.originalUrl) }));
 
 // Routes
 app.use('/serve-monitor/api/auth', authRoutes);
@@ -43,6 +46,7 @@ app.use('/serve-monitor/api/visitor-analytics', visitorAnalyticsRoutes);
 app.use('/serve-monitor/api/client-growth', require('./routes/clientGrowth'));
 app.use('/serve-monitor/api/push', require('./routes/push'));
 app.use('/serve-monitor/api/go', require('./routes/go'));
+app.use('/serve-monitor/api/remote', require('./routes/remote').panel);
 app.use('/serve-monitor/api', (req, res) => res.status(404).json({ error: 'הנתיב לא נמצא.' }));
 
 // Serve frontend

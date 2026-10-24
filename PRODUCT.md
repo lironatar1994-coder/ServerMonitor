@@ -9,7 +9,7 @@ web
 The internal website operations team, working in Hebrew on desktop and mobile.
 
 ## Product Purpose
-Connect website activity, recorded business outcomes and the team's client work. Keep server operations separate from visitor and client workflows. Provide one browser-encrypted team vault for app usernames, passwords and exact login URLs.
+Connect website activity, recorded business outcomes and the team's client work. Keep server operations separate from visitor and client workflows. Provide one browser-encrypted team vault for app usernames, passwords and exact login URLs, and an owner-only remote screen that continues the owner's PC Claude sessions from a phone.
 
 ## Capabilities and Constraints
 The user authorized internal goals, lead tracking, improvements, campaigns, activity history and editable summaries opened manually in email or WhatsApp. No client-facing access to this workspace and no Search Console integration. Existing Manager Site analytics contracts remain unchanged.

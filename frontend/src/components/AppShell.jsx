@@ -8,6 +8,7 @@ import {
   BriefcaseBusiness,
   KeyRound,
   MoreHorizontal,
+  MonitorSmartphone,
   X,
   Search,
 } from "lucide-react";
@@ -30,6 +31,8 @@ const main = [
 const operations = [
   { to: "/infrastructure", label: "שרת ושירותים", icon: ServerCog, match: ["/infrastructure", "/services", "/operations"] },
 ];
+// Controlling the owner's PC; the server refuses every other role.
+const remote = { to: "/remote", label: "מחשב", icon: MonitorSmartphone };
 const settings = { to: "/settings", label: "הגדרות", icon: Settings };
 const NavItem = ({ item, onClick, badge = 0 }) => {
   const Icon = item.icon;
@@ -214,6 +217,7 @@ export default function AppShell() {
           {operations.map((item) => (
             <NavItem key={item.to} item={item} badge={item.to === "/infrastructure" ? down : 0} />
           ))}
+          {user?.role === "owner" && <NavItem item={remote} />}
         </nav>
         <div className="rail-foot">
           <NavItem item={settings} />
@@ -260,7 +264,8 @@ export default function AppShell() {
         <button
           className={
             more ||
-            location.pathname.startsWith("/settings")
+            location.pathname.startsWith("/settings") ||
+            location.pathname.startsWith("/remote")
               ? "is-active"
               : ""
           }
@@ -289,6 +294,7 @@ export default function AppShell() {
               <X />
             </button>
           </div>
+          {user?.role === "owner" && <NavItem item={remote} onClick={() => setMore(false)} />}
           <NavItem item={settings} onClick={() => setMore(false)} />
         </Modal>
       )}

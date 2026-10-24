@@ -19,7 +19,6 @@ const PROJECTS = [
     { id: 'desk', name: 'Desk', path: '/opt/desk', dependencies: [] },
     { id: 'allsee', name: 'AllSee', path: '/opt/allsee', dependencies: [] },
     { id: 'video-library', name: 'Video Library', path: '/opt/video-library', dependencies: [] },
-    { id: 'claude-rc', name: 'Claude RC', path: '/opt/claude-rc', dependencies: [] },
     { id: 'alenu', name: 'Alenu', path: '/opt/lawebs-alenu', dependencies: [] },
     { id: 'mila-tova', name: 'Mila Tova CV', path: '/opt/mila-tova', dependencies: [] },
     { id: 'on-your-way', name: 'On Your Way', path: '/root/OnYourWay', dependencies: ['/root/OnYourWay/backend/node_modules', '/root/OnYourWay/frontend/node_modules', '/root/OnYourWay/admin/node_modules'] },

@@ -4,6 +4,7 @@ import {
   BriefcaseBusiness,
   Globe2,
   KeyRound,
+  MonitorSmartphone,
   Search,
   ServerCog,
   Activity,
@@ -18,6 +19,7 @@ import { apiFetch } from "../lib/api";
 import { reportRange } from "../lib/reportNavigation";
 import { rangeSearch } from "../lib/dailyCheck";
 import { useRange } from "../lib/useRange";
+import { getSessionSnapshot } from "../lib/session";
 
 const destinations = [
   { id: "sites", title: "אתרים", to: "/visitors", icon: Globe2 },
@@ -32,6 +34,7 @@ const destinations = [
   { id: "services", title: "תפעול: שירותים", to: "/services", icon: Wrench },
   { id: "availability", title: "תפעול: זמינות ומהירות", to: "/operations/availability", icon: Activity },
   { id: "backups", title: "תפעול: גיבויים ותעודות", to: "/operations/backups", icon: Archive },
+  { id: "remote", title: "מחשב", to: "/remote", icon: MonitorSmartphone, owner: true },
   { id: "settings", title: "הגדרות", to: "/settings", icon: Settings },
 ];
 const publicLocation = (value) => {
@@ -64,7 +67,8 @@ export default function QuickSwitch({ onClose }) {
   }, []);
   const results = useMemo(() => {
     const term = query.trim().toLocaleLowerCase();
-    const nav = destinations.filter((item) =>
+    const owner = getSessionSnapshot()?.role === "owner";
+    const nav = destinations.filter((item) => (!item.owner || owner) &&
       item.title.toLocaleLowerCase().includes(term),
     );
     const list = apps

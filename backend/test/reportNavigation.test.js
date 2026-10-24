@@ -8,6 +8,7 @@ test('email destinations stay internal and preserve valid report periods', async
     const { safeReturnPath, reportRange } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
     const route = '/visitors/20?from=2026-09-22T21:00:00.000Z&to=2026-09-23T21:00:00.000Z';
     assert.equal(safeReturnPath(route), route);
+    assert.equal(safeReturnPath('/remote'), '/remote');
     for (const value of ['https://evil.test', '//evil.test', '/\\evil.test', '/login', '/visitors/../login', null]) {
         assert.equal(safeReturnPath(value), '/visitors');
     }

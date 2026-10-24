@@ -20,3 +20,9 @@ __pycache__/
 # Local review screenshots and report previews may contain internal metrics.
 .impeccable/review/
 backend/.push-key.json
+
+# Remote control: PC agent token, local logs and relay state.
+pc-agent/config.json
+pc-agent/agent.log*
+backend/.rc-agent.sha256
+backend/.remote-state.json

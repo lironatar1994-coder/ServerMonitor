@@ -3,7 +3,7 @@ export function safeReturnPath(value) {
   const path = value.split("?")[0];
   return /^\/(?:visitors|services|clients|app)(?:\/\d+)?$/.test(path) ||
     /^\/visitors\/\d+\/diagnostics$/.test(path) ||
-    /^\/(?:infrastructure|settings|dashboard|sites|server|system-stats|operations\/(?:availability|backups))$/.test(
+    /^\/(?:infrastructure|settings|dashboard|sites|server|system-stats|remote|operations\/(?:availability|backups))$/.test(
       path,
     ) ||
     /^\/vault(?:\/[a-f0-9-]{36})?$/.test(path)

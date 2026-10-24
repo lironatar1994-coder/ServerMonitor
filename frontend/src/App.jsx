@@ -35,6 +35,7 @@ const AppDetails = lazy(() => import("./pages/AppDetails"));
 const Settings = lazy(() => import("./pages/Settings"));
 const ClientGrowth = lazy(() => import("./pages/ClientGrowth"));
 const Vault = lazy(() => import("./pages/Vault"));
+const Remote = lazy(() => import("./pages/Remote"));
 
 const VisitorSite = ({ diagnostics = false }) => {
   const { id } = useParams();
@@ -140,6 +141,7 @@ function App() {
               <Route path="/operations/backups" element={<Backups />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/vault/*" element={<Vault />} />
+              <Route path="/remote" element={<Remote />} />
               <Route
                 path="/clients"
                 element={<ClientGrowth key="overview" />}
