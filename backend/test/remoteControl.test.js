@@ -89,3 +89,19 @@ test("screenshots upload as images and are served only to owners", async () => {
   assert.equal(shot.headers.get("content-type"), "image/jpeg");
   assert.deepEqual(Buffer.from(await shot.arrayBuffer()), image);
 });
+
+test("two connected PCs keep their own waits and the most recent poll takes the job", async () => {
+  const owner = identity("rc-owner-4", "owner");
+  const abort = new AbortController();
+  let firstAnswered = false;
+  const first = agent("/poll?host=PC-A&v=2.1.0", { signal: abort.signal }).then(() => { firstAnswered = true; }).catch(() => {});
+  await new Promise((r) => setTimeout(r, 100));
+  const second = agent("/poll?host=PC-B&v=2.1.0", {}, SECOND_TOKEN).then((r) => r.json());
+  await new Promise((r) => setTimeout(r, 100));
+  assert.equal(firstAnswered, false, "a second PC must not end the first PC's wait");
+  const { job } = await (await human(owner, "/jobs", "POST", { type: "status" })).json();
+  assert.equal((await second).jobs[0].id, job.id);
+  assert.equal(firstAnswered, false);
+  abort.abort();
+  await first;
+});

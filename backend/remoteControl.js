@@ -47,7 +47,9 @@ const state = {
     screenshot: null, // { buf, type, at }
 };
 const jobs = new Map(); // id -> job, insertion ordered
-let waiter = null; // pending agent long-poll { send, timer }
+// Pending agent long-polls, one per PC (host): { send, timer }. Each PC replaces only its own
+// earlier poll, so two connected agents never answer each other's waits in a loop.
+const waiters = new Map();
 
 try {
     const saved = JSON.parse(fs.readFileSync(stateFile(), 'utf8'));
@@ -98,17 +100,18 @@ function take(job) {
 }
 
 function dispatchToWaiter() {
-    if (!waiter) return;
+    const host = [...waiters.keys()].pop(); // the PC that polled most recently
+    if (host === undefined) return;
     const job = nextQueued();
     if (!job) return;
-    const { send, timer } = waiter;
-    waiter = null;
+    const { send, timer } = waiters.get(host);
+    waiters.delete(host);
     clearTimeout(timer);
     send(take(job));
 }
 
 function agentOnline() {
-    return Date.now() - state.agent.lastSeen < AGENT_ONLINE_MS || Boolean(waiter);
+    return Date.now() - state.agent.lastSeen < AGENT_ONLINE_MS || waiters.size > 0;
 }
 
 function cleanArgs(type, args) {
@@ -161,18 +164,21 @@ function seen() { state.agent.lastSeen = Date.now(); }
 
 // `send` answers the agent's request; `onClose` registers cleanup if the agent hangs up.
 function poll({ host, version, claude }, send, onClose) {
-    state.agent.host = String(host || '').slice(0, 80);
+    const name = String(host || '').slice(0, 80);
+    state.agent.host = name;
     state.agent.version = String(version || '').slice(0, 20);
     state.agent.claudeRunning = claude == null ? null : claude === '1';
     const job = nextQueued();
     if (job) return send(take(job));
-    if (waiter) { clearTimeout(waiter.timer); waiter.send({ jobs: [] }); }
+    const previous = waiters.get(name);
+    if (previous) { clearTimeout(previous.timer); waiters.delete(name); previous.send({ jobs: [] }); }
+    const release = () => { if (waiters.get(name) === current) waiters.delete(name); };
     const current = {
         send,
-        timer: setTimeout(() => { if (waiter === current) waiter = null; seen(); send({ jobs: [] }); }, POLL_WAIT_MS),
+        timer: setTimeout(() => { release(); seen(); send({ jobs: [] }); }, POLL_WAIT_MS),
     };
-    waiter = current;
-    onClose(() => { if (waiter === current) { clearTimeout(current.timer); waiter = null; } });
+    waiters.set(name, current);
+    onClose(() => { clearTimeout(current.timer); release(); });
 }
 
 function cleanSessions(list) {
