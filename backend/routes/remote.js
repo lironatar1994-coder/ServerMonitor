@@ -28,7 +28,12 @@ agent.post('/screenshot', express.raw({ type: ['image/jpeg', 'image/png'], limit
 });
 
 // Outside availability: the agent fetches each public address from the PC's own connection.
-agent.get('/probe-targets', (req, res) => res.json({ targets: require('../externalChecks').probeTargets(db), interval_s: 600 }));
+agent.get('/probe-targets', (req, res) => res.json({
+    targets: require('../externalChecks').probeTargets(db),
+    interval_s: 600,
+    // Lets the agent notice a monitor whose checks stopped running even though it still answers.
+    cycle_at: Number(db.prepare("SELECT value FROM monitor_metadata WHERE key = 'monitor-cycle-at'").get()?.value) || null,
+}));
 agent.post('/probes', express.json({ limit: '64kb' }), (req, res) => {
     try { res.json(require('../externalChecks').recordProbeRun(db, req.query.host, req.body?.results)); }
     catch (error) { res.status(error.status || 500).json({ error: error.status ? error.message : 'Failed' }); }

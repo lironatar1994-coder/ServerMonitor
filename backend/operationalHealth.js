@@ -116,6 +116,9 @@ function buildOperationalHealth({
       );
     if ((health.warnings || []).some((value) => /reboot required/i.test(value)))
       add("reboot", "נדרש אתחול שרת", "לתיאום בחלון תחזוקה");
+    // unattended-upgrades installs security fixes daily; still pending after two days means it stopped.
+    if ((health.warnings || []).some((value) => /Security updates pending/i.test(value)))
+      add("security-updates", "עדכוני אבטחה לא הותקנו", `${health.updates?.security ?? ""} עדכונים ממתינים יותר מיומיים; העדכון האוטומטי לא התקין אותם`.trim());
     const other = (health.errors || []).filter(
       (value) => !/Disk usage/.test(value),
     );

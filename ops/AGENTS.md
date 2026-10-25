@@ -16,8 +16,8 @@
 
 - `visitor-tracker.js` also reports uncaught errors from the site's own scripts (name, message, file name and line; at most three per page; never stacks or other origins).
 - `growth-tracker.js` and `install-growth-coverage.py` collect anonymous contact actions and allow-listed campaign tags on twelve canonical public sites. They compose with the existing navigation injection and add no second native navigation signal.
-- `maintenance.py` is installed as `/usr/local/sbin/lawebs-maintenance`.
-- `test_maintenance.py` covers safe cleanup and verified SQLite backups.
+- `maintenance.py` is installed as `/usr/local/sbin/lawebs-maintenance`. Its daily run records pending updates from a simulated `apt-get -s upgrade` (no lock, nothing installed) in `updates.json`, keeping when security updates were first seen; the 15-minute health check warns when they are still pending after two days, since unattended-upgrades should have installed them.
+- `test_maintenance.py` covers safe cleanup, verified SQLite backups and update tracking.
 
 - `install-maintenance.sh` owns the systemd timers and removes the legacy cron entry.
 - `install-visitor-coverage.py` and `visitor-tracker.js` add missing navigation signals at the Nginx boundary, preserving application builds and CMS content.

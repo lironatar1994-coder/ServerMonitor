@@ -405,11 +405,32 @@ def catalog_health(pm2_status, db_path=Path('/root/ServerMonitor/backend/monitor
                 errors.append(f'Catalog HTTP check failed: {name}')
     return errors, warnings
 
+def updates_status(simulate=None, now=None):
+    """Pending package updates from a simulated upgrade (no lock, nothing installed), once a day.
+    unattended-upgrades installs security fixes on its own, so security updates still pending two
+    days later mean it is not working."""
+    now = now or time.time()
+    output = simulate() if simulate else run(['apt-get', '-s', '-o', 'Debug::NoLocking=1', 'upgrade'], timeout=180)
+    installs = [line for line in output.splitlines() if line.startswith('Inst ')]
+    security = sum(1 for line in installs if '-security' in line)
+    try:
+        previous = json.loads((STATE / 'updates.json').read_text())
+    except Exception:
+        previous = {}
+    since = (previous.get('security_since') or now) if security else None
+    status = {'checked': now, 'pending': len(installs), 'security': security, 'security_since': since}
+    write_json(STATE / 'updates.json', status)
+    return status
+
 def daily():
     before = shutil.disk_usage('/').free
     # Cache cleanup must work even when free space is too low for a snapshot.
     pre = cleanup(True, releases=False)
     routine = housekeeping()
+    try:
+        updates_status()
+    except Exception as exc:
+        routine.append({'ok': False, 'error': f'Update check: {exc}'})
     location = snapshot()
     post = cleanup(True, releases=True)
     dedupe = dedupe_release_dependencies()
@@ -565,8 +586,14 @@ def health():
         warnings.append('Available RAM below 128 MiB; no automatic process termination or cache drops')
     if Path('/var/run/reboot-required').exists():
         warnings.append('OS reboot required; manual maintenance window needed')
+    try:
+        updates = json.loads((STATE / 'updates.json').read_text())
+        if updates.get('security') and time.time() - updates['security_since'] > 2 * 86400:
+            warnings.append(f"Security updates pending for over two days: {updates['security']}")
+    except (FileNotFoundError, ValueError, KeyError, TypeError):
+        updates = None
     result = {'checked': time.time(), 'disk_used_percent': used, 'free_bytes': disk.free, 'memory_available_bytes': mem.get('MemAvailable'), 'swap_used_bytes': mem.get('SwapTotal', 0) - mem.get('SwapFree', 0),
-              'errors': errors, 'warnings': warnings}
+              'updates': updates, 'errors': errors, 'warnings': warnings}
     write_json(STATE / 'health.json', result)
     print(json.dumps(result, indent=2), flush=True)
     return bool(errors)

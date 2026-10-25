@@ -6,12 +6,28 @@ const STATUS = { offline: 'לא פועל', error: 'בדיקת הכתובת נכ�
 const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
+// Host-check messages from ops/maintenance.py, in the alert's language; anything else stays as written.
+const REASONS = [
+    [/^Certificate expires within (\d+) days: (.+)$/, (m) => `התעודה של ${m[2]} פגה בתוך ${m[1]} יום ולא חודשה`],
+    [/^Last successful backup is older than (\d+) hours$/, (m) => `הגיבוי המאומת האחרון ישן מ־${m[1]} שעות`],
+    [/^No successful verified backup recorded$/, () => 'אין גיבוי מאומת'],
+    [/^Service not active: (.+)$/, (m) => `השירות ${m[1]} לא פועל`],
+    [/^PM2 process not online: (.+)$/, (m) => `התהליך ${m[1]} לא פועל`],
+    [/^Disk usage ([\d.]+)%$/, (m) => `הדיסק מלא ב־${m[1]}%`],
+    [/^host checks stopped$/, () => 'בדיקות השרת לא רצו בחצי השעה האחרונה'],
+];
+const reason = (text) => {
+    for (const [pattern, render] of REASONS) { const m = pattern.exec(text); if (m) return render(m); }
+    return text;
+};
+
 function describe(item) {
     if (item.kind === 'up') return 'חזר לפעול';
     if (item.kind === 'slow') return `איטי: ${(item.ms / 1000).toFixed(1)} שניות לתגובה`;
     if (item.kind === 'silent') return 'מדידת הדפדפן שותקת 6 שעות, למרות ביקורים בשרת';
     if (item.kind === 'external') return `לא נפתח מבחוץ (${item.sources.join(', ')})${item.error ? `: ${item.error}` : ''}, אף שהשרת עונה`;
-    return `${STATUS[item.status] || item.status}${item.reminder ? ' (עדיין)' : ''}`;
+    const why = item.detail ? `: ${item.detail.split('; ').map(reason).join(' · ')}` : '';
+    return `${item.detail ? 'נמצאו תקלות' : STATUS[item.status] || item.status}${why}${item.reminder ? ' (עדיין)' : ''}`;
 }
 const link = (item) => `${BASE}/${item.kind === 'silent' ? 'visitors' : 'services'}/${item.id}`;
 const color = (item) => item.kind === 'up' ? '#24734F' : item.kind === 'down' ? '#B13443' : '#875A13';

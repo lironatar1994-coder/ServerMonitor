@@ -111,6 +111,27 @@ class Backups(unittest.TestCase):
 
 
 
+class Updates(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        m.STATE = Path(self.temp.name)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_security_updates_keep_their_first_seen_time_until_installed(self):
+        def listing(security):
+            lines = ['Inst vim [9.1] (9.1.1 Ubuntu:24.04/noble-updates [amd64])', 'Conf vim']
+            if security:
+                lines.insert(0, 'Inst libc6 [2.39] (2.39.1 Ubuntu:24.04/noble-security [amd64])')
+            return lambda: '\n'.join(lines)
+        first = m.updates_status(listing(True), now=1000)
+        self.assertEqual((first['pending'], first['security'], first['security_since']), (2, 1, 1000))
+        later = m.updates_status(listing(True), now=90000)
+        self.assertEqual(later['security_since'], 1000)
+        cleared = m.updates_status(listing(False), now=180000)
+        self.assertEqual((cleared['pending'], cleared['security'], cleared['security_since']), (1, 0, None))
+
 class Cleanup(unittest.TestCase):
     def setUp(self):
         from unittest.mock import patch

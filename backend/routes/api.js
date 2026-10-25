@@ -258,6 +258,16 @@ router.get('/certificates', async (req, res, next) => {
     catch (error) { next(error); }
 });
 
+// Written daily by ops/maintenance.py from a simulated upgrade; absent off the server.
+function pendingUpdates() {
+    try {
+        const file = '/var/lib/lawebs-maintenance/updates.json';
+        if (fs.statSync(file).size > 4096) return null;
+        const { checked, pending, security } = JSON.parse(fs.readFileSync(file, 'utf8'));
+        return { checked, pending, security };
+    } catch { return null; }
+}
+
 router.get('/server-stats', async (req, res) => {
     const cpuLoad = os.loadavg()[0]; // 1 min average
     const cpuSnapshot = getCpuSnapshot();
@@ -271,6 +281,7 @@ router.get('/server-stats', async (req, res) => {
         uptime: os.uptime(),
         disk,
         forecast: require('../capacity').capacityForecast(db),
+        updates: pendingUpdates(),
         resources: await getResourceUsage({
             pm2Processes: getPm2Snapshot(),
             apps,

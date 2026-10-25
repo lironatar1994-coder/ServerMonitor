@@ -96,3 +96,10 @@ test('script errors fold into daily counts without personal details', async () =
     assert.equal(summary.total, 2);
     assert.equal(summary.errors[0].top_path, '/contact');
 });
+
+test('maintenance alerts name what failed in Hebrew and keep unknown reasons as written', () => {
+    const { text } = renderAlert([{ id: 1, name: 'Maintenance', status: 'error', kind: 'down',
+        detail: 'Certificate expires within 21 days: pinhasratzon.co.il; Odd failure' }]);
+    assert.match(text, /נמצאו תקלות: התעודה של pinhasratzon\.co\.il פגה בתוך 21 יום ולא חודשה · Odd failure/);
+    assert.match(renderAlert([{ id: 2, name: 'Site', status: 'offline', kind: 'down' }]).text, /Site: לא פועל/);
+});

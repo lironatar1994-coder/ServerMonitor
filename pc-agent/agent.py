@@ -19,7 +19,7 @@ from urllib.parse import urljoin
 import requests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-VERSION = '2.2.1'
+VERSION = '2.3.0'
 SERVER = 'https://monitor.vee-app.co.il/serve-monitor/api/remote'
 # Configs written before the move into Server Monitor point at the retired panel.
 LEGACY_SERVERS = {'https://lawebs.co.il/rc'}
@@ -48,6 +48,67 @@ def keep_awake():
     ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)
 
 
+MONITOR_PAGE = 'https://monitor.vee-app.co.il/serve-monitor/operations/availability'
+# Windows' own connectivity probe: tells "the server is down" apart from "this PC is offline".
+INTERNET_CHECK = 'http://www.msftconnecttest.com/connecttest.txt'
+TOAST_SCRIPT = r"""
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null
+[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] > $null
+$e = [Security.SecurityElement]
+$xml = "<toast activationType='protocol' launch='$($e::Escape($env:TOAST_URL))'><visual><binding template='ToastGeneric'><text>$($e::Escape($env:TOAST_TITLE))</text><text>$($e::Escape($env:TOAST_BODY))</text></binding></visual></toast>"
+$doc = New-Object Windows.Data.Xml.Dom.XmlDocument
+$doc.LoadXml($xml)
+$app = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe'
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($app).Show([Windows.UI.Notifications.ToastNotification]::new($doc))
+"""
+
+
+def notify(title, body, url=MONITOR_PAGE):
+    """A Windows notification; the text travels in environment variables, never in the script."""
+    import subprocess
+    env = {**os.environ, 'TOAST_TITLE': title, 'TOAST_BODY': body, 'TOAST_URL': url}
+    try:
+        subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', TOAST_SCRIPT], env=env,
+                       timeout=30, capture_output=True, creationflags=0x08000000)  # CREATE_NO_WINDOW
+    except Exception as e:
+        log.warning('notification failed: %s', e)
+
+
+class Watchdog:
+    """Notices from outside the server when the monitor stops answering or its checks stop running,
+    since the server cannot send an alert about itself. One notification per incident, a reminder
+    every six hours, and one when it recovers."""
+
+    STALE_S = 30 * 60
+    REMIND_S = 6 * 3600
+
+    def __init__(self, internet_ok):
+        self.internet_ok = internet_ok
+        self.unreachable = 0
+        self.problem = None
+        self.notified_at = 0
+
+    def observe(self, answered, cycle_at=None, now=None):
+        now = now or time.time()
+        self.unreachable = 0 if answered else self.unreachable + 1
+        problem = None
+        if not answered and self.unreachable >= 2 and self.internet_ok():
+            problem = ('down', 'Server Monitor לא עונה', 'השרת או המוניטור לא עונים כבר 20 דקות, והאינטרנט במחשב תקין.')
+        elif answered and cycle_at and now - cycle_at / 1000 > self.STALE_S:
+            minutes = round((now - cycle_at / 1000) / 60)
+            problem = ('stale', 'בדיקות המוניטור נעצרו', f'המוניטור עונה, אבל מחזור הבדיקות לא רץ כבר {minutes} דקות. התראות על תקלות לא יישלחו.')
+        if problem and (problem[0] != (self.problem or (None,))[0] or now - self.notified_at > self.REMIND_S):
+            notify(problem[1], problem[2])
+            log.warning('watchdog: %s', problem[1])
+            self.notified_at = now
+        elif not problem and self.problem and answered:
+            notify('Server Monitor חזר לפעול', 'המוניטור עונה ומחזור הבדיקות רץ שוב.')
+            log.info('watchdog: recovered')
+        if problem or answered:
+            self.problem = problem
+        return problem
+
+
 class OutsideChecks(threading.Thread):
     """Every ~10 minutes, fetches each monitored public address from this PC's own connection and
     reports status and time to first byte. Sites never see the agent token; requests carry the
@@ -60,6 +121,13 @@ class OutsideChecks(threading.Thread):
         self.api.headers.update({'Authorization': f'Bearer {token}', 'User-Agent': f'claude-remote-agent/{VERSION}'})
         self.web = requests.Session()
         self.web.headers.update({'User-Agent': f'ServerMonitor-ExternalProbe/{VERSION}', 'Cookie': 'monitor_internal=1'})
+        self.watchdog = Watchdog(self.internet_ok)
+
+    def internet_ok(self):
+        try:
+            return requests.get(INTERNET_CHECK, timeout=10).ok
+        except requests.RequestException:
+            return False
 
     def probe(self, target):
         # Redirects are followed here, not by requests, which would drop the internal-browser cookie.
@@ -83,9 +151,17 @@ class OutsideChecks(threading.Thread):
         while True:
             interval = 600
             try:
-                r = self.api.get(f'{self.base}/agent/probe-targets', timeout=20)
+                # No answer or a 5xx (Nginx without the monitor behind it) counts as down; a 4xx still answers.
+                try:
+                    r = self.api.get(f'{self.base}/agent/probe-targets', timeout=20)
+                except requests.RequestException:
+                    self.watchdog.observe(False)
+                    raise
+                if r.status_code >= 500:
+                    self.watchdog.observe(False)
                 r.raise_for_status()
                 data = r.json()
+                self.watchdog.observe(True, data.get('cycle_at'))
                 interval = max(300, int(data.get('interval_s') or 600))
                 results = [self.probe(t) for t in data.get('targets', [])[:60]]
                 self.api.post(f'{self.base}/agent/probes', params={'host': self.host}, json={'results': results}, timeout=20).raise_for_status()

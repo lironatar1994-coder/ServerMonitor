@@ -106,6 +106,7 @@ async function runMonitorCycle() {
             let appCpu = 0;
             let appMemory = 0;
             let responseMs = null;
+            let detail = null;
 
             // 1. Runtime state
             if (app.pm2_name) {
@@ -147,6 +148,8 @@ async function runMonitorCycle() {
                     const health = JSON.parse(fs.readFileSync('/var/lib/lawebs-maintenance/health.json', 'utf8'));
                     const stale = Date.now() - Number(health.checked) * 1000 > 30 * 60 * 1000;
                     status = stale || health.errors?.length ? 'error' : 'online';
+                    // The alert names what failed (a certificate, a backup) instead of only the maintenance record.
+                    detail = stale ? 'host checks stopped' : (health.errors || []).slice(0, 3).join('; ') || null;
                 } catch {
                     status = 'unknown';
                 }
@@ -176,7 +179,7 @@ async function runMonitorCycle() {
                 if (!isNewOnline) {
                     // Alert after two consecutive failed cycles, then repeat every six hours.
                     const dueAlert = !isOldOnline && (!lastAlertedAt || Date.now() - new Date(lastAlertedAt.replace(' ', 'T') + 'Z').getTime() > alertReminderMs);
-                    if (dueAlert) alerts.push({ id: app.id, name: app.name, status, kind: 'down', reminder: Boolean(lastAlertedAt) });
+                    if (dueAlert) alerts.push({ id: app.id, name: app.name, status, kind: 'down', reminder: Boolean(lastAlertedAt), detail });
                 } else if (!isOldOnline && lastAlertedAt) {
                     // Recovery is reported only for failures that were reported.
                     alerts.push({ id: app.id, name: app.name, kind: 'up' });
@@ -229,6 +232,8 @@ async function runMonitorCycle() {
         }
         try { sampleHost(db); } catch (error) { console.error('[Capacity] sample failed:', error.message); }
         purgeExpiredMonitorData();
+        // The PC agents watch this: a cycle that stops running is reported from outside the server.
+        metadata.set('monitor-cycle-at', Date.now());
     } catch (err) {
         console.error('Monitor cycle error:', err);
     }

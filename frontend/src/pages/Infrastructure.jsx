@@ -287,7 +287,7 @@ const Infrastructure = () => {
         )}
         <OperationalStatus data={operations} />
         <details className="measurement-details">
-          <summary>Swap וזמן פעילות</summary>
+          <summary>Swap, זמן פעילות ועדכונים</summary>
           <StatRow>
             <Stat
               label="Swap"
@@ -304,6 +304,13 @@ const Infrastructure = () => {
               label="זמן פעילות"
               value={`${uptimeDays}י ${uptimeHours}ש`}
               foot="מאז האתחול"
+            />
+            <Stat
+              label="עדכונים ממתינים"
+              value={stats?.updates ? formatNumber(stats.updates.pending) : "—"}
+              tone={stats?.updates?.security ? "ochre" : "ink"}
+              foot={stats?.updates ? `${formatNumber(stats.updates.security)} אבטחה` : "לא נבדק"}
+              hint="נבדק בכל לילה בהדמיה בלבד. עדכוני אבטחה מותקנים אוטומטית; עדכונים רגילים מותקנים בחלון תחזוקה."
             />
           </StatRow>
         </details>
