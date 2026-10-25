@@ -95,6 +95,9 @@ if [ -n "${PREBUILT_FRONTEND:-}" ] && [ "$(basename "$PREBUILT_FRONTEND")" = "fr
   rm -rf "$FRONTEND_DIR/dist"
   mv "$FRONTEND_DIR/dist.next/dist" "$FRONTEND_DIR/dist"
   rm -rf "$FRONTEND_DIR/dist.next"
+  # Archives packed on Windows carry no Unix modes; serve them read-only.
+  chown -R root:root "$FRONTEND_DIR/dist"
+  chmod -R u=rwX,go=rX "$FRONTEND_DIR/dist"
   find "$(dirname "$PREBUILT_FRONTEND")" -maxdepth 1 -name 'frontend-dist-*.tar.gz' -delete
 else
   echo "[INFO] No prebuilt dashboard for this commit; building it here at low priority..."

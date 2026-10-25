@@ -59,7 +59,10 @@ $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoi
 $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Limited
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger @($atLogon, $watchdog) -Settings $settings -Principal $principal -Force | Out-Null
 
+# End the task's own run first: it ignores a new start while it still counts the old one as running.
+Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
 Stop-Agent
+Start-Sleep -Seconds 2
 Start-ScheduledTask -TaskName $taskName
 Start-Sleep -Seconds 3
 $running = Get-CimInstance Win32_Process -Filter "Name='pythonw.exe'" | Where-Object { $_.CommandLine -like "*$here*agent.py*" }

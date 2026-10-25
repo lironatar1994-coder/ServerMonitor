@@ -14,11 +14,12 @@ import sys
 import threading
 import time
 from logging.handlers import RotatingFileHandler
+from urllib.parse import urljoin
 
 import requests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-VERSION = '2.2.0'
+VERSION = '2.2.1'
 SERVER = 'https://monitor.vee-app.co.il/serve-monitor/api/remote'
 # Configs written before the move into Server Monitor point at the retired panel.
 LEGACY_SERVERS = {'https://lawebs.co.il/rc'}
@@ -61,12 +62,19 @@ class OutsideChecks(threading.Thread):
         self.web.headers.update({'User-Agent': f'ServerMonitor-ExternalProbe/{VERSION}', 'Cookie': 'monitor_internal=1'})
 
     def probe(self, target):
-        started = time.monotonic()
+        # Redirects are followed here, not by requests, which would drop the internal-browser cookie.
+        url, started = target['url'], time.monotonic()
         try:
-            with self.web.get(target['url'], timeout=(5, 10), stream=True, allow_redirects=True) as r:
-                ms = (time.monotonic() - started) * 1000
-                ok = r.status_code < 400
-                return {'id': target['id'], 'ok': ok, 'status': r.status_code, 'ms': round(ms), 'error': None if ok else f'HTTP {r.status_code}'}
+            for _ in range(4):
+                with self.web.get(url, timeout=(5, 10), stream=True, allow_redirects=False) as r:
+                    location = r.headers.get('Location') if r.is_redirect else None
+                    status = r.status_code
+                if not location:
+                    break
+                url = urljoin(url, location)
+            ms = (time.monotonic() - started) * 1000
+            ok = status < 400
+            return {'id': target['id'], 'ok': ok, 'status': status, 'ms': round(ms), 'error': None if ok else f'HTTP {status}'}
         except requests.RequestException as e:
             return {'id': target['id'], 'ok': False, 'status': None, 'ms': None, 'error': type(e).__name__}
 
