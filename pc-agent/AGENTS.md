@@ -8,6 +8,7 @@
 
 - `agent.py` long-polls `<server>/agent/poll`, runs one job at a time and reports to `<server>/agent/report` or `<server>/agent/screenshot`. The default server is `https://monitor.vee-app.co.il/serve-monitor/api/remote`; a config still pointing at `https://lawebs.co.il/rc` is moved to it.
 - `claude_ui.py` drives Claude desktop through Windows UI Automation only (no mouse or keyboard input), so it works with the window covered. It checks every Claude window, restores a minimized or hidden one without taking focus, and on failure reports the windows and pages it saw.
+- `OutsideChecks` in `agent.py` fetches every monitored public address from the PC's connection every 10 minutes (targets and interval come from the server) and reports status and time to first byte. The sites never receive the agent token; requests carry `monitor_internal=1` and a `ServerMonitor-ExternalProbe` user agent so they are not counted as visits. `"outsideChecks": false` in `config.json` turns it off.
 - `rc.py` and `rc.cmd` are the local command-line equivalent (list, connect, status).
 - `install.cmd` (double-click) runs `install.ps1`, which installs packages and the `Claude Remote Agent` scheduled task (logon start, five-minute watchdog) and stops any older agent copy. An existing `config.json` is used as is; without one it creates a token and appends its SHA-256 to `/root/.server-monitor-rc-agent.sha256` over SSH. `-NewToken` replaces every stored hash (revoking other agents); `-Uninstall` removes the task.
 

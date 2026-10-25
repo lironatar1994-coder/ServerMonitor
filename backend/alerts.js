@@ -1,4 +1,4 @@
-// Outage, slowness, silent-measurement and recovery alerts by email and browser push,
+// Outage, outside-only failure, slowness, silent-measurement and recovery alerts by email and browser push,
 // batched per monitor cycle.
 const BASE = 'https://monitor.vee-app.co.il/serve-monitor';
 const STATUS = { offline: 'לא פועל', error: 'בדיקת הכתובת נכשלה', unknown: 'לא נבדק' };
@@ -10,6 +10,7 @@ function describe(item) {
     if (item.kind === 'up') return 'חזר לפעול';
     if (item.kind === 'slow') return `איטי: ${(item.ms / 1000).toFixed(1)} שניות לתגובה`;
     if (item.kind === 'silent') return 'מדידת הדפדפן שותקת 6 שעות, למרות ביקורים בשרת';
+    if (item.kind === 'external') return `לא נפתח מבחוץ (${item.sources.join(', ')})${item.error ? `: ${item.error}` : ''}, אף שהשרת עונה`;
     return `${STATUS[item.status] || item.status}${item.reminder ? ' (עדיין)' : ''}`;
 }
 const link = (item) => `${BASE}/${item.kind === 'silent' ? 'visitors' : 'services'}/${item.id}`;
@@ -17,7 +18,7 @@ const color = (item) => item.kind === 'up' ? '#24734F' : item.kind === 'down' ? 
 
 function renderAlert(changes, now = new Date()) {
     const group = (kind) => changes.filter((item) => item.kind === kind).map((item) => item.name).join(', ');
-    const subject = [['down', 'לא זמין'], ['slow', 'איטי'], ['silent', 'מדידה שותקת'], ['up', 'חזר לפעול']]
+    const subject = [['down', 'לא זמין'], ['external', 'לא נפתח מבחוץ'], ['slow', 'איטי'], ['silent', 'מדידה שותקת'], ['up', 'חזר לפעול']]
         .filter(([kind]) => group(kind)).map(([kind, label]) => `${label}: ${group(kind)}`).join(' · ');
     const time = now.toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', dateStyle: 'short', timeStyle: 'short' });
     const rows = changes.map((item) => `<tr><td style="padding:8px 0;border-bottom:1px solid #DCE3EB">`

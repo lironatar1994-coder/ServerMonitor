@@ -246,7 +246,7 @@ router.get('/operational-health', async (req, res, next) => {
 });
 
 router.get('/availability', (req, res) => {
-    res.json({ apps: require('../observability').availabilitySummary(db) });
+    res.json({ apps: require('../observability').availabilitySummary(db), external_sources: require('../externalChecks').externalSummary(db).sources });
 });
 
 router.get('/backups', (req, res) => {
@@ -270,6 +270,7 @@ router.get('/server-stats', async (req, res) => {
         cpu: { load: cpuLoad, cores: os.cpus().length, snapshot: cpuSnapshot },
         uptime: os.uptime(),
         disk,
+        forecast: require('../capacity').capacityForecast(db),
         resources: await getResourceUsage({
             pm2Processes: getPm2Snapshot(),
             apps,

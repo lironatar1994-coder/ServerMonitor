@@ -519,5 +519,8 @@ purgeRetiredProductionApps();
 syncProductionApps();
 require('./growthSchema').initializeGrowth(db);
 require('./observability').initializeObservability(db);
+require('./externalChecks').initializeExternalChecks(db);
+require('./capacity').initializeCapacity(db);
+require('./jsErrors').initializeJsErrors(db);
 
 module.exports = db;

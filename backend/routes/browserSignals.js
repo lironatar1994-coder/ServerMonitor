@@ -13,7 +13,8 @@ const SIGNAL_RECORDERS = {
     engagement: recordEngagementSignal,
     product: recordProductEvent,
     vitals: recordWebVitals,
-    interaction: recordInteraction
+    interaction: recordInteraction,
+    error: require('../jsErrors').recordJsError
 };
 
 const router = express.Router();

@@ -1,4 +1,4 @@
-/* Anonymous navigation and page-speed numbers only. No forms, query strings, document contents or secrets. */
+/* Anonymous navigation, page-speed numbers and script error counts only. No forms, query strings, document contents or secrets. */
 (() => {
   const script = document.currentScript;
   const prefix = script?.dataset.prefix || '';
@@ -18,6 +18,30 @@
       return original.call(this, input, options);
     };
     return;
+  }
+  // Uncaught errors in this site's own scripts: at most three per page, name and message only (no stack).
+  if (!window.__veeErrors) {
+    window.__veeErrors = true;
+    const reported = new Set();
+    const report = (name, message, source, line) => {
+      const key = `${name}|${message}|${source}|${line}`;
+      if (!message || reported.size >= 3 || reported.has(key)) return;
+      reported.add(key);
+      fetch(endpoint, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'error', event_id: crypto.randomUUID(), path: location.pathname, name, message: String(message).slice(0, 300),
+          source, line, webdriver: navigator.webdriver === true }) }).catch(() => {});
+    };
+    addEventListener('error', (event) => {
+      if (!(event instanceof ErrorEvent)) return;
+      let file;
+      try { file = new URL(event.filename || location.href, location.href); } catch { return; }
+      if (file.origin !== location.origin) return; // other origins only say "Script error."
+      report(event.error?.name || 'Error', event.message, file.pathname.split('/').pop(), event.lineno || null);
+    });
+    addEventListener('unhandledrejection', (event) => {
+      const reason = event.reason;
+      report(reason?.name || 'UnhandledRejection', reason?.message || (typeof reason === 'string' ? reason : ''), '', null);
+    });
   }
   // Core Web Vitals, once per page load, whichever monitor script runs first. Numbers only.
   if (!window.__veeVitals && 'PerformanceObserver' in window && !document.cookie.split(';').some(c => c.trim() === 'monitor_internal=1')) {

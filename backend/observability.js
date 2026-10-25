@@ -103,6 +103,7 @@ function availability(db, appId, from, to) {
 function availabilitySummary(db, now = Date.now()) {
     const apps = db.prepare('SELECT id, name, status, status_changed_at, url, pm2_name, systemd_unit, analytics_enabled FROM apps ORDER BY name').all();
     const range = (days) => [new Date(now - days * DAY).toISOString(), new Date(now).toISOString()];
+    const outside = require('./externalChecks').externalSummary(db, now).byApp;
     return apps.map((app) => {
         const week = availability(db, app.id, ...range(7));
         const month = availability(db, app.id, ...range(30));
@@ -110,7 +111,7 @@ function availabilitySummary(db, now = Date.now()) {
             WHERE app_id = ? AND response_ms IS NOT NULL AND timestamp >= datetime('now', '-1 day')`).get(app.id);
         const last = db.prepare('SELECT response_ms FROM metrics WHERE app_id = ? ORDER BY timestamp DESC LIMIT 1').get(app.id);
         return { ...app, week: week.percent, month: month.percent, outages: month.outages.slice(0, 5),
-            response_ms: last?.response_ms ?? null, response_avg_ms: latency?.avg == null ? null : Math.round(latency.avg), response_max_ms: latency?.max ?? null };
+            external: outside.get(app.id) || [], response_ms: last?.response_ms ?? null, response_avg_ms: latency?.avg == null ? null : Math.round(latency.avg), response_max_ms: latency?.max ?? null };
     });
 }
 

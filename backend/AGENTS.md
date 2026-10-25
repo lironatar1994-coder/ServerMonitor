@@ -29,6 +29,9 @@
 - `emailReports.js` owns daily and weekly client comparison reports, Resend delivery, scheduling, and delivery deduplication.
 - `emailReportTemplate.js` owns shared Hebrew HTML/plain-text report presentation and app-specific monitor links.
 - `remoteControl.js` owns the Claude Remote relay for several PCs, each named by its agent's `host`: per-PC sessions, links, status and last screenshot, an in-memory job queue whose jobs each target one PC, and per-PC long-polls. Session lists persist in `RC_STATE_FILE` (default `backend/.remote-state.json`); PCs unseen for 30 days are dropped, at most 10 are kept. `routes/remote.js` exposes `/remote/agent/*` to the PC agents and owner-only `/remote/state?pc=`, `/remote/jobs` (`pc` in the body) and `/remote/screenshot?pc=`; without `pc` the most recently seen PC is used.
+- `externalChecks.js` stores only the latest outside result per site and source (`external_checks`) with consecutive failures; `/remote/agent/probe-targets` and `/remote/agent/probes` serve the PC agents. `outsideOnlyFailures` feeds the monitor cycle's `external` alert (server online, two fresh outside failures, six-hour reminder). Runs with most targets failing are stored as inconclusive in `monitor_metadata` (`external-run:<source>`) and change no site.
+- `capacity.js` samples root-disk and memory once an hour from `statfs` and `/proc/meminfo` inside the monitor cycle (`host_samples`, 120 days) and serves a 30-minute cached forecast in `/apps/server-stats` (`forecast.disk`: days to full from a two-week least-squares slope, needing two days of samples; `forecast.memory_growth`: up to three services that grew over 30% and 50 MB from a week ago).
+- `jsErrors.js` folds visitor script errors (signal kind `error`) into one `js_errors` row per site, day, page and signature, at most 200 rows per site per day, 30-day retention. Messages lose URLs, e-mail addresses and 4+ digit numbers; sources keep only the file name; `Script error.` and automation are dropped. `/visitor-analytics/apps/:id/js-errors` returns the top signatures.
 - `routes/` owns HTTP route handlers and request/response contracts.
 - `monitor.db` is runtime state and must not be treated as a source schema definition.
 
@@ -135,6 +138,7 @@
 - `test/vaultCrypto.test.js` exercises identity/recovery, wrong passwords, authenticated envelope tampering, recipient sharing, new-key isolation, fresh nonces and safe URLs. `test/vaultSecurity.test.js` verifies cookies/MFA/CSRF/origin, roles, service isolation, invites, conflicts, last owner, revocation, atomic rotation and a decryptable SQLite restore.
 
 
+- `test/healthSignals.test.js` verifies outside-check failure counting, inconclusive runs and alert selection, hourly host sampling with the disk forecast, and script-error sanitising and aggregation.
 - `test/remoteControl.test.js` verifies owner-only panel access, agent-token isolation with several tokens, long-poll job delivery with report completion, per-PC waits, jobs and sessions, and job-bound owner-only screenshots.
 - `test/pageInsights.test.js` verifies ordered visit attribution, site/automation isolation, separate lead outcomes, engagement delta aggregation and the indexed history lookup. `test/apiClient.test.js` verifies client timeouts and invalid-response handling.
 

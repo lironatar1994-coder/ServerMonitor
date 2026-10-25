@@ -80,6 +80,35 @@ export function NotFoundPanel({ appId, range }) {
   );
 }
 
+/** Uncaught script errors reported by visitors' browsers, most frequent first. */
+export function ScriptErrorsPanel({ appId, range }) {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    apiFetch(`/visitor-analytics/apps/${appId}/js-errors?${rangeQuery(range)}`)
+      .then((value) => alive && setData(value))
+      .catch(() => alive && setData({ total: 0, errors: [], failed: true }));
+    return () => { alive = false; };
+  }, [appId, range]);
+  return (
+    <Panel title="שגיאות בדפדפן" hint="שגיאות JavaScript שקרו אצל גולשים בסקריפטים של האתר עצמו: סוג, הודעה ועמוד בלבד, בלי פרטים אישיים. נאסף באתרים עם תג המדידה של המוניטור; Seder ו־PDF Studio מודדים בעצמם ואינם נכללים." bleed
+      action={data?.total ? <span className="muted">{formatNumber(data.total)} מקרים</span> : null}>
+      {data?.errors?.length ? (
+        <ul className="backup-list">
+          {data.errors.map((row) => (
+            <li key={row.signature}><div className="backup-row">
+              <span><b dir="ltr">{row.name}: {row.message}</b>
+                <small dir="ltr">{row.top_path}{row.pages > 1 ? ` +${row.pages - 1}` : ''}{row.source ? ` · ${row.source}${row.line ? `:${row.line}` : ''}` : ''}</small></span>
+              <span>{formatNumber(row.count)}</span>
+              <span className="muted">{formatDateTime(row.last_seen)}</span>
+            </div></li>
+          ))}
+        </ul>
+      ) : <Empty text={!data ? 'טוען…' : data.failed ? 'לא ניתן לטעון שגיאות' : 'לא נרשמו שגיאות בטווח הזה'} />}
+    </Panel>
+  );
+}
+
 /** Notes and runtime starts on the chart's period; editors add notes, authors and owners remove them. */
 export function ChartNotes({ appId = null, range, onMarks }) {
   const [data, setData] = useState({ notes: [], deploys: [] });

@@ -8,6 +8,8 @@ const { sendAlertEmail } = require('./alerts');
 const { recordStatus, recordRuntimeStarts, silentTrackers } = require('./observability');
 const { MAINTENANCE_APP, SSH_APP } = require('./catalogNames');
 const { runInsights } = require('./insights');
+const { outsideOnlyFailures } = require('./externalChecks');
+const { sampleHost } = require('./capacity');
 
 console.log('Background Monitor Started...');
 
@@ -30,6 +32,7 @@ function purgeExpiredMonitorData() {
         .run(new Date(now - 400 * 86400000).toISOString());
     db.prepare('DELETE FROM insight_notifications WHERE created_at < ?').run(new Date(now - 90 * 86400000).toISOString());
     db.prepare('DELETE FROM push_deliveries WHERE sent_at < ?').run(new Date(now - 30 * 86400000).toISOString());
+    db.prepare('DELETE FROM js_errors WHERE day < ?').run(new Date(now - 30 * 86400000).toISOString().slice(0, 10));
     lastDataPurgeAt = now;
 }
 
@@ -204,6 +207,12 @@ async function runMonitorCycle() {
             }
         }
 
+        // Reachable from the server but not from outside, twice in a row: one reminder per six hours.
+        const current = db.prepare('SELECT id, name, status, alerts_enabled FROM apps').all();
+        for (const item of outsideOnlyFailures(db, current)) {
+            if (due(`external-alert:${item.id}`, alertReminderMs)) alerts.push({ ...item, kind: 'external', metaKey: `external-alert:${item.id}` });
+        }
+
         if (alerts.length) {
             const { sent } = await sendAlertEmail(alerts);
             const mark = db.prepare('UPDATE apps SET last_alerted_at = CURRENT_TIMESTAMP WHERE id = ?');
@@ -218,6 +227,7 @@ async function runMonitorCycle() {
             lastInsightsAt = Date.now();
             try { await runInsights(db); } catch (error) { console.error('[Insights] failed:', error.message); }
         }
+        try { sampleHost(db); } catch (error) { console.error('[Capacity] sample failed:', error.message); }
         purgeExpiredMonitorData();
     } catch (err) {
         console.error('Monitor cycle error:', err);

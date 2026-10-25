@@ -709,6 +709,14 @@ router.get('/apps/:id/not-found', (req, res) => {
     } catch (error) { respondError(res, error); }
 });
 
+router.get('/apps/:id/js-errors', (req, res) => {
+    try {
+        const app = assertApp(req.params.id);
+        const range = parseRange(req.query);
+        res.json(require('../jsErrors').jsErrorSummary(db, app.id, range.from, range.to));
+    } catch (error) { respondError(res, error); }
+});
+
 router.get('/apps/:id/sources', (req, res) => {
     try {
         const app = assertApp(req.params.id);

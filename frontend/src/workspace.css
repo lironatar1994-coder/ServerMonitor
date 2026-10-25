@@ -542,7 +542,7 @@ dialog.mobile-more { margin-block-start: auto; margin-block-end: 80px; inset: 0;
 .is-attention { color: var(--ochre); }
 .is-healthy { color: var(--healthy); }
 .availability-table { display: grid; }
-.availability-row { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(4.5rem, .8fr)) minmax(0, 1.4fr) 1.2rem; align-items: center; gap: .75rem; min-height: 52px; padding: .45rem 1rem; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; font-variant-numeric: tabular-nums; }
+.availability-row { display: grid; grid-template-columns: minmax(0, 2fr) repeat(4, minmax(4.5rem, .8fr)) minmax(0, 1.4fr) 1.2rem; align-items: center; gap: .75rem; min-height: 52px; padding: .45rem 1rem; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; font-variant-numeric: tabular-nums; }
 .availability-row:hover { background: var(--row-hover); }
 .availability-row--head { min-height: 36px; border-top: 0; background: var(--paper-deep); color: var(--ink-muted); font-size: .74rem; }
 .availability-row--head:hover { background: var(--paper-deep); }
@@ -563,7 +563,7 @@ dialog.mobile-more { margin-block-start: auto; margin-block-end: 80px; inset: 0;
 .backup-files { margin: 0 0 .5rem; padding: 0 1rem; list-style: none; font-size: .78rem; color: var(--ink-muted); }
 .backup-files li { display: flex; justify-content: space-between; gap: 1rem; padding: .2rem 0; }
 @media (max-width: 760px) {
-  .availability-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .3rem .6rem; padding-block: .6rem; }
+  .availability-row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .3rem .6rem; padding-block: .6rem; }
   .availability-row--head { display: none; }
   .availability-name { grid-column: 1 / -1; }
   .availability-row [data-label]::before { content: attr(data-label); display: block; color: var(--ink-muted); font-size: .7rem; }

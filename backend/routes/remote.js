@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticateToken } = require('./auth');
 const security = require('../security');
 const remote = require('../remoteControl');
+const db = require('../database');
 
 // The PC agent authenticates with its own bearer token, never with a human session.
 const agent = express.Router();
@@ -24,6 +25,13 @@ agent.post('/screenshot', express.raw({ type: ['image/jpeg', 'image/png'], limit
     // Accepted only as the answer to a screenshot job, which names the PC it belongs to.
     if (!remote.screenshot(req.body, req.get('content-type'), req.query.job)) return res.status(404).json({ error: 'Unknown job' });
     res.json({ ok: true });
+});
+
+// Outside availability: the agent fetches each public address from the PC's own connection.
+agent.get('/probe-targets', (req, res) => res.json({ targets: require('../externalChecks').probeTargets(db), interval_s: 600 }));
+agent.post('/probes', express.json({ limit: '64kb' }), (req, res) => {
+    try { res.json(require('../externalChecks').recordProbeRun(db, req.query.host, req.body?.results)); }
+    catch (error) { res.status(error.status || 500).json({ error: error.status ? error.message : 'Failed' }); }
 });
 
 // Controlling the PC is owner-only: monitor service sessions and other roles are refused.

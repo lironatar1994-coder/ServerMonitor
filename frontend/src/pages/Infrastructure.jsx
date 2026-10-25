@@ -206,6 +206,12 @@ const Infrastructure = () => {
     [storage],
   );
   const largestApp = applications[0];
+  // Disk-full estimate and steadily growing services, computed hourly on the server.
+  const diskForecast = stats?.forecast?.disk;
+  const diskDays = diskForecast?.status === "filling" ? diskForecast.days_to_full : null;
+  const diskOutlook = diskForecast?.status === "filling" ? `יתמלא בעוד כ־${formatNumber(diskDays)} ימים`
+    : diskForecast?.status === "stable" ? "לא מתמלא" : diskForecast?.status === "collecting" ? "אוסף נתוני מגמה" : "";
+  const memoryGrowth = stats?.forecast?.memory_growth || [];
 
   const selectedItems =
     resourceView === "applications"
@@ -252,8 +258,9 @@ const Infrastructure = () => {
             icon={HardDrive}
             label="דיסק פנוי"
             value={stats?.disk ? formatBytes(stats.disk.available) : "—"}
-            tone={toneFor(disk)}
-            foot={`${disk.toFixed(0)}% בשימוש`}
+            tone={diskDays != null && diskDays < 14 ? "vermilion" : diskDays != null && diskDays < 45 ? "ochre" : toneFor(disk)}
+            foot={`${disk.toFixed(0)}% בשימוש${diskOutlook ? ` · ${diskOutlook}` : ""}`}
+            hint="התחזית לפי קצב הגידול בשבועיים האחרונים, מדגימה אחת בשעה."
           />
           <Stat
             icon={TriangleAlert}
@@ -267,6 +274,17 @@ const Infrastructure = () => {
           />
         </StatRow>
 
+        {memoryGrowth.length > 0 && (
+          <p className="banner banner--attention" role="status">
+            <b>זיכרון שגדל השבוע:</b>{" "}
+            {memoryGrowth.map((item, index) => (
+              <span key={item.app_id}>
+                {index > 0 && " · "}
+                {item.name} <bdi dir="ltr">+{item.percent}% ({formatBytes(item.from)} → {formatBytes(item.to)})</bdi>
+              </span>
+            ))}
+          </p>
+        )}
         <OperationalStatus data={operations} />
         <details className="measurement-details">
           <summary>Swap וזמן פעילות</summary>

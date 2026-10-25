@@ -11,13 +11,14 @@ import logging
 import os
 import socket
 import sys
+import threading
 import time
 from logging.handlers import RotatingFileHandler
 
 import requests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-VERSION = '2.1.0'
+VERSION = '2.2.0'
 SERVER = 'https://monitor.vee-app.co.il/serve-monitor/api/remote'
 # Configs written before the move into Server Monitor point at the retired panel.
 LEGACY_SERVERS = {'https://lawebs.co.il/rc'}
@@ -44,6 +45,48 @@ def single_instance():
 def keep_awake():
     # ES_CONTINUOUS | ES_SYSTEM_REQUIRED: no idle sleep while the agent runs (the display may still turn off).
     ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)
+
+
+class OutsideChecks(threading.Thread):
+    """Every ~10 minutes, fetches each monitored public address from this PC's own connection and
+    reports status and time to first byte. Sites never see the agent token; requests carry the
+    monitor's internal-browser cookie and a ServerMonitor user agent, so they are not counted as visits."""
+
+    def __init__(self, base, token, host):
+        super().__init__(daemon=True, name='outside-checks')
+        self.base, self.host = base, host
+        self.api = requests.Session()
+        self.api.headers.update({'Authorization': f'Bearer {token}', 'User-Agent': f'claude-remote-agent/{VERSION}'})
+        self.web = requests.Session()
+        self.web.headers.update({'User-Agent': f'ServerMonitor-ExternalProbe/{VERSION}', 'Cookie': 'monitor_internal=1'})
+
+    def probe(self, target):
+        started = time.monotonic()
+        try:
+            with self.web.get(target['url'], timeout=(5, 10), stream=True, allow_redirects=True) as r:
+                ms = (time.monotonic() - started) * 1000
+                ok = r.status_code < 400
+                return {'id': target['id'], 'ok': ok, 'status': r.status_code, 'ms': round(ms), 'error': None if ok else f'HTTP {r.status_code}'}
+        except requests.RequestException as e:
+            return {'id': target['id'], 'ok': False, 'status': None, 'ms': None, 'error': type(e).__name__}
+
+    def run(self):
+        time.sleep(30)
+        while True:
+            interval = 600
+            try:
+                r = self.api.get(f'{self.base}/agent/probe-targets', timeout=20)
+                r.raise_for_status()
+                data = r.json()
+                interval = max(300, int(data.get('interval_s') or 600))
+                results = [self.probe(t) for t in data.get('targets', [])[:60]]
+                self.api.post(f'{self.base}/agent/probes', params={'host': self.host}, json={'results': results}, timeout=20).raise_for_status()
+                failed = [x for x in results if not x['ok']]
+                if failed:
+                    log.info('outside check: %d of %d failed', len(failed), len(results))
+            except Exception as e:
+                log.warning('outside check skipped: %s', e)
+            time.sleep(interval)
 
 
 class Agent:
@@ -166,6 +209,9 @@ def main():
         cfg = json.load(f)
     if cfg.get('keepAwake', True):
         keep_awake()
+    if cfg.get('outsideChecks', True):
+        base = (cfg.get('server') or SERVER).rstrip('/')
+        OutsideChecks(SERVER if base in LEGACY_SERVERS else base, cfg['token'], socket.gethostname()).start()
     while True:
         try:
             Agent(cfg).loop()

@@ -21,6 +21,9 @@ MANAGER_SITE_ANALYTICS_KEY_FILE="${MANAGER_SITE_ANALYTICS_KEY_FILE:-/root/.manag
 VISITOR_SIGNAL_KEY_FILE="${VISITOR_SIGNAL_KEY_FILE:-/root/.visitor-signal-key}"
 AUTH_KEY_FILE="${AUTH_KEY_FILE:-/root/.server-monitor-auth-key}"
 MONITOR_ORIGIN="https://monitor.vee-app.co.il"
+# Anything this script has to compile runs behind the production sites, never ahead of them.
+LOW_PRIORITY=(nice -n 10)
+if command -v ionice > /dev/null 2>&1; then LOW_PRIORITY+=(ionice -c 3); fi
 
 echo "[INFO] Starting Deployment..."
 cd "$APP_ROOT"
@@ -81,19 +84,35 @@ install -m 0644 ssh-hardening.conf "$SSH_HARDENING_CONFIG"
 sshd -t
 systemctl reload ssh
 
-# 5. Frontend Setup
-echo "[INFO] Processing Frontend..."
-cd "$FRONTEND_DIR"
-npm ci -s
-npm run build
-cd ..
+# 5. Frontend: deploy.ps1 uploads the dashboard it built and checked for this exact commit.
+HEAD_SHA="$(git rev-parse HEAD)"
+if [ -n "${PREBUILT_FRONTEND:-}" ] && [ "$(basename "$PREBUILT_FRONTEND")" = "frontend-dist-$HEAD_SHA.tar.gz" ] && [ -s "$PREBUILT_FRONTEND" ]; then
+  echo "[INFO] Installing the prebuilt dashboard for $HEAD_SHA..."
+  rm -rf "$FRONTEND_DIR/dist.next"
+  mkdir -p "$FRONTEND_DIR/dist.next"
+  tar -xzf "$PREBUILT_FRONTEND" -C "$FRONTEND_DIR/dist.next"
+  test -f "$FRONTEND_DIR/dist.next/dist/index.html"
+  rm -rf "$FRONTEND_DIR/dist"
+  mv "$FRONTEND_DIR/dist.next/dist" "$FRONTEND_DIR/dist"
+  rm -rf "$FRONTEND_DIR/dist.next"
+  find "$(dirname "$PREBUILT_FRONTEND")" -maxdepth 1 -name 'frontend-dist-*.tar.gz' -delete
+else
+  echo "[INFO] No prebuilt dashboard for this commit; building it here at low priority..."
+  (cd "$FRONTEND_DIR" && "${LOW_PRIORITY[@]}" npm ci -s && "${LOW_PRIORITY[@]}" npm run build)
+fi
 
-# 6. Backend Setup
+# 6. Backend: reinstall dependencies only when the lock file or Node version changed.
 echo "[INFO] Processing Backend..."
 cd "$BACKEND_DIR"
-npm ci -s
-# Rebuild sqlite3 for Linux environment just in case
-npm rebuild better-sqlite3
+DEPS_STAMP="$(sha256sum package-lock.json | cut -d' ' -f1)-$(node -v)"
+if [ -d node_modules ] && [ "$(cat node_modules/.deploy-stamp 2>/dev/null)" = "$DEPS_STAMP" ]; then
+  echo "[INFO] Backend dependencies unchanged"
+else
+  "${LOW_PRIORITY[@]}" npm ci -s
+  # better-sqlite3 is native; build it for this server's Node.
+  "${LOW_PRIORITY[@]}" npm rebuild better-sqlite3
+  echo "$DEPS_STAMP" > node_modules/.deploy-stamp
+fi
 if ! node -e "process.exit(require('fs').existsSync(require('playwright').chromium.executablePath()) ? 0 : 1)"; then
   NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive npx playwright install --with-deps chromium
 fi
@@ -103,6 +122,7 @@ bash "$APP_ROOT/ops/install-maintenance.sh"
 python3 "$APP_ROOT/ops/install-visitor-coverage.py"
 python3 "$APP_ROOT/ops/install-growth-coverage.py"
 bash "$APP_ROOT/ops/install-retired-sites.sh"
+python3 "$APP_ROOT/ops/tidy-nginx.py"
 python3 "$APP_ROOT/ops/ensure-monitor-logging.py"
 bash "$APP_ROOT/ops/update-asn-db.sh"
 

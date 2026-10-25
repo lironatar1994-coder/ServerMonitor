@@ -10,7 +10,7 @@ import PageInsights from '../components/PageInsights';
 import TrafficChart from '../components/TrafficChart';
 import SiteSwitcher from '../components/SiteSwitcher';
 import SiteLink from '../components/SiteLink';
-import { ChartNotes, NotFoundPanel, SpeedPanel } from '../components/SiteInsights';
+import { ChartNotes, NotFoundPanel, ScriptErrorsPanel, SpeedPanel } from '../components/SiteInsights';
 import { LinksPanel, SourcesPanel } from '../components/TrafficSources';
 import { previousRange, rangeSearch } from '../lib/dailyCheck';
 import { pageName } from '../lib/analyticsLabels';
@@ -211,6 +211,7 @@ const VisitorDetail = ({ diagnostics = false }) => {
           {selectedPath && data?.app && <PageInsights key={`${id}:${selectedPath}:${days}:${custom?.from}`} app={data.app} path={selectedPath} resolveRange={resolveRange} onClose={() => setSelectedPath(null)} onSelect={setSelectedPath} />}
         </div>
         {data?.range && <NotFoundPanel appId={id} range={data.range} />}
+        {data?.range && <ScriptErrorsPanel appId={id} range={data.range} />}
         <details className="measurement-details"><summary>מעורבות</summary>
         {engagementError && <div className="banner banner--error" role="alert">מדידת השימוש לא נטענה. {engagementError}<button className="btn" onClick={fetchAnalytics}>ניסיון נוסף</button></div>}
         {(data?.app?.name === 'PDF Studio' || data?.app?.name === 'LA webs' || data?.app?.name === 'Miryam Zelig' || data?.app?.name === 'Seder' || Boolean(engagement?.engagement_samples) || Boolean(engagement?.product?.summary?.sessions)) && (
