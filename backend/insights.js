@@ -20,7 +20,7 @@ function metadata(db) {
 }
 
 const sites = (db) => db.prepare("SELECT id, name FROM apps WHERE analytics_enabled = 1 AND reporting_enabled = 1 AND url IS NOT NULL AND trim(url) <> ''").all();
-const sessions = (db, appId, from, to) => db.prepare(`SELECT COUNT(DISTINCT session_hash) AS n FROM browser_signals
+const sessions = (db, appId, from, to) => db.prepare(`SELECT COUNT(DISTINCT visit_hash) AS n FROM browser_signals
     WHERE app_id = ? AND automation_hint = 0 AND occurred_at >= ? AND occurred_at < ?`).get(appId, from, to).n;
 const contacts = (db, appId, from, to) => db.prepare(`SELECT COUNT(*) AS n FROM growth_events
     WHERE app_id = ? AND automation_hint = 0 AND event_type = 'contact_click' AND occurred_at >= ? AND occurred_at < ?`).get(appId, from, to).n;

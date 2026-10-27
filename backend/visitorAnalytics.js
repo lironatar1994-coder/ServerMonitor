@@ -171,6 +171,7 @@ function initialBackfill(app, stat) {
         const cutoff = Date.now() - BACKFILL_DAYS * 24 * 60 * 60 * 1000;
         const content = safeBuffer.toString('utf8');
         const lines = content.split('\n');
+        const partial = lines.pop() || '';
         let offset = safeStart;
         let inserted = 0;
         const transaction = db.transaction(() => {
@@ -184,7 +185,7 @@ function initialBackfill(app, stat) {
             });
         });
         transaction();
-        upsertState.run(app.id, app.log_path, getFileId(stat), stat.size, '', 1);
+        upsertState.run(app.id, app.log_path, getFileId(stat), stat.size, partial, 1);
         return inserted;
     } finally {
         fs.closeSync(fd);
@@ -227,6 +228,7 @@ function purgeExpiredEvents() {
     const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
     const events = db.prepare('DELETE FROM visitor_events WHERE occurred_at < ?').run(cutoff).changes;
     db.prepare('DELETE FROM browser_signals WHERE occurred_at < ?').run(cutoff);
+    db.prepare('DELETE FROM browser_interactions WHERE occurred_at < ?').run(cutoff);
     db.prepare('DELETE FROM engagement_signals WHERE occurred_at < ?').run(cutoff);
     db.prepare('DELETE FROM engagement_zones WHERE occurred_at < ?').run(cutoff);
     db.prepare('DELETE FROM engagement_zone_views WHERE occurred_at < ?').run(cutoff);
@@ -370,6 +372,7 @@ function startVisitorIngestion() {
 }
 
 module.exports = {
+    locationAvailable: () => Boolean(geoReader),
     backfillArchivedLogs,
     BACKFILL_BYTES,
     BACKFILL_DAYS,

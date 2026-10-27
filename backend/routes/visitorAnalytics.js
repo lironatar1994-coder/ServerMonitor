@@ -52,9 +52,10 @@ function getBrowserSignalSummary(appId, range) {
     const result = db.prepare(`
         SELECT
             COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN visitor_hash END) AS browser_signal_visitors,
-            COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN session_hash END) AS browser_signal_sessions,
+            COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN visit_hash END) AS browser_signal_sessions,
             SUM(CASE WHEN automation_hint = 0 THEN 1 ELSE 0 END) AS browser_signal_page_views,
-            SUM(CASE WHEN automation_hint = 1 THEN 1 ELSE 0 END) AS automated_browser_signals
+            SUM(CASE WHEN automation_hint = 1 THEN 1 ELSE 0 END) AS automated_browser_signals,
+            SUM(CASE WHEN automation_hint = 2 THEN 1 ELSE 0 END) AS pending_browser_signals
         FROM browser_signals
         WHERE occurred_at >= ? AND occurred_at < ? ${appId ? 'AND app_id = ?' : ''}
     `).get(...params);
@@ -62,7 +63,8 @@ function getBrowserSignalSummary(appId, range) {
         browser_signal_visitors: Number(result.browser_signal_visitors) || 0,
         browser_signal_sessions: Number(result.browser_signal_sessions) || 0,
         browser_signal_page_views: Number(result.browser_signal_page_views) || 0,
-        automated_browser_signals: Number(result.automated_browser_signals) || 0
+        automated_browser_signals: Number(result.automated_browser_signals) || 0,
+        pending_browser_signals: Number(result.pending_browser_signals) || 0
     };
 }
 
@@ -232,7 +234,7 @@ function getSiteRanking(range) {
     const signals = db.prepare(`
         SELECT app_id,
             COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN visitor_hash END) AS browser_signal_visitors,
-            COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN session_hash END) AS browser_signal_sessions,
+            COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN visit_hash END) AS browser_signal_sessions,
             SUM(CASE WHEN automation_hint = 0 THEN 1 ELSE 0 END) AS browser_signal_page_views
         FROM browser_signals
         WHERE occurred_at >= ? AND occurred_at < ?
@@ -254,13 +256,23 @@ function getSiteRanking(range) {
 }
 
 function getHourly(appId, range) {
-    return db.prepare(`
-        SELECT CAST(strftime('%H', occurred_at, '+3 hours') AS INTEGER) AS hour,
-            COUNT(*) AS page_views, COUNT(DISTINCT ip) AS unique_visitors
+    const rows = db.prepare(`
+        SELECT strftime('%Y-%m-%dT%H:00:00Z', occurred_at) AS bucket,
+            ip, COUNT(*) AS page_views
         FROM visitor_events
         WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND is_bot = 0 AND is_page_view = 1
-        GROUP BY hour ORDER BY hour ASC
+        GROUP BY bucket,ip ORDER BY bucket ASC
     `).all(appId, range.from, range.to);
+    const hours = new Map();
+    const format = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hourCycle: 'h23' });
+    for (const row of rows) {
+        const hour = Number(format.format(new Date(row.bucket)));
+        const value = hours.get(hour) || { hour, page_views: 0, ips: new Set() };
+        value.page_views += row.page_views;
+        value.ips.add(row.ip);
+        hours.set(hour, value);
+    }
+    return [...hours.values()].map(({ips,...value}) => ({...value,unique_visitors:ips.size})).sort((a,b) => a.hour-b.hour);
 }
 
 function assertApp(appId) {
@@ -309,6 +321,7 @@ function buildAppAnalytics(app, range) {
         range: { from: range.from, to: range.to },
         app,
         tracking_health: trackingHealth(),
+        measurement: { retention_days: 90, city_available: require('../visitorAnalytics').locationAvailable() },
         summary,
         comparison: getComparison(app.id, range, summary),
         series: getSeries(app.id, range),
@@ -387,14 +400,21 @@ function getVisitorTimeline(app, range, query) {
         error.status = 400;
         throw error;
     }
+    const history = db.prepare(`SELECT MIN(occurred_at) AS first_seen,MAX(occurred_at) AS last_seen,
+        COUNT(*) AS page_views,COUNT(DISTINCT substr(occurred_at,1,10)) AS active_days
+        FROM visitor_events WHERE app_id=? AND ip=? AND is_bot=0 AND is_page_view=1 AND occurred_at<?`)
+        .get(app.id, ip, range.to);
+    const from = query.history === 'all' ? new Date(Date.now()-90*86400000).toISOString() : range.from;
     const events = db.prepare(`
         SELECT occurred_at, method, path, status, referrer, device_type,
-               is_bot, bot_reason, bot_classification, bot_confidence, city, region
+               is_bot, is_page_view, bot_reason, bot_classification, bot_confidence, city, region
         FROM visitor_events
         WHERE app_id = ? AND ip = ? AND occurred_at >= ? AND occurred_at < ?
+        ${query.pages === '1' ? 'AND is_bot=0 AND is_page_view=1' : ''}
         ORDER BY occurred_at DESC LIMIT 250
-    `).all(app.id, ip, range.from, range.to);
-    return { app, ip, range: { from: range.from, to: range.to }, events };
+    `).all(app.id, ip, from, range.to);
+    return { app, ip, range: { from, to: range.to }, events, history,
+        seen_before_period: Boolean(history.first_seen && history.first_seen < range.from), limit: 250 };
 }
 
 function handleManagerSiteAnalytics(req, res) {
@@ -691,6 +711,16 @@ router.get('/apps/:id/visitors', (req, res) => {
     } catch (error) {
         respondError(res, error);
     }
+});
+
+router.get('/apps/:id/browsers', (req, res) => {
+    try { res.json(require('../browserVisitors').browserVisitors(assertApp(req.params.id), parseRange(req.query), req.query)); }
+    catch (error) { respondError(res, error); }
+});
+
+router.get('/apps/:id/browser', (req, res) => {
+    try { res.json(require('../browserVisitors').browserHistory(assertApp(req.params.id), parseRange(req.query), req.query)); }
+    catch (error) { respondError(res, error); }
 });
 
 router.get('/apps/:id/vitals', (req, res) => {

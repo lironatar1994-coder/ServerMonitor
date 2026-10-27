@@ -158,7 +158,7 @@ function validateProductEventBody(body) {
     return { ...base, eventType, label, value };
 }
 
-function getAutomationHint({ body, ip, userAgent, path }) {
+function getAutomationHint({ body, ip, userAgent, path, appId }) {
     if (body?.webdriver === true) return 1;
     const classification = getBotClassification({
         ip,
@@ -169,7 +169,15 @@ function getAutomationHint({ body, ip, userAgent, path }) {
     });
     if (classification.classification === 'candidate') return 0;
     // 2 = hosting network, pending: counted once the same session shows real interaction.
-    return classification.reason === 'hosting network' ? 2 : 1;
+    if (classification.reason !== 'hosting network') return 1;
+    if (appId && ID_PATTERN.test(String(body?.session_id || ''))) {
+        const scope = body?.kind === 'growth' ? 'growth' : 'browser';
+        const hash = hashIdentifier(`${appId}:${scope === 'growth' ? 'growth:' : ''}${body.session_id}`, getSignalKey());
+        const since = new Date(Date.now() - 30 * 60000).toISOString();
+        if (db.prepare('SELECT 1 FROM browser_interactions WHERE app_id=? AND session_hash=? AND scope=? AND occurred_at>=?')
+            .get(appId, hash, scope, since)) return 0;
+    }
+    return 2;
 }
 
 /* Engagement is a second, later beacon for the same page view. It must never
@@ -194,7 +202,7 @@ function recordEngagementSignal({ body, ip, userAgent, siteUrl }) {
         error.status = 400;
         throw error;
     }
-    const automationHint = getAutomationHint({ body, ip: normalizedIp, userAgent, path: signal.path });
+    const automationHint = getAutomationHint({ body, ip: normalizedIp, userAgent, path: signal.path, appId: app.id });
     const occurredAt = new Date().toISOString();
 
     const result = db.prepare(`
@@ -276,7 +284,7 @@ function recordProductEvent({ body, ip, userAgent, siteUrl }) {
         error.status = 400;
         throw error;
     }
-    const automationHint = getAutomationHint({ body, ip: normalizedIp, userAgent, path: signal.path });
+    const automationHint = getAutomationHint({ body, ip: normalizedIp, userAgent, path: signal.path, appId: app.id });
     const result = db.prepare(`
         INSERT OR IGNORE INTO product_events (
             app_id, event_id, occurred_at, visitor_hash, session_hash, path,
@@ -328,22 +336,31 @@ function recordBrowserSignal({ body, ip, userAgent, siteUrl }) {
         throw error;
     }
 
-    const automationHint = getAutomationHint({ body, ip: normalizedIp, userAgent, path: signal.path });
+    const automationHint = getAutomationHint({ body, ip: normalizedIp, userAgent, path: signal.path, appId: app.id });
+    const occurredAt = new Date().toISOString();
+    const visitorHash = hashIdentifier(`${app.id}:${signal.visitorId}`, key);
+    const sessionHash = hashIdentifier(`${app.id}:${signal.sessionId}`, key);
+    const previous = db.prepare(`SELECT visit_hash, occurred_at FROM browser_signals
+        WHERE app_id=? AND visitor_hash=? AND session_hash=? ORDER BY occurred_at DESC, id DESC LIMIT 1`)
+        .get(app.id, visitorHash, sessionHash);
+    const visitHash = previous && Date.parse(occurredAt) - Date.parse(previous.occurred_at) < 30 * 60000
+        ? previous.visit_hash : signal.eventId;
     const result = db.prepare(`
         INSERT OR IGNORE INTO browser_signals (
             app_id, event_id, occurred_at, ip, visitor_hash, session_hash,
-            path, user_agent, automation_hint
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            path, user_agent, automation_hint, visit_hash
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
         app.id,
         signal.eventId,
-        new Date().toISOString(),
+        occurredAt,
         normalizedIp,
-        hashIdentifier(`${app.id}:${signal.visitorId}`, key),
-        hashIdentifier(`${app.id}:${signal.sessionId}`, key),
+        visitorHash,
+        sessionHash,
         signal.path,
         String(userAgent || '').slice(0, 1024) || null,
-        automationHint
+        automationHint,
+        visitHash
     );
 
     return { accepted: true, duplicate: result.changes === 0, app: app.name };
@@ -371,13 +388,25 @@ function recordInteraction({ body, ip, userAgent, siteUrl }) {
     }
     if (getAutomationHint({ body, ip: normalizedIp, userAgent, path: '/' }) === 1) return { accepted: true, released: 0, app: app.name };
     let released = 0;
+    const scope = body.scope === 'growth' ? 'growth' : 'browser';
+    const sessionHash = hashIdentifier(`${app.id}:${scope === 'growth' ? 'growth:' : ''}${sessionId}`, key);
+    const occurredAt = new Date().toISOString();
+    db.prepare(`INSERT INTO browser_interactions(app_id,session_hash,scope,occurred_at) VALUES(?,?,?,?)
+        ON CONFLICT(app_id,session_hash,scope) DO UPDATE SET occurred_at=excluded.occurred_at`)
+        .run(app.id, sessionHash, scope, occurredAt);
+    const since = new Date(Date.now() - 30 * 60000).toISOString();
     if (body.scope === 'growth') {
         const hash = crypto.createHmac('sha256', key).update(`${app.id}:growth:${sessionId}`).digest('hex');
-        released += db.prepare('UPDATE growth_events SET automation_hint = 0 WHERE app_id = ? AND session_hash = ? AND automation_hint = 2').run(app.id, hash).changes;
+        released += db.prepare('UPDATE growth_events SET automation_hint = 0 WHERE app_id = ? AND session_hash = ? AND automation_hint = 2 AND occurred_at >= ?').run(app.id, hash, since).changes;
     } else {
         const hash = hashIdentifier(`${app.id}:${sessionId}`, key);
-        for (const table of ['browser_signals', 'engagement_signals']) {
-            released += db.prepare(`UPDATE ${table} SET automation_hint = 0 WHERE app_id = ? AND session_hash = ? AND automation_hint = 2`).run(app.id, hash).changes;
+        for (const table of ['browser_signals', 'engagement_signals', 'product_events']) {
+            released += db.prepare(`UPDATE ${table} SET automation_hint = 0 WHERE app_id = ? AND session_hash = ? AND automation_hint = 2 AND occurred_at >= ?`).run(app.id, hash, since).changes;
+        }
+        for (const table of ['engagement_zones', 'engagement_zone_views', 'engagement_heatmap_cells']) {
+            db.prepare(`UPDATE ${table} SET automation_hint=0 WHERE app_id=? AND automation_hint=2 AND event_id IN
+                (SELECT event_id FROM engagement_signals WHERE app_id=? AND session_hash=? AND automation_hint=0 AND occurred_at>=?)`)
+                .run(app.id, app.id, hash, since);
         }
     }
     return { accepted: true, released, app: app.name };

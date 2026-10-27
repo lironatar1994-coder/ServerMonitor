@@ -3,7 +3,8 @@
 #   .\deploy.ps1                         deploy the committed main branch
 #   .\deploy.ps1 -CommitMessage "..."    commit every current change first (secret-looking files are refused)
 param (
-    [string]$CommitMessage = ""
+    [string]$CommitMessage = "",
+    [switch]$SkipTests
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,7 +43,8 @@ try {
     $sha = (git rev-parse HEAD).Trim()
 
     # 2. Checks and the production dashboard build, on this PC.
-    Invoke-Checked 'Backend tests...' 'backend' 'npm test'
+    if (-not $SkipTests) { Invoke-Checked 'Backend tests...' 'backend' 'npm test' }
+    else { Write-Host 'Automated tests skipped by explicit request; lint and build still run.' -ForegroundColor Gray }
     Invoke-Checked 'Dashboard lint...' 'frontend' 'npm run lint'
     Invoke-Checked 'Dashboard build...' 'frontend' 'npm run build'
     if (-not (Test-Path 'frontend/dist/index.html')) { throw 'The dashboard build produced no index.html' }
@@ -62,7 +64,8 @@ try {
 
     # 4. Server side: same commit, prebuilt dashboard, dependencies only when the lock file changed.
     Write-Host 'Running the server deployment...' -ForegroundColor Blue
-    $remote = "cd /root/ServerMonitor && git fetch origin main && git reset --hard origin/main && chmod +x deploy_linux.sh && PREBUILT_FRONTEND=$INCOMING/frontend-dist-$sha.tar.gz ./deploy_linux.sh"
+    $browserCheck = if ($SkipTests) { 'SKIP_DEPLOY_BROWSER_CHECK=1 ' } else { '' }
+    $remote = "cd /root/ServerMonitor && git fetch origin main && git reset --hard origin/main && chmod +x deploy_linux.sh && ${browserCheck}PREBUILT_FRONTEND=$INCOMING/frontend-dist-$sha.tar.gz ./deploy_linux.sh"
     & ssh $SSH_HOST $remote
     if ($LASTEXITCODE -ne 0) { Write-Host "`n[!] DEPLOYMENT FAILED" -ForegroundColor Red; exit $LASTEXITCODE }
 

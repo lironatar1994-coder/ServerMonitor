@@ -17,6 +17,20 @@
   const placementAt = el => el?.closest('.wa-float') ? 'floating' : el?.closest('header') ? 'header' : el?.closest('footer') ? 'footer' : el?.closest('#contact') ? 'contact' : el?.closest('.hero') ? 'hero' : 'content';
   const storageKey = `vee.growth:${prefix || '/'}`;
   const random = () => crypto.randomUUID();
+  // Read only the installed collector's anonymous ID. Never infer identity from IP or timing.
+  function navigationSession() {
+    const shared = window.__monitorNavigationIdentity?.();
+    if (shared?.session) return shared.session;
+    const native = prefix === '/seder' ? 'seder' : prefix === '/pdf-studio' ? 'pdf-studio'
+      : prefix === '/OnYourWay' ? 'on-your-way' : /miryamzelig/.test(location.hostname) ? 'miryam'
+      : /sosbaderech/.test(location.hostname) ? 'sos' : /vee-app/.test(location.hostname) && !prefix ? 'vee' : '';
+    if (!native) return '';
+    try {
+      const raw = sessionStorage.getItem(`${native}.monitor.session`);
+      const value = raw?.startsWith('{') ? JSON.parse(raw)?.id : raw;
+      return /^[A-Za-z0-9_-]{16,96}$/.test(value || '') ? value : '';
+    } catch { return ''; }
+  }
   const safeTag = value => /^[\p{L}\p{N}_. -]{1,80}$/u.test(value || '') ? value : '';
   let session, visitor, attribution;
   try {
@@ -61,12 +75,18 @@
     addEventListener('pagehide', () => { if (document.visibilityState !== 'hidden') return; flush(); });
   }
   // First real interaction on this page: lets visits from hosting networks (VPNs, offices) count.
-  const interactionEvents = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
-  const interacted = () => {
-    interactionEvents.forEach(type => removeEventListener(type, interacted, true));
+  const interactionEvents = ['pointerdown', 'keydown', 'touchstart', 'wheel'];
+  let lastInteraction = 0;
+  const interacted = (event) => {
+    if (!event.isTrusted || document.visibilityState !== 'visible') return;
+    if (Date.now() - lastInteraction < 60000) return;
+    lastInteraction = Date.now();
     if (document.cookie.split(';').some(c => c.trim() === 'monitor_internal=1')) return;
     fetch(endpoint, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: 'interaction', scope: 'growth', event_id: crypto.randomUUID(), session_id: session, webdriver: navigator.webdriver === true }) }).catch(() => {});
+    const navigation = navigationSession();
+    if (navigation) fetch(endpoint, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'interaction', event_id: crypto.randomUUID(), session_id: navigation, webdriver: navigator.webdriver === true }) }).catch(() => {});
   };
   interactionEvents.forEach(type => addEventListener(type, interacted, { capture: true, passive: true }));
   const started = new WeakSet();
@@ -82,7 +102,7 @@
     last.set(signature, Date.now());
     fetch(endpoint, { method: 'POST', credentials: 'same-origin', keepalive: true,
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        kind: 'growth', event_id: random(), visitor_id: visitor, session_id: session,
+        kind: 'growth', event_id: random(), visitor_id: visitor, session_id: session, navigation_session_id: navigationSession(),
         path: location.pathname, event_type: type, label, ...attribution,
         placement, project: portfolio ? project || projectAt(location.pathname) : '',
         device: innerWidth < 768 ? 'mobile' : innerWidth < 1100 ? 'tablet' : 'desktop', webdriver: navigator.webdriver === true

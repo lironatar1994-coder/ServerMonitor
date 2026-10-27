@@ -86,6 +86,7 @@ db.exec(`
         ip TEXT NOT NULL,
         visitor_hash TEXT NOT NULL,
         session_hash TEXT NOT NULL,
+        visit_hash TEXT,
         path TEXT NOT NULL,
         user_agent TEXT,
         automation_hint INTEGER DEFAULT 0,
@@ -233,6 +234,31 @@ if (!adminExists && process.env.MONITOR_BOOTSTRAP_PASSWORD) {
 }
 
 // Programmatic Migrations for schema updates
+// Keep source sessions for exact attribution and split visits after 30 idle minutes.
+if (!db.prepare('PRAGMA table_info(browser_signals)').all().some(c => c.name === 'visit_hash')) {
+    db.exec('ALTER TABLE browser_signals ADD COLUMN visit_hash TEXT');
+}
+db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_browser_session_time ON browser_signals(app_id, session_hash, occurred_at DESC);
+    CREATE TABLE IF NOT EXISTS browser_interactions (
+        app_id INTEGER NOT NULL REFERENCES apps(id) ON DELETE CASCADE,
+        session_hash TEXT NOT NULL, scope TEXT NOT NULL, occurred_at TEXT NOT NULL,
+        PRIMARY KEY(app_id, session_hash, scope)
+    );
+`);
+if (db.prepare('SELECT 1 FROM browser_signals WHERE visit_hash IS NULL LIMIT 1').get()) {
+    db.exec(`WITH ordered AS (
+        SELECT id, app_id, visitor_hash, session_hash, occurred_at,
+            LAG(occurred_at) OVER (PARTITION BY app_id, visitor_hash, session_hash ORDER BY occurred_at, id) AS previous
+        FROM browser_signals
+    ), visits AS (
+        SELECT id, session_hash || ':' || SUM(CASE WHEN previous IS NULL OR
+            (julianday(occurred_at)-julianday(previous))*86400 >= 1800 THEN 1 ELSE 0 END)
+            OVER (PARTITION BY app_id, visitor_hash, session_hash ORDER BY occurred_at, id) AS visit_hash FROM ordered
+    ) UPDATE browser_signals SET visit_hash=(SELECT visit_hash FROM visits WHERE visits.id=browser_signals.id)
+      WHERE visit_hash IS NULL`);
+}
+
 try {
     db.exec(`ALTER TABLE apps ADD COLUMN last_alerted_at DATETIME`);
     console.log('Added column last_alerted_at to apps table');

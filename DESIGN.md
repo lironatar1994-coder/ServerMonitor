@@ -282,6 +282,8 @@ Service lists keep the name, runtime/URL and concise status aligned. Operational
 
 Keep `מבקרים משוערים` explicit; `ביקורים` and `צפיות` retain their full measured meaning in accessible names and shared hints. Measurement diagnostics, source gaps and longer evidence open on demand. Browser signals and server candidates remain visually distinct measurements.
 
+The per-site `מבקרים` tab opens anonymous-browser history directly, with returning status, first/last seen, retained visits, ordered pages and exactly linked actions. Keep the same compact ledger and native modal primitives on desktop and mobile; put the diagnostics link in the site header and label connection controls `פרטים והיסטוריה`. History is bounded to retained data up to the selected period's end. A shared network address never identifies a returning person.
+
 A page drill-down shows friendly names, recorded next pages and later contact/outbound actions, with low samples visible. The row is one keyboard-operable control and closing restores focus. Exact dates and page context survive navigation and authentication.
 
 ### Operational attention

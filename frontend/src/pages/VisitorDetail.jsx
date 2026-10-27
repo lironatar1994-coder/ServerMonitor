@@ -10,6 +10,7 @@ import PageInsights from '../components/PageInsights';
 import TrafficChart from '../components/TrafficChart';
 import SiteSwitcher from '../components/SiteSwitcher';
 import SiteLink from '../components/SiteLink';
+import BrowserVisitors, { ConnectionHistory } from '../components/BrowserVisitors';
 import { ChartNotes, NotFoundPanel, ScriptErrorsPanel, SpeedPanel } from '../components/SiteInsights';
 import { LinksPanel, SourcesPanel } from '../components/TrafficSources';
 import { previousRange, rangeSearch } from '../lib/dailyCheck';
@@ -49,16 +50,16 @@ const VisitorDetail = ({ diagnostics = false }) => {
   const [engagementError, setEngagementError] = useState('');
   const [breakdown, setBreakdown] = useState('locations');
   const [selectedIp, setSelectedIp] = useState(null);
-  const [timeline, setTimeline] = useState([]);
   const [query, setQuery] = useSearchParams();
   const selectedPath = query.get('page');
-  const view = selectedPath ? 'pages' : query.get('view') || 'overview';
+  const view = selectedPath ? 'pages' : query.get('visitor') ? 'visitors' : query.get('view') || 'overview';
   const origin = useRef(null);
   const originPath = useRef(selectedPath);
   const wasOpen = useRef(false);
   const [previous, setPrevious] = useState(null);
   const [comparisonError, setComparisonError] = useState('');
   const sequence = useRef(0);
+  const visitorSequence = useRef(0);
   const setSelectedPath = (path, trigger) => {
     if (trigger) { origin.current = trigger; originPath.current = path; }
     const next = new URLSearchParams(query);
@@ -106,12 +107,15 @@ const VisitorDetail = ({ diagnostics = false }) => {
   const fetchVisitors = useCallback(async () => {
     if (!diagnostics) return;
     setTableLoading(true);
+    const seq = ++visitorSequence.current;
     try {
       const query = `${rangeQuery(resolveRange())}&page=${page}&limit=25&search=${encodeURIComponent(search)}`;
-      setVisitors(await apiFetch(`/visitor-analytics/apps/${id}/visitors?${query}`));
+      const result = await apiFetch(`/visitor-analytics/apps/${id}/visitors?${query}`);
+      if (seq !== visitorSequence.current) return;
+      setVisitors(result);
       setTableError('');
-    } catch (error) { setTableError(error.message); }
-    finally { setTableLoading(false); }
+    } catch (error) { if (seq === visitorSequence.current) setTableError(error.message); }
+    finally { if (seq === visitorSequence.current) setTableLoading(false); }
   }, [id, page, search, resolveRange, diagnostics]);
 
   useEffect(() => {
@@ -122,27 +126,12 @@ const VisitorDetail = ({ diagnostics = false }) => {
   }, [fetchAnalytics]);
 
   useEffect(() => {
+    const requests = visitorSequence;
     const timeout = window.setTimeout(fetchVisitors, 250);
-    return () => window.clearTimeout(timeout);
+    return () => { window.clearTimeout(timeout); requests.current++; };
   }, [fetchVisitors]);
 
-  const handleOpenVisitor = async (ip) => {
-    setSelectedIp(ip);
-    setTimeline([]);
-    try {
-      const result = await apiFetch(`/visitor-analytics/apps/${id}/timeline?${rangeQuery(resolveRange())}&ip=${encodeURIComponent(ip)}`);
-      setTimeline(result.events || []);
-    } catch (fetchError) {
-      setTimeline([{ error: fetchError.message }]);
-    }
-  };
-
-  useEffect(() => {
-    if (!selectedIp) return undefined;
-    const handleEscape = (event) => event.key === 'Escape' && setSelectedIp(null);
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [selectedIp]);
+  const handleOpenVisitor = ip => setSelectedIp(ip);
 
   const summary = data?.summary || {};
   const pageCount = Math.max(1, Math.ceil((visitors.total || 0) / (visitors.limit || 25)));
@@ -169,6 +158,7 @@ const VisitorDetail = ({ diagnostics = false }) => {
         }
       >
         {!diagnostics && <SiteSwitcher currentId={id} range={data?.range || resolveRange()} />}
+        {!diagnostics && <Link className="btn" to={`/visitors/${id}/diagnostics${rangeSearch(data?.range || resolveRange())}`}>אבחון מדידה</Link>}
         <RangePicker
           updatedAt={data?.generated_at}
           range={custom}
@@ -177,7 +167,7 @@ const VisitorDetail = ({ diagnostics = false }) => {
           onChange={(value) => { setDays(value); setPage(1); }}
           onCustom={(value) => { setCustom(value); setPage(1); }}
           loading={loading}
-          onRefresh={fetchAnalytics}
+          onRefresh={() => { fetchAnalytics(); fetchVisitors(); }}
         />
       </PageHead>
 
@@ -187,10 +177,11 @@ const VisitorDetail = ({ diagnostics = false }) => {
         {data?.app?.status && data.app.status !== 'online' && <div className="attention-list"><Link to={`/services/${id}`}>{data.app.status === 'unknown' ? 'זמינות האתר טרם נבדקה' : 'האתר לא זמין בבדיקה האחרונה'} <ChevronLeft aria-hidden="true" /></Link></div>}
         <StatRow>
           <Stat icon={Users} label="מבקרים משוערים" value={summary.browser_signal_visitors} previous={data?.comparison?.previous?.browser_signal_visitors} tone="forest" />
-          <Stat icon={Activity} label="ביקורים" value={summary.browser_signal_sessions} previous={data?.comparison?.previous?.browser_signal_sessions} />
+          <Stat icon={Activity} label="ביקורים" value={summary.browser_signal_sessions} previous={data?.comparison?.previous?.browser_signal_sessions} hint="ביקורים שנמדדו בדפדפן. אחרי 30 דקות ללא פתיחת עמוד שנמדדה מתחיל ביקור חדש. זהו אומדן לפי המדידה הזמינה." />
           <Stat icon={Eye} label="צפיות" value={summary.browser_signal_page_views} previous={data?.comparison?.previous?.browser_signal_page_views} />
         </StatRow>
-        <div className="workspace-tabs"><Tabs label="תצוגת אתר" tabs={[{ id: 'overview', label: 'סקירה', icon: ChartNoAxesCombined }, { id: 'pages', label: 'עמודים', icon: PanelsTopLeft }, { id: 'sources', label: 'מקורות', icon: Link2 }, { id: 'audience', label: 'קהל', icon: Globe }]} value={view} onChange={value => { const next = new URLSearchParams(query); next.set('view', value); next.delete('page'); setQuery(next); }} /></div>
+        <div className="workspace-tabs"><Tabs label="תצוגת אתר" tabs={[{ id: 'overview', label: 'סקירה', icon: ChartNoAxesCombined }, { id: 'visitors', label: 'מבקרים', icon: Users }, { id: 'pages', label: 'עמודים', icon: PanelsTopLeft }, { id: 'sources', label: 'מקורות', icon: Link2 }, { id: 'audience', label: 'קהל', icon: Globe }]} value={view} onChange={value => { const next = new URLSearchParams(query); next.set('view', value); next.delete('page'); next.delete('visitor'); setQuery(next); }} /></div>
+        {view === 'visitors' && data?.range && <BrowserVisitors key={`${id}:${data.range.from}:${data.range.to}`} appId={id} appName={data.app?.name} range={data.range} />}
         {view === 'overview' && <>
           {!summary.browser_signal_page_views && <p className="status-line is-attention">לא נמדדה פעילות בטווח הזה.</p>}
           <TrafficChart data={data} previous={previous} comparisonError={comparisonError} marks={marks} />
@@ -202,7 +193,7 @@ const VisitorDetail = ({ diagnostics = false }) => {
           <SourcesPanel appId={id} range={data.range} />
           <LinksPanel appId={Number(id)} siteUrl={data.app?.url} />
         </>}
-        {view === 'audience' && <Panel title="קהל ואתרים מפנים לפי השרת" hint="פילוח לפי פתיחות עמודים שנרשמו בשרת; מיקום משוער לפי כתובת רשת." action={<Tabs tabs={BREAKDOWN_TABS} value={breakdown} onChange={setBreakdown} />}><RankedList items={data?.[breakdown]} color={breakdownMeta.color} empty={breakdownMeta.empty} /></Panel>}
+        {view === 'audience' && <Panel title="קהל ואתרים מפנים לפי השרת" hint="פילוח לפי פתיחות עמודים שנרשמו בשרת; מיקום משוער לפי כתובת רשת." action={<Tabs tabs={BREAKDOWN_TABS} value={breakdown} onChange={setBreakdown} />}>{breakdown === 'locations' && data?.measurement?.city_available === false ? <Empty text="נתוני עיר אינם זמינים: בסיס נתוני המיקום אינו מותקן בשרת." /> : <RankedList items={data?.[breakdown]} color={breakdownMeta.color} empty={breakdownMeta.empty} />}</Panel>}
         {view === 'pages' && <>
         <div className={`page-explorer ${selectedPath ? 'has-selection' : ''}`}>
           <Panel title="עמודים שנצפו" hint={PAGE_VIEW_HINT}>
@@ -223,6 +214,7 @@ const VisitorDetail = ({ diagnostics = false }) => {
         <Link className="diagnostics-link" to={`/visitors/${id}/diagnostics${rangeSearch(data?.range || resolveRange())}`}>אבחון מדידה: חיבורים, תגובות שרת ובקשות אוטומטיות <ChevronLeft aria-hidden="true" /></Link>
         </>}
         {diagnostics && <>
+        {summary.pending_browser_signals > 0 && <p className="status-line is-attention">{formatNumber(summary.pending_browser_signals)} אותות דפדפן מרשתות אירוח ממתינים לאינטראקציה ואינם נכללים בספירת המבקרים.</p>}
         <StatRow>
           <Stat label="כתובות רשת שונות" value={summary.unique_candidates} previous={data?.comparison?.previous?.unique_candidates} hint={CANDIDATE_HINT} />
           <Stat label="פתיחות עמודים לפי השרת" value={summary.page_views} previous={data?.comparison?.previous?.page_views} hint={PAGE_VIEW_HINT} />
@@ -231,11 +223,12 @@ const VisitorDetail = ({ diagnostics = false }) => {
         <Panel title="תגובות שרת"><RankedList items={data?.statuses} /></Panel>
         <Panel
           title="פעילות לפי חיבור"
-          hint="לחיצה על שורה פותחת את ציר הפעילות המלא"
+          hint="היסטוריה לפי כתובת רשת. אותה כתובת יכולה לשמש כמה אנשים; דפדפנים חוזרים מופיעים בלשונית מבקרים."
           action={
             <div className="search">
               <Search aria-hidden="true" />
               <input
+                dir="auto"
                 value={search}
                 onChange={(event) => { setSearch(event.target.value); setPage(1); }}
                 placeholder="IP, עמוד או עיר"
@@ -254,8 +247,8 @@ const VisitorDetail = ({ diagnostics = false }) => {
               </thead>
               <tbody>
                 {visitors.visitors.map((visitor) => (
-                  <tr key={visitor.ip} onClick={() => handleOpenVisitor(visitor.ip)} tabIndex="0" onKeyDown={(event) => (event.key === 'Enter' || event.key === ' ') && handleOpenVisitor(visitor.ip)}>
-                    <td><b dir="ltr">{visitor.ip}</b></td>
+                  <tr key={visitor.ip}>
+                    <td><button className="connection-open" onClick={() => handleOpenVisitor(visitor.ip)}><bdi>{visitor.ip}</bdi><span>פרטים והיסטוריה <ChevronLeft aria-hidden="true" /></span></button></td>
                     <td>
                       <span><MapPin aria-hidden="true" /> {visitor.city || visitor.region || 'לא ידוע'}</span>
                       <small><MonitorSmartphone aria-hidden="true" /> {visitor.device_type || 'לא ידוע'}</small>
@@ -275,12 +268,14 @@ const VisitorDetail = ({ diagnostics = false }) => {
                     <span className="record-list__top"><b dir="ltr">{visitor.ip}</b><strong>{formatNumber(visitor.requests)}</strong></span>
                     <small>{[visitor.city || visitor.region, visitor.device_type].filter(Boolean).join(' · ') || 'לא ידוע'} · {formatDateTime(visitor.last_seen)}</small>
                     <em dir="ltr">{visitor.latest_path || '—'}</em>
+                    <span className="connection-open__label">פרטים והיסטוריה <ChevronLeft aria-hidden="true" /></span>
                   </button>
                 </li>
               ))}
             </ul>
 
-            {!tableError && !visitors.visitors.length && <Empty text={search ? 'אין תוצאות לחיפוש הזה' : 'אין חיבורים שנמדדו בטווח הזה'} />}
+            {tableLoading && <p role="status" className="status-line">טוען חיבורים…</p>}
+            {!tableError && !tableLoading && !visitors.visitors.length && <Empty text={search ? 'אין תוצאות לחיפוש הזה' : 'אין חיבורים שנמדדו בטווח הזה'} />}
           </div>
 
           {pageCount > 1 && (
@@ -295,25 +290,7 @@ const VisitorDetail = ({ diagnostics = false }) => {
       </DataState>
 
       {selectedIp && (
-        <div className="drawer-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setSelectedIp(null)}>
-          <aside className="drawer" role="dialog" aria-modal="true" aria-labelledby="visitor-drawer-title">
-            <header>
-              <h2 id="visitor-drawer-title" dir="ltr">{selectedIp}</h2>
-              <button type="button" onClick={() => setSelectedIp(null)} aria-label="סגירה"><X aria-hidden="true" /></button>
-            </header>
-            <div className="timeline">
-              {!timeline.length && <div className="skeleton-stack"><span /><span /></div>}
-              {timeline.map((event, index) => event.error ? <div className="error-state" key="error">{event.error}</div> : (
-                <article key={`${event.occurred_at}-${index}`}>
-                  <i className={event.is_bot ? 'is-bot' : ''} aria-hidden="true" />
-                  <time>{formatDateTime(event.occurred_at)}</time>
-                  <b dir="ltr">{event.method} {event.path}</b>
-                  <small>HTTP {event.status} · {event.city || event.region || 'מיקום לא ידוע'}</small>
-                </article>
-              ))}
-            </div>
-          </aside>
-        </div>
+        <ConnectionHistory key={`${id}:${selectedIp}:${data?.range?.from}:${data?.range?.to}`} appId={id} ip={selectedIp} range={data?.range || resolveRange()} onClose={() => setSelectedIp(null)} />
       )}
     </div>
   );

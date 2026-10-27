@@ -2,7 +2,7 @@ const fs = require('fs');
 
 const DEFAULT_TAIL_BYTES = 65536;
 const VISITOR_TAIL_BYTES = 2097152;
-const CLASSIFICATION_RULESET_VERSION = '2026-10-21.3';
+const CLASSIFICATION_RULESET_VERSION = '2026-10-27.1';
 
 const botUserAgentPatterns = [
     /bot/i,
@@ -61,6 +61,7 @@ const botUserAgentPatterns = [
     /\bodin\b/i,
     // Our own health checks and review sessions, scripts and the Claude desktop browser.
     /servermonitor-/i,
+    /(?:^|[- ])(?:release[- ]audit|deployment[- ]audit)(?:\/|$)/i,
     /^node$/i,
     /node-fetch|undici/i,
     /powershell/i,

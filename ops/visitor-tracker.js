@@ -2,6 +2,10 @@
 (() => {
   const script = document.currentScript;
   const prefix = script?.dataset.prefix || '';
+  const trackerKey = `monitor.navigation:${prefix || '/'}`;
+  window.__monitorNavigationTrackers ||= new Set();
+  if (window.__monitorNavigationTrackers.has(trackerKey)) return;
+  window.__monitorNavigationTrackers.add(trackerKey);
   const endpoint = `${prefix}/.well-known/vee-visitor-signal`;
   // ?monitor_internal=1 marks this browser internal for the whole host; =0 clears it.
   const internal = new URLSearchParams(location.search).get('monitor_internal');
@@ -72,8 +76,9 @@
   }
   const key = `monitor.navigation:${prefix || '/'}`;
   const random = () => crypto.randomUUID();
-  function identifier(storage, name, ttl) {
+  function identifier(storageName, name, ttl) {
     try {
+      const storage = window[storageName];
       const previous = JSON.parse(storage.getItem(name) || 'null');
       if (previous?.id && previous.expires > Date.now()) return previous.id;
       const value = { id: random(), expires: Date.now() + ttl };
@@ -81,12 +86,16 @@
       return value.id;
     } catch { return random(); }
   }
-  const visitor = identifier(localStorage, `${key}:visitor`, 30 * 86400000);
-  const session = identifier(sessionStorage, `${key}:session`, 86400000);
+  const visitor = identifier('localStorage', `${key}:visitor`, 30 * 86400000);
+  const session = identifier('sessionStorage', `${key}:session`, 86400000);
+  window.__monitorNavigationIdentity = () => ({ visitor, session });
   // First real interaction on this page: lets visits from hosting networks (VPNs, offices) count.
-  const interactionEvents = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
-  const interacted = () => {
-    interactionEvents.forEach(type => removeEventListener(type, interacted, true));
+  const interactionEvents = ['pointerdown', 'keydown', 'touchstart', 'wheel'];
+  let lastInteraction = 0;
+  const interacted = (event) => {
+    if (!event.isTrusted || document.visibilityState !== 'visible') return;
+    if (Date.now() - lastInteraction < 60000) return;
+    lastInteraction = Date.now();
     fetch(endpoint, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: 'interaction', event_id: crypto.randomUUID(), session_id: session, webdriver: navigator.webdriver === true }) }).catch(() => {});
   };

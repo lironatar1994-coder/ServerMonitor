@@ -21,6 +21,7 @@
 
 - `install-maintenance.sh` owns the systemd timers and removes the legacy cron entry.
 - `install-visitor-coverage.py` and `visitor-tracker.js` add missing navigation signals at the Nginx boundary, preserving application builds and CMS content.
+- Injected navigation has a per-prefix duplicate guard and handles unavailable browser storage. It exposes only its anonymous identity to the companion growth tracker. Growth attaches the actual installed injected/native navigation session as `navigation_session_id`; known native storage keys are read without rewriting native collectors. Trusted pointer/key/touch/wheel input refreshes interaction at most once a minute; script-generated scrolling cannot qualify pending traffic. Never infer missing historical associations.
 - Dfus Reuven's replacement storefront has no native navigation collector. Install the existing first-party visitor bridge for its canonical domain, excluding `/admin`, `/api` and supplier pages, alongside growth actions. Keep its existing app ID/log history and verify navigation receipts after storefront replacement.
 
 - `accessibility-check.cjs` verifies shared token contrast, 44px targets and responsive overflow. `ui-review.cjs` runs a local browser against the Vite production-API proxy for read-only responsive, navigation, focus and mocked-state checks. `email-preview.cjs` renders completed-period daily/weekly HTML/text without sending. These tools store artifacts only under ignored `.impeccable/review/`; UI review uses an ephemeral five-minute token in process memory.

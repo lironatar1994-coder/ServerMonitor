@@ -87,7 +87,7 @@ function getRangeStats(appId, from, to) {
     const signalStats = db.prepare(`
         SELECT
             COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN visitor_hash END) AS browser_signal_visitors,
-            COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN session_hash END) AS browser_signal_sessions,
+            COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN visit_hash END) AS browser_signal_sessions,
             SUM(CASE WHEN automation_hint = 0 THEN 1 ELSE 0 END) AS browser_signal_page_views
         FROM browser_signals
         WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ?

@@ -31,12 +31,14 @@ function recordGrowthSignal({ body, ip, userAgent, siteUrl }) {
     const project = app.name === 'LA webs' && ['koral', 'miryam', 'pinhas', 'reuven', 'sos', 'seder', 'pdf', 'pizza'].includes(body.project) ? body.project : '';
     boundedRate(app.id, address);
     const result = db.prepare(`INSERT OR IGNORE INTO growth_events
-        (app_id,event_id,occurred_at,session_hash,event_type,path,label,source,medium,campaign,device,automation_hint,placement,project)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(app.id, signal.eventId, new Date().toISOString(),
+        (app_id,event_id,occurred_at,session_hash,event_type,path,label,source,medium,campaign,device,automation_hint,placement,project,browser_session_hash)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(app.id, signal.eventId, new Date().toISOString(),
         crypto.createHmac('sha256', key).update(`${app.id}:growth:${signal.sessionId}`).digest('hex'),
         body.event_type, signal.path, label, campaignTag(body.source), campaignTag(body.medium), campaignTag(body.campaign),
         ['mobile', 'tablet', 'desktop'].includes(body.device) ? body.device : 'unknown',
-        getAutomationHint({ body, ip: address, userAgent, path: signal.path }), placement, project);
+        getAutomationHint({ body, ip: address, userAgent, path: signal.path, appId: app.id }), placement, project,
+        /^[A-Za-z0-9_-]{16,96}$/.test(String(body.navigation_session_id || ''))
+            ? crypto.createHmac('sha256', key).update(`${app.id}:${body.navigation_session_id}`).digest('hex') : '');
     return { accepted: true, duplicate: result.changes === 0, app: app.name };
 }
 module.exports = { recordGrowthSignal, campaignTag, EVENTS };

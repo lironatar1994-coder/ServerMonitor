@@ -177,6 +177,10 @@ bash "$APP_ROOT/ops/install-remote-relay.sh"
 echo "[INFO] Verifying production through the resource-limited browser service..."
 curl --silent --show-error --fail --retry 10 --retry-connrefused --retry-delay 1 --max-time 5 \
   --output /dev/null "http://127.0.0.1:$BACKEND_PORT/serve-monitor/"
-/usr/local/sbin/lawebs-maintenance browser
+if [ "${SKIP_DEPLOY_BROWSER_CHECK:-0}" = 1 ]; then
+  echo '[INFO] Deployment browser tests skipped by explicit request; readiness checked above.'
+else
+  /usr/local/sbin/lawebs-maintenance browser
+fi
 
 echo "[SUCCESS] DEPLOYMENT COMPLETE"
