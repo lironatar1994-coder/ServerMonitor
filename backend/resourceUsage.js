@@ -178,20 +178,21 @@ function deploymentCopyTargets(entries, root = '/root') {
             path: path.posix.join(root, entry.name), type: 'rollback', dependencies: [path.posix.join(root, entry.name, 'node_modules')] }));
 }
 
-async function buildStorageSnapshot(diskTotal) {
+async function buildStorageSnapshot(diskTotal, readSizes = readDuSizes) {
         // One bounded directory listing includes retained deployment copies in ownership.
         let copies = [];
         try { copies = deploymentCopyTargets(await fs.promises.readdir('/root', { withFileTypes: true })); } catch { /* Existing roots still report if /root is unavailable. */ }
         const targets = [...PROJECTS, ...copies];
-        const projectSizes = await readDuSizes(targets);
-        const dependencyTargets = targets.flatMap((project) => project.dependencies.map((dependencyPath) => ({ path: dependencyPath })));
-        const dependencySizes = await readDuSizes(dependencyTargets);
-        const otherSizes = await readDuSizes(OTHER_STORAGE);
+        const projectSizes = await readSizes(targets);
+        // Data-only roots have no node_modules; they must not break the whole scan.
+        const dependencyTargets = targets.flatMap((project) => (project.dependencies || []).map((dependencyPath) => ({ path: dependencyPath })));
+        const dependencySizes = await readSizes(dependencyTargets);
+        const otherSizes = await readSizes(OTHER_STORAGE);
         const projects = targets
             .filter((project) => projectSizes.has(path.normalize(project.path)))
             .map((project) => {
                 const bytes = projectSizes.get(path.normalize(project.path)) || 0;
-                const dependencyBytes = project.dependencies.reduce((sum, dependencyPath) => sum + (dependencySizes.get(path.normalize(dependencyPath)) || 0), 0);
+                const dependencyBytes = (project.dependencies || []).reduce((sum, dependencyPath) => sum + (dependencySizes.get(path.normalize(dependencyPath)) || 0), 0);
                 return {
                     id: project.id,
                     name: project.name,
@@ -283,4 +284,4 @@ async function getResourceUsage({ pm2Processes, apps, totalMemory, diskTotal }) 
     }
 }
 
-module.exports = { buildApplicationUsage, collectProcessTree, deploymentCopyTargets, getResourceUsage, parseProcessTable };
+module.exports = { buildApplicationUsage, buildStorageSnapshot, collectProcessTree, deploymentCopyTargets, getResourceUsage, parseProcessTable };

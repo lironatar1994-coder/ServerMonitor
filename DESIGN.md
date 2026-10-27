@@ -208,6 +208,7 @@ Petrol provides a single action accent against cool porcelain and white; slate a
 - Site rows share one column header for identity, three metrics and change. Each row shows its public domain/path beneath the name and a separate 44px external-link control. On mobile, three numeric columns remain aligned, change moves below identity and the external action sits below the metrics within an 84px minimum row (60px on desktop). Sites with no activity in either period fold under one quiet row. Client tables use the same alignment grammar, with concise inquiry/task headings.
 - Page rankings open a useful adjacent drill-down on desktop. On mobile the detail is a full-screen, focus-trapped dialog with inert background, a visible close control and no enclosing panel radius.
 - Controls wrap, names break within their column and grids collapse before the content becomes cramped. Verify desktop, 390px and 320px screens without page-level horizontal overflow.
+- Chart notes show two recent events with an explicit expander; all events remain on the chart. Custom calendar errors sit beside the fields, and the picker reopens on the active Israel dates. Service lists include refresh without resetting filters; failed storage measurement shows dashes and an explicit notice.
 
 ## Elevation & Depth
 

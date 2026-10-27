@@ -770,6 +770,7 @@
       "**Do** compose screens from shared components and local surface/status tokens.",
       "**Do** verify desktop and mobile layouts, keyboard focus, 44px targets and readable contrast.",
       "**Do** retain source distinctions, failures and measurement uncertainty in concise Hebrew.",
+      "**Do** keep chart events behind a two-row preview, custom-calendar errors beside their fields, and unavailable storage measurements as dashes with a recovery notice.",
       "**Do** keep infrastructure graphite and email presentation separately grounded in their source."
     ],
     "donts": [

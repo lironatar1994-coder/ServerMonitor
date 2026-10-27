@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { X, ExternalLink, Eye, Activity, MessageCircle, MousePointer2, Timer, ArrowDownToLine, TriangleAlert } from 'lucide-react';
 import { apiFetch, rangeQuery } from '../lib/api';
 import { pageName, PAGE_HINT } from '../lib/analyticsLabels';
 import { formatNumber, formatDateTime } from '../lib/format';
 import { DataState, Empty, Panel, Stat, StatRow } from './AnalyticsParts';
+import SiteLink from './SiteLink';
 
 export default function PageInsights({ app, path, resolveRange, onClose, onSelect }) {
   const [state, setState] = useState({ loading: true, data: null, error: '' });
@@ -12,7 +13,7 @@ export default function PageInsights({ app, path, resolveRange, onClose, onSelec
   const section = useRef(null);
   const close = useRef(onClose);
   useEffect(() => { close.current = onClose; }, [onClose]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const mobile = window.matchMedia('(max-width: 760px)');
     const oldOverflow = document.body.style.overflow;
     const siblings = [];
@@ -62,7 +63,7 @@ export default function PageInsights({ app, path, resolveRange, onClose, onSelec
           {data.next.length ? <ul className="insight-list">{data.next.map(row => <li key={row.path}><button className="text-action" type="button" onClick={() => onSelect(row.path)}>{pageName(row.path, app.name)}</button><b>{formatNumber(row.visits)} ביקורים</b></li>)}</ul> : <Empty text="לא נמדד מעבר נוסף" />}
           {data.engagement?.visits > 0 && <div className="engagement-strip"><span><Timer aria-hidden="true" />{formatNumber(Math.round(data.engagement.active_ms / 1000))} שנ׳ בממוצע</span><span><ArrowDownToLine aria-hidden="true" />{formatNumber(Math.round(data.engagement.scroll))}% גלילה</span></div>}
           {data.low_sample && <p className="status-line is-attention"><TriangleAlert aria-hidden="true" /> מדגם קטן</p>}
-          <div className="insight-actions"><a className="btn" href={destination.href} target="_blank" rel="noopener noreferrer"><ExternalLink aria-hidden="true" />לעמוד</a><Link className="btn" to={`/clients/${app.id}`}><MessageCircle aria-hidden="true" />פניות</Link></div>
+          <div className="insight-actions"><SiteLink className="btn" href={destination.href}><ExternalLink aria-hidden="true" />לעמוד</SiteLink><Link className="btn" to={`/clients/${app.id}`}><MessageCircle aria-hidden="true" />פניות</Link></div>
           <details className="measurement-details"><summary>מגבלות המדידה</summary><p>המדידה החלה ב־{formatDateTime(data.coverage_since)}. חוסר מדידה אינו מעיד בהכרח על סיום הביקור; ייתכנו חסימות מדידה. מדגם קטן אינו מספיק למסקנות. לחיצות קשר אינן פניות מאומתות ואין שיוך אוטומטי ביניהן.</p></details>
         </>}
       </DataState>

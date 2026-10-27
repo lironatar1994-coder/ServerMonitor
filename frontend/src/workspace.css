@@ -586,6 +586,9 @@ dialog.mobile-more { margin-block-start: auto; margin-block-end: 80px; inset: 0;
 .chart-notes time { color: var(--ink-muted); font-variant-numeric: tabular-nums; }
 .chart-notes small { color: var(--ink-muted); }
 .chart-notes__add { justify-self: start; }
+.chart-notes__toggle { justify-self: start; min-height: 44px; padding: .25rem 0; border: 0; background: transparent; color: var(--accent); font: inherit; font-size: .82rem; cursor: pointer; }
+.chart-notes__toggle:hover { text-decoration: underline; }
+.custom-range__error { margin: 0; color: var(--vermilion); font-size: .8rem; line-height: 1.5; }
 .chart-notes__form { display: flex; flex-wrap: wrap; gap: .5rem; }
 .chart-notes__form input { flex: 1 1 16rem; min-height: 44px; padding: .5rem .65rem; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--paper-light); color: var(--ink); font: inherit; }
 .diagnostics-link { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-height: 48px; margin-block-start: 1rem; padding: .6rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-light); color: var(--ink-muted); text-decoration: none; font-size: .86rem; }

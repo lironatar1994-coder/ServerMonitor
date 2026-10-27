@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ExternalLink, Plus, Search, X } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { ChevronLeft, ExternalLink, Plus, RefreshCw, Search, X } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import AddAppModal from "../components/AddAppModal";
 import SiteLink from "../components/SiteLink";
@@ -15,6 +15,7 @@ import { apiFetch } from "../lib/api";
 import { formatDateTime } from "../lib/format";
 import { getSessionSnapshot } from "../lib/session";
 import { serviceState } from "../lib/serviceState";
+import { useVisiblePolling } from "../lib/useVisiblePolling";
 
 const FILTERS = [
   { id: "all", label: "הכול" },
@@ -45,6 +46,7 @@ const Services = () => {
   const [operations, setOperations] = useState(null);
   const [operationsError, setOperationsError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
   const [filter, setFilter] = useState(
@@ -55,6 +57,7 @@ const Services = () => {
   const [search, setSearch] = useState(params.get("search") || "");
 
   const fetchApps = useCallback(async () => {
+    setRefreshing(true);
     try {
       const [catalog, health] = await Promise.all([
         apiFetch("/apps"),
@@ -68,13 +71,11 @@ const Services = () => {
       setError(fetchError.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => {
-    const timeout = window.setTimeout(fetchApps, 0);
-    return () => window.clearTimeout(timeout);
-  }, [fetchApps]);
+  useVisiblePolling(fetchApps);
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -114,6 +115,9 @@ const Services = () => {
           </span>
         }
       >
+        <button type="button" className="icon-btn" onClick={fetchApps} disabled={refreshing} aria-label="רענון שירותים" title="רענון שירותים">
+          <RefreshCw className={refreshing ? "is-spinning" : ""} aria-hidden="true" />
+        </button>
         {getSessionSnapshot()?.role === "owner" && (
           <button
             type="button"

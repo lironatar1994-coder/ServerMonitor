@@ -1,6 +1,21 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildApplicationUsage, collectProcessTree, deploymentCopyTargets, parseProcessTable } = require('../resourceUsage');
+const { buildApplicationUsage, buildStorageSnapshot, collectProcessTree, deploymentCopyTargets, parseProcessTable } = require('../resourceUsage');
+
+test('data-only roots keep their size without breaking project, dependency and backup totals', async () => {
+    const path = require('node:path');
+    const readSizes = async targets => new Map(targets.map(target => [path.normalize(target.path),
+        target.path.endsWith('node_modules') ? 100 : target.type === 'backup' ? 500 : 1000]));
+    const snapshot = await buildStorageSnapshot(100000, readSizes);
+    const data = snapshot.projects.find(project => project.id === 'dfus-reuven-data');
+    assert.equal(data.bytes, 1000);
+    assert.equal(data.dependency_bytes, 0);
+    assert.equal(data.disk_percent, 1);
+    assert.ok(snapshot.projects.find(project => project.id === 'server-monitor').dependency_bytes > 0);
+    assert.ok(snapshot.totals.project_bytes > data.bytes);
+    assert.ok(snapshot.totals.dependency_bytes > 0);
+    assert.ok(snapshot.totals.backup_bytes > 0);
+});
 
 test('storage ownership includes only named deployment copies and never symlinks', () => {
     const entry = (name, directory = true, symlink = false) => ({ name, isDirectory: () => directory, isSymbolicLink: () => symlink });

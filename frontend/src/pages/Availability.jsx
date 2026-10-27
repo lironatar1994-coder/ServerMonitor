@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, RefreshCw } from 'lucide-react';
 import { DataState, Empty, Panel, PageHead, Stat, StatRow } from '../components/AnalyticsParts';
 import OpsTabs from '../components/OpsTabs';
 import { apiFetch } from '../lib/api';
 import { formatAgo, formatDateTime, formatNumber } from '../lib/format';
+import { useVisiblePolling } from '../lib/useVisiblePolling';
 
 const percent = (value) => value == null ? '—' : `${value >= 99.995 ? '100' : value.toFixed(2)}%`;
 const speed = (ms) => ms == null ? '—' : ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${formatNumber(ms)} ms`;
@@ -36,7 +37,7 @@ export default function Availability() {
     catch (e) { setError(e.message); }
     finally { setLoading(false); }
   }, []);
-  useEffect(() => { const timer = setTimeout(load, 0); return () => clearTimeout(timer); }, [load]);
+  useVisiblePolling(load);
 
   // Down first, then sites the server reaches but visitors can't, then the least available.
   const outsideFails = (row) => outside(row.external).tone === 'is-danger';
@@ -52,7 +53,7 @@ export default function Availability() {
   return (
     <div className="page page--infrastructure page--availability">
       <PageHead title="תפעול" meta={<span className="muted">זמינות ומהירות</span>}>
-        <button type="button" className="icon-btn" onClick={load} aria-label="רענון" title="רענון"><RefreshCw className={loading ? 'is-spinning' : ''} aria-hidden="true" /></button>
+        <button type="button" className="icon-btn" onClick={load} disabled={loading} aria-label="רענון" title="רענון"><RefreshCw className={loading ? 'is-spinning' : ''} aria-hidden="true" /></button>
       </PageHead>
       <OpsTabs />
       <DataState loading={loading && !apps} error={error} onRetry={load}>

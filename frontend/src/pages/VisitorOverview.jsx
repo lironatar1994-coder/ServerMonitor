@@ -33,6 +33,7 @@ import { ChartNotes } from "../components/SiteInsights";
 import TrafficChart from "../components/TrafficChart";
 import { previousRange, rangeSearch } from "../lib/dailyCheck";
 import { VISITOR_HINT, CONNECTION_HINT } from "../lib/analyticsLabels";
+import { useVisiblePolling } from "../lib/useVisiblePolling";
 
 const siteLocation = (value) => {
   try {
@@ -94,14 +95,10 @@ const VisitorOverview = () => {
     },
     [resolveRange],
   );
+  useVisiblePolling(fetchAnalytics, 30000);
   useEffect(() => {
-    const initial = setTimeout(fetchAnalytics, 0),
-      interval = setInterval(() => fetchAnalytics(true), 30000);
     return () => {
-      clearTimeout(initial);
-      clearInterval(
-        interval,
-      ); /* Invalidate requests from the previous route/range. */
+      /* Invalidate requests from the previous route/range. */
       // eslint-disable-next-line react-hooks/exhaustive-deps
       request.current++;
     };

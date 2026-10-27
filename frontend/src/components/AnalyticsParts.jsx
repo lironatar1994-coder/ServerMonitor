@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { CalendarDays, Check, ChevronLeft, Clock3, Info, Minus, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
 import { formatDateTime, formatNumber } from '../lib/format';
 import { changeLabel } from '../lib/dailyCheck';
+import { calendarRange, inputDate } from '../lib/calendarRange';
 
 const RANGE_OPTIONS = [
   { days: 1, label: '24 שעות' },
@@ -9,10 +10,6 @@ const RANGE_OPTIONS = [
   { days: 30, label: '30 יום' },
   { days: 90, label: '90 יום' }
 ];
-
-const toInputDate = (date) => date.toISOString().slice(0, 10);
-const today = toInputDate(new Date());
-const weekAgo = toInputDate(new Date(Date.now() - 7 * 86400000));
 
 /** Small “why” affordance so caveats live in one icon instead of a paragraph per metric. */
 export const Hint = ({ text }) => (
@@ -100,18 +97,27 @@ export const Panel = ({ title, hint, action, children, className = '', bleed = f
   </section>
 );
 
-const CustomRange = ({ onApply, active, onClear }) => {
+const CustomRange = ({ onApply, active, range, onClear }) => {
   const [open, setOpen] = useState(false);
-  const [from, setFrom] = useState(weekAgo);
-  const [to, setTo] = useState(today);
+  const [from, setFrom] = useState(() => inputDate(Date.now() - 7 * 86400000));
+  const [to, setTo] = useState(() => inputDate());
+  const [attempted, setAttempted] = useState(false);
+  const errorId = useId();
   const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const today = inputDate();
+  const result = calendarRange(from, to);
+  const error = attempted ? result.error : '';
 
   useEffect(() => {
     if (!open) return undefined;
+    containerRef.current?.querySelector('input')?.focus();
     const handlePointer = (event) => {
       if (!containerRef.current?.contains(event.target)) setOpen(false);
     };
-    const handleKey = (event) => event.key === 'Escape' && setOpen(false);
+    const handleKey = (event) => {
+      if (event.key === 'Escape') { event.preventDefault(); setOpen(false); triggerRef.current?.focus(); }
+    };
     document.addEventListener('mousedown', handlePointer);
     document.addEventListener('keydown', handleKey);
     return () => {
@@ -120,34 +126,44 @@ const CustomRange = ({ onApply, active, onClear }) => {
     };
   }, [open]);
 
-  const handleApply = () => {
-    const fromDate = new Date(`${from}T00:00:00`);
-    const toDate = new Date(`${to}T23:59:59`);
-    if (fromDate >= toDate) return;
-    onApply({ from: fromDate.toISOString(), to: toDate.toISOString() });
+  const handleApply = (event) => {
+    event.preventDefault();
+    setAttempted(true);
+    if (result.error) return;
+    onApply(result.range);
     setOpen(false);
+    triggerRef.current?.focus();
   };
 
   return (
     <div className="custom-range" ref={containerRef}>
       <button
+        ref={triggerRef}
         type="button"
         className={`custom-range__trigger ${active ? 'is-active' : ''}`}
         aria-expanded={open}
         aria-label="טווח מותאם"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          if (!open) {
+            setFrom(range?.from ? inputDate(range.from) : inputDate(Date.now() - 7 * 86400000));
+            setTo(range?.to ? inputDate(range.to) : today);
+            setAttempted(false);
+          }
+          setOpen((current) => !current);
+        }}
       >
         <CalendarDays aria-hidden="true" />
       </button>
       {open && (
-        <div className="custom-range__panel">
-          <label>מתאריך<input type="date" max={today} value={from} onChange={(event) => setFrom(event.target.value)} /></label>
-          <label>עד תאריך<input type="date" max={today} value={to} onChange={(event) => setTo(event.target.value)} /></label>
+        <form className="custom-range__panel" onSubmit={handleApply} noValidate>
+          <label>מתאריך<input type="date" max={today} value={from} aria-invalid={Boolean(error)} aria-describedby={error ? errorId : undefined} onChange={(event) => setFrom(event.target.value)} /></label>
+          <label>עד תאריך<input type="date" max={today} value={to} aria-invalid={Boolean(error)} aria-describedby={error ? errorId : undefined} onChange={(event) => setTo(event.target.value)} /></label>
+          {error && <p className="custom-range__error" id={errorId} role="alert">{error}</p>}
           <div className="custom-range__actions">
             {active && <button type="button" className="is-ghost" onClick={() => { onClear(); setOpen(false); }}>איפוס</button>}
-            <button type="button" onClick={handleApply}><Check aria-hidden="true" /> הצגה</button>
+            <button type="submit"><Check aria-hidden="true" /> הצגה</button>
           </div>
-        </div>
+        </form>
       )}
     </div>
   );
@@ -155,7 +171,7 @@ const CustomRange = ({ onApply, active, onClear }) => {
 
 // Typing in a field or an open dialog keeps keys for themselves.
 const isTypingTarget = (event) => event.ctrlKey || event.metaKey || event.altKey
-  || Boolean(document.querySelector('dialog[open]'))
+  || Boolean(document.querySelector('dialog[open], [role="dialog"][aria-modal="true"], .custom-range__panel'))
   || /^(INPUT|TEXTAREA|SELECT)$/.test(event.target?.tagName || '') || event.target?.isContentEditable;
 
 export const RangePicker = ({ days, onChange, loading, onRefresh, onCustom, customActive = false, updatedAt, range }) => {
@@ -186,7 +202,7 @@ export const RangePicker = ({ days, onChange, loading, onRefresh, onCustom, cust
         </button>
       ))}
     </div>
-    {onCustom && <CustomRange onApply={onCustom} active={customActive} onClear={() => onChange(days || 7)} />}
+    {onCustom && <CustomRange onApply={onCustom} active={customActive} range={range} onClear={() => onChange(days || 7)} />}
     {onRefresh && (
       <button type="button" className="range-picker__refresh" onClick={onRefresh} disabled={loading} aria-label="רענון נתונים" title="רענון (R)">
         <RefreshCw className={loading ? 'is-spinning' : ''} aria-hidden="true" />

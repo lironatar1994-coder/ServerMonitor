@@ -113,6 +113,7 @@ export function ScriptErrorsPanel({ appId, range }) {
 export function ChartNotes({ appId = null, range, onMarks }) {
   const [data, setData] = useState({ notes: [], deploys: [] });
   const [adding, setAdding] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [text, setText] = useState('');
   const [error, setError] = useState('');
   const user = getSessionSnapshot();
@@ -143,7 +144,7 @@ export function ChartNotes({ appId = null, range, onMarks }) {
     <div className="chart-notes">
       {items.length > 0 && (
         <ul>
-          {items.slice(0, 8).map((item) => (
+          {items.slice(0, expanded ? items.length : 2).map((item) => (
             <li key={`${item.kind}-${item.id || item.app_id}-${item.at}`}>
               {item.kind === 'note' ? <StickyNote aria-label="הערה" /> : <Rocket aria-label="הפעלה מחדש או פריסה" />}
               <time>{formatDateTime(item.at)}</time>
@@ -156,6 +157,9 @@ export function ChartNotes({ appId = null, range, onMarks }) {
           ))}
         </ul>
       )}
+      {items.length > 2 && <button type="button" className="chart-notes__toggle" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>
+        {expanded ? 'הצגת האחרונים' : `עוד ${formatNumber(items.length - 2)} אירועים`}
+      </button>}
       {canWrite && (adding ? (
         <form onSubmit={save} className="chart-notes__form">
           <input value={text} onChange={(e) => setText(e.target.value)} maxLength={200} required autoFocus placeholder="מה השתנה? למשל: קמפיין חדש עלה" aria-label="טקסט ההערה" />

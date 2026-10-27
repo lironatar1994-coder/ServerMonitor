@@ -18,6 +18,8 @@
 - `src/components/ProductAnalytics.jsx` owns reusable engagement heatmaps, named click/visibility zones, and scroll reach, plus PDF Studio usage totals and per-tool outcomes.
 - `TrafficChart.jsx` owns one selected browser metric with a dashed preceding-period series; `SiteSwitcher.jsx` owns searchable date-preserving site navigation. `lib/dailyCheck.js` owns small-sample comparison language, equal-period range math and sparse bucket alignment. Reuse existing read-only APIs.
 - `src/lib/useRange.js` owns the analytics time range shared across screens.
+- `lib/calendarRange.js` validates custom calendar periods before loading, using complete Israel days and DST boundaries; missing, reversed, future and over-90-day selections get an inline error. Reopening the picker uses the active dates; Escape restores its trigger.
+- `lib/useVisiblePolling.js` pauses overview, services and availability reads in hidden tabs, prevents overlapping scheduled reads, and refreshes on return. Service refresh preserves filters and makes pending work explicit.
 - `src/pages/` owns route-level screens.
 - `src/components/` owns reusable dashboard widgets and app templates.
 - `public/` and `src/assets/` own static browser assets.
@@ -26,6 +28,8 @@
 ## Local Contracts
 
 - `SiteLink` (with `lib/siteLinks.js`) is the only way to link a public site: a clean href for copying and an ordinary click that opens it with `?monitor_internal=1`. `InternalVisits` lists monitored domains in Settings with mark/clear actions.
+- Page drill-downs release inert backgrounds and restore their originating row during the layout phase before paint, including when switching from the overview to the pages tab. Their public-page action uses `SiteLink` too.
+- Chart notes show the latest two events by default with an accessible expander for the complete returned list; chart markers retain all events. Storage failures show unmeasured values and retry guidance, never zero totals.
 - `RangePicker` binds keys 1–4 and R outside fields and dialogs; `AppShell` binds `/` to the page search and polls `/apps` every minute while visible for the tab-title count and the server-destination badge.
 - `QuickSwitch.jsx` owns global Ctrl/Cmd+K navigation, keyboard selection, app/domain matching and explicit-date preservation. Fetch only the monitoring catalog; never search decrypted vault content. Reuse the native modal and keep the shortcut inactive while another dialog is open.
 - The site ledger supports all/activity/attention filters and distinct detail versus direct-public-site links; opening a site never supplies stored credentials. Every repeated external link has a contextual accessible label and 44px target.

@@ -41,8 +41,8 @@ const toneFor = (percentage) => {
   return "forest";
 };
 
-const ResourceRows = ({ items, kind }) => {
-  if (!items.length) return <Empty text="הפירוט זמין בשרת Linux" />;
+const ResourceRows = ({ items, kind, empty = "הפירוט זמין בשרת Linux" }) => {
+  if (!items.length) return <Empty text={empty} />;
   const peak = Math.max(
     ...items.map(
       (item) =>
@@ -342,16 +342,16 @@ const Infrastructure = () => {
               <small>תלויות</small>
               <strong>
                 <bdi dir="ltr">
-                  {storage?.totals ? formatBytes(storage.totals.dependency_bytes) : "—"}
+                  {Number.isFinite(storage?.totals?.dependency_bytes) ? formatBytes(storage.totals.dependency_bytes) : "—"}
                 </bdi>
               </strong>
-              <b>{storage?.projects ? `${storage.projects.length} פרויקטים` : "האחסון נסרק"}</b>
+              <b>{storage?.error && !storage.projects?.length ? "לא נמדד" : storage?.projects ? `${storage.projects.length} פרויקטים` : "האחסון נסרק"}</b>
             </span>
             <span>
               <small>גיבויים ו-Rollback</small>
               <strong>
                 <bdi dir="ltr">
-                  {storage?.totals
+                  {Number.isFinite(storage?.totals?.backup_bytes) && Number.isFinite(storage?.totals?.rollback_bytes)
                     ? formatBytes(
                         (Number(storage.totals.backup_bytes) || 0) +
                           (Number(storage.totals.rollback_bytes) || 0),
@@ -361,7 +361,8 @@ const Infrastructure = () => {
               </strong>
             </span>
           </div>
-          <ResourceRows items={showAllResources ? selectedItems : selectedItems.slice(0, 8)} kind={resourceView} />
+          {storage?.error && <p className="status-line is-attention" role="status">פירוט האחסון לא עודכן{storage.projects?.length ? ` · מוצגת הבדיקה מ־${formatDateTime(storage.updated_at)}` : " · לא נמדד"}</p>}
+          <ResourceRows items={showAllResources ? selectedItems : selectedItems.slice(0, 8)} kind={resourceView} empty={resourceView === "storage" ? (storage?.error ? "פירוט האחסון אינו זמין. אפשר לנסות לרענן." : "סריקת האחסון טרם הושלמה") : undefined} />
           {selectedItems.length > 8 && (
             <button type="button" className="idle-toggle" aria-expanded={showAllResources} onClick={() => setShowAllResources((value) => !value)}>
               {showAllResources ? "הצגת 8 המובילים" : `עוד ${formatNumber(selectedItems.length - 8)}`}

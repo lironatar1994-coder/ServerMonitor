@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChartNoAxesCombined, Link2, ChevronLeft, ChevronRight, ExternalLink, Eye, Activity, Globe, MapPin, MonitorSmartphone, PanelsTopLeft, Search, Users, X } from 'lucide-react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch, rangeQuery } from '../lib/api';
@@ -70,7 +70,7 @@ const VisitorDetail = ({ diagnostics = false }) => {
     else { next.delete('page'); next.set('view', 'pages'); }
     setQuery(next, { replace: !trigger });
   };
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!selectedPath && wasOpen.current) {
       const row = origin.current?.isConnected ? origin.current : document.querySelector(`[data-page-path="${CSS.escape(originPath.current || wasOpen.current)}"]`);
       (row || document.querySelector('.workspace-tabs button'))?.focus({ preventScroll: true });
@@ -159,7 +159,7 @@ const VisitorDetail = ({ diagnostics = false }) => {
               : <Link className="crumb" to={`/visitors${rangeSearch(data?.range || resolveRange())}`}><ChevronRight aria-hidden="true" /> אתרים</Link>}
             {data?.app && (
               <span className={`chip ${data.app.status === 'online' ? 'is-online' : 'is-offline'}`}>
-                {data.app.status === 'online' ? 'זמין' : 'לא זמין'}
+                {data.app.status === 'online' ? 'זמין' : data.app.status === 'unknown' ? 'לא נבדק' : 'לא זמין'}
               </span>
             )}
             {data?.app?.url && (
@@ -184,7 +184,7 @@ const VisitorDetail = ({ diagnostics = false }) => {
       <DataState loading={loading && !data} error={error} onRetry={fetchAnalytics}>
         {!diagnostics && <>
         <TrackingStatus health={data?.tracking_health} site={data?.app?.name} />
-        {data?.app?.status && data.app.status !== 'online' && <div className="attention-list"><Link to={`/services/${id}`}>האתר לא זמין בבדיקה האחרונה <ChevronLeft aria-hidden="true" /></Link></div>}
+        {data?.app?.status && data.app.status !== 'online' && <div className="attention-list"><Link to={`/services/${id}`}>{data.app.status === 'unknown' ? 'זמינות האתר טרם נבדקה' : 'האתר לא זמין בבדיקה האחרונה'} <ChevronLeft aria-hidden="true" /></Link></div>}
         <StatRow>
           <Stat icon={Users} label="מבקרים משוערים" value={summary.browser_signal_visitors} previous={data?.comparison?.previous?.browser_signal_visitors} tone="forest" />
           <Stat icon={Activity} label="ביקורים" value={summary.browser_signal_sessions} previous={data?.comparison?.previous?.browser_signal_sessions} />

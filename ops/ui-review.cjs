@@ -31,7 +31,7 @@ const check = async (name, fn) => { try { await fn(); results.push({ name, ok: t
       await page.route('**/api/apps/operational-health', route => route.fulfill({json:operational}));
     }
     const ready = async route => { await page.goto(base + route); await page.locator('.page h1, .login h1').waitFor(); await page.locator('.skeleton-stack,.page-loader').first().waitFor({ state: 'hidden' }); await page.evaluate(() => document.fonts.ready); assert.equal(await page.locator('.error-state').count(), 0); };
-    const routes = ['/visitors', `/visitors/${id}`, '/clients', `/clients/${id}`, '/infrastructure', '/services', `/services/${id}`, '/settings'];
+    const routes = ['/visitors', `/visitors/${id}`, '/clients', `/clients/${id}`, '/infrastructure', '/services', `/services/${id}`, '/operations/availability', '/operations/backups', '/settings'];
     if (process.env.UI_REVIEW_EXTRA_ONLY) {
       routes.splice(0, routes.length, ...apps.filter(app => ['PDF Studio','Seder','Miryam Zelig','אבטחת SSH'].includes(app.name))
         .map(app => `/${app.analytics_enabled ? 'visitors' : 'services'}/${app.id}`));
@@ -67,7 +67,10 @@ const check = async (name, fn) => { try { await fn(); results.push({ name, ok: t
       assert.equal(new URL(page.url()).pathname, `/serve-monitor/visitors/${seder.id}`);
       await ready('/server');assert.equal(new URL(page.url()).pathname,'/serve-monitor/infrastructure');
       await ready('/dashboard');assert.equal(new URL(page.url()).pathname,'/serve-monitor/visitors');
+      // An idle site is intentionally folded; search makes the link observable in any period.
+      await page.getByLabel('חיפוש אתר',{exact:true}).fill('LA webs');
       const open=page.getByRole('link',{name:'פתיחת האתר LA webs',exact:true});assert.equal(await open.getAttribute('href'),apps.find(app=>app.id===id).url);
+      await page.getByLabel('חיפוש אתר',{exact:true}).fill('');
       await page.getByRole('button',{name:'עם פעילות',exact:true}).click();
       assert.ok(await page.locator('.comparison-list li').count() <= apps.filter(app=>app.analytics_enabled).length);
       await page.getByRole('button',{name:'הכול',exact:true}).click();
@@ -85,6 +88,23 @@ const check = async (name, fn) => { try { await fn(); results.push({ name, ok: t
     const end = Math.floor(Date.now() / 86400000) * 86400000;
     const from = new Date(end - 3 * 86400000).toISOString(), to = new Date(end).toISOString();
     const dates = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+    await check('custom-calendar-validation-and-focus', async () => {
+      await ready(`/visitors${dates}`);
+      await page.getByRole('button', { name: 'טווח מותאם', exact: true }).click();
+      const start = page.getByLabel('מתאריך', { exact: true });
+      const end = page.getByLabel('עד תאריך', { exact: true });
+      const { inputDate } = await import('../frontend/src/lib/calendarRange.js');
+      assert.equal(await start.inputValue(), inputDate(from));
+      await start.fill('2026-01-01'); await end.fill('2026-10-01');
+      await page.getByRole('button', { name: 'הצגה', exact: true }).click();
+      await page.getByText('אפשר להציג עד 90 יום בכל פעם', { exact: true }).waitFor();
+      assert.equal(new URL(page.url()).searchParams.get('from'), from);
+      await start.fill('2026-10-02'); await end.fill('2026-10-01');
+      await page.getByRole('button', { name: 'הצגה', exact: true }).click();
+      await page.getByText('תאריך הסיום צריך להיות אחרי תאריך ההתחלה', { exact: true }).waitFor();
+      await page.keyboard.press('Escape');
+      assert.ok(await page.getByRole('button', { name: 'טווח מותאם', exact: true }).evaluate(el => el === document.activeElement));
+    });
     await check('shared-page-pins-preset-dates', async () => {
       await ready(`/visitors/${id}`);
       await page.getByRole('button', { name: '7 ימים', exact: true }).click();
@@ -102,6 +122,11 @@ const check = async (name, fn) => { try { await fn(); results.push({ name, ok: t
       await page.setViewportSize({ width, height: 960 }); await ready(`/visitors/${id}${dates}`);
       const row = page.locator('.ranked-row__button').first(); const selected = await row.getAttribute('data-page-path');
       await row.focus(); await page.keyboard.press('Enter'); await page.locator('.page-insights h3').first().waitFor();
+      await page.keyboard.press('Escape'); await page.locator('.page-insights').waitFor({ state: 'hidden' });
+      assert.equal(await page.evaluate(() => document.activeElement.dataset.pagePath), selected);
+      assert.equal(await page.locator('[inert]').count(), 0);
+      await page.locator('.ranked-row__button').first().click();
+      await page.locator('.page-insights h3').first().waitFor();
       assert.equal(new URL(page.url()).searchParams.get('page'), selected);
       if(width < 760) assert.equal(Math.round((await page.locator('.page-insights').boundingBox()).y), 0);
       assert.equal(new URL(page.url()).searchParams.get('from'), from);
