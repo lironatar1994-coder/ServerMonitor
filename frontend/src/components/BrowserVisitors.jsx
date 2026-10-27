@@ -8,6 +8,8 @@ import { DataState, Empty, Hint, Panel } from './AnalyticsParts';
 import Modal from './Modal';
 
 const deviceName = value => ({ Mobile: 'נייד', Desktop: 'מחשב' })[value] || 'מכשיר לא ידוע';
+const visitsLabel = value => `${formatNumber(value)} ${value === 1 ? 'ביקור' : 'ביקורים'}`;
+const viewsLabel = value => `${formatNumber(value)} ${value === 1 ? 'צפייה' : 'צפיות'}`;
 const actionName = row => ({ contact_click: `לחיצה ל${({ whatsapp: 'וואטסאפ', phone: 'טלפון', email: 'דוא״ל' })[row.label] || 'יצירת קשר'}`,
   form_start: 'התחלת מילוי טופס', form_submit: 'ניסיון שליחת טופס', form_error: 'שגיאה בטופס',
   form_success_observed: 'הוצגה הודעת הצלחה בטופס', project_open: 'פתיחת פרויקט', outbound_click: 'מעבר לאתר חיצוני',
@@ -37,19 +39,19 @@ function BrowserHistory({ appId, appName, range, visitor, onClose }) {
       {summary?.visits > 0 ? <>
         <div className="visitor-history__summary">
           <strong>{summary.visits > 1 ? 'מבקר חוזר' : 'ביקור ראשון שנשמר'}<Hint text="חוזר פירושו שנמדד יותר מביקור אחד באותו דפדפן אנונימי באתר הזה. ביקור חדש מתחיל אחרי 30 דקות ללא פתיחת עמוד שנמדדה. מחיקת אחסון או החלפת דפדפן יוצרת מזהה אחר." /></strong>
-          <span><b>{formatNumber(summary.visits)}</b> ביקורים · <b>{formatNumber(summary.page_views)}</b> צפיות בהיסטוריה</span>
+          <span><b>{visitsLabel(summary.visits)}</b> · <b>{viewsLabel(summary.page_views)}</b> בהיסטוריה</span>
           <span>נראה לראשונה: <bdi>{formatDateTime(summary.first_seen)}</bdi></span>
           <span>נראה לאחרונה: <bdi>{formatDateTime(summary.last_seen)}</bdi></span>
         </div>
         <p className="status-line">היסטוריה שנשמרה עד 90 יום, עד סוף הטווח שנבחר.</p>
         <ol className="visitor-visit-list">
           {result.visits.map((visit, index) => <li key={`${visit.first_seen}:${index}`}>
-            <div className="visitor-visit-list__head"><strong><bdi>{formatDateTime(visit.first_seen)}</bdi></strong><span>{formatNumber(visit.page_views)} צפיות · {visit.in_period ? 'בטווח שנבחר' : 'ביקור קודם'}</span></div>
+            <div className="visitor-visit-list__head"><strong><bdi>{formatDateTime(visit.first_seen)}</bdi></strong><span>{viewsLabel(visit.page_views)} · {visit.in_period ? 'בטווח שנבחר' : 'ביקור קודם'}</span></div>
             <ol className="visitor-steps">
               {[...visit.pages.map(row => ({ ...row, type: 'page' })), ...visit.actions.map(row => ({ ...row, type: 'action' }))]
                 .sort((a, b) => a.occurred_at.localeCompare(b.occurred_at)).map((row, i) => <li key={`${row.occurred_at}:${i}`}>
                   <time><bdi>{formatDateTime(row.occurred_at)}</bdi></time>
-                  <span>{row.type === 'page' ? pageName(row.path, appName) : actionName(row)}{row.type === 'action' && <small><bdi>{row.path}</bdi></small>}</span>
+                  <span><bdi>{row.type === 'page' ? pageName(row.path, appName) : actionName(row)}</bdi>{row.type === 'action' && <small><bdi>{row.path}</bdi></small>}</span>
                 </li>)}
             </ol>
             {visit.page_views > visit.pages.length && <p className="status-line">מוצגות {formatNumber(visit.pages.length)} הצפיות הראשונות בביקור הזה.</p>}
@@ -96,7 +98,7 @@ export default function BrowserVisitors({ appId, appName, range }) {
         <ul className="browser-ledger">
           {result?.visitors.map(visitor => <li key={visitor.visitor_id}><button onClick={() => select(visitor.visitor_id)} aria-label={`פרטים והיסטוריה של מבקר ${visitor.visitor_id.slice(0, 8)}`}>
             <span className="browser-ledger__identity"><strong>מבקר <bdi>{visitor.visitor_id.slice(0, 8)}</bdi></strong><small>{deviceName(visitor.device)} · {visitor.returning ? 'חוזר' : 'ביקור יחיד שנשמר'}{visitor.seen_before_period ? ' · נמדד גם לפני הטווח' : ''}</small></span>
-            <span className="browser-ledger__activity"><b>{formatNumber(visitor.visits)} ביקורים · {formatNumber(visitor.page_views)} צפיות</b><small><bdi>{formatDateTime(visitor.last_seen)}</bdi></small><span className="is-path"><bdi>{pageName(visitor.latest_path, appName)}</bdi></span></span>
+            <span className="browser-ledger__activity"><b>{visitsLabel(visitor.visits)} · {viewsLabel(visitor.page_views)}</b><small><bdi>{formatDateTime(visitor.last_seen)}</bdi></small><span className="is-path"><bdi>{pageName(visitor.latest_path, appName)}</bdi></span></span>
             <ChevronLeft aria-hidden="true" />
           </button></li>)}
         </ul>
