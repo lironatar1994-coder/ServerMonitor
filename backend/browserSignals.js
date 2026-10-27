@@ -341,8 +341,8 @@ function recordBrowserSignal({ body, ip, userAgent, siteUrl }) {
     const visitorHash = hashIdentifier(`${app.id}:${signal.visitorId}`, key);
     const sessionHash = hashIdentifier(`${app.id}:${signal.sessionId}`, key);
     const previous = db.prepare(`SELECT visit_hash, occurred_at FROM browser_signals
-        WHERE app_id=? AND visitor_hash=? AND session_hash=? ORDER BY occurred_at DESC, id DESC LIMIT 1`)
-        .get(app.id, visitorHash, sessionHash);
+        WHERE app_id=? AND visitor_hash=? ORDER BY occurred_at DESC, id DESC LIMIT 1`)
+        .get(app.id, visitorHash);
     const visitHash = previous && Date.parse(occurredAt) - Date.parse(previous.occurred_at) < 30 * 60000
         ? previous.visit_hash : signal.eventId;
     const result = db.prepare(`

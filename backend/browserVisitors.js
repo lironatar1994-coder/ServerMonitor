@@ -44,10 +44,10 @@ function browserHistory(app, range, query) {
         COUNT(DISTINCT CASE WHEN occurred_at>=? THEN visit_hash END) AS period_visits
         FROM browser_signals WHERE app_id=? AND visitor_hash=? AND automation_hint=0 AND occurred_at>=? AND occurred_at<?`)
         .get(range.from, app.id, visitor, from, range.to);
-    const visits = db.prepare(`SELECT visit_hash,session_hash,MIN(occurred_at) AS first_seen,
+    const visits = db.prepare(`SELECT visit_hash,MIN(occurred_at) AS first_seen,
         MAX(occurred_at) AS last_seen,COUNT(*) AS page_views FROM browser_signals
         WHERE app_id=? AND visitor_hash=? AND automation_hint=0 AND occurred_at>=? AND occurred_at<?
-        GROUP BY visit_hash,session_hash ORDER BY first_seen DESC LIMIT 10 OFFSET ?`)
+        GROUP BY visit_hash ORDER BY first_seen DESC LIMIT 10 OFFSET ?`)
         .all(app.id, visitor, from, range.to, (page - 1) * 10);
     for (const visit of visits) {
         visit.pages = db.prepare(`SELECT occurred_at,path FROM browser_signals WHERE app_id=? AND visitor_hash=?
@@ -55,15 +55,16 @@ function browserHistory(app, range, query) {
             ORDER BY occurred_at,id LIMIT 80`).all(app.id, visitor, visit.visit_hash, from, range.to);
         const until = new Date(Math.min(Date.parse(range.to), Date.parse(visit.last_seen) + 30 * 60000)).toISOString();
         visit.actions = db.prepare(`SELECT occurred_at,event_type,label,path FROM growth_events WHERE app_id=?
-            AND browser_session_hash=? AND automation_hint=0 AND event_type!='page_view'
+            AND browser_session_hash IN (SELECT session_hash FROM browser_signals WHERE app_id=? AND visitor_hash=? AND visit_hash=? AND automation_hint=0)
+            AND automation_hint=0 AND event_type!='page_view'
             AND occurred_at>=? AND occurred_at<? ORDER BY occurred_at,id LIMIT 80`)
-            .all(app.id, visit.session_hash, visit.first_seen, until);
+            .all(app.id, app.id, visitor, visit.visit_hash, visit.first_seen, until);
         const product = db.prepare(`SELECT occurred_at,event_type,label,path FROM product_events WHERE app_id=?
-            AND session_hash=? AND automation_hint=0 AND occurred_at>=? AND occurred_at<? ORDER BY occurred_at,id LIMIT 80`)
-            .all(app.id, visit.session_hash, visit.first_seen, until);
+            AND session_hash IN (SELECT session_hash FROM browser_signals WHERE app_id=? AND visitor_hash=? AND visit_hash=? AND automation_hint=0)
+            AND automation_hint=0 AND occurred_at>=? AND occurred_at<? ORDER BY occurred_at,id LIMIT 80`)
+            .all(app.id, app.id, visitor, visit.visit_hash, visit.first_seen, until);
         visit.actions = [...visit.actions, ...product].sort((a,b) => a.occurred_at.localeCompare(b.occurred_at)).slice(0,80);
         visit.in_period = visit.last_seen >= range.from;
-        delete visit.session_hash;
         delete visit.visit_hash;
     }
     return { visitor_id: visitor, summary, visits, page, limit: 10, has_more: page * 10 < summary.visits,

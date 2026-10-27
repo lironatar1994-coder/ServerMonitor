@@ -246,17 +246,18 @@ db.exec(`
         PRIMARY KEY(app_id, session_hash, scope)
     );
 `);
-if (db.prepare('SELECT 1 FROM browser_signals WHERE visit_hash IS NULL LIMIT 1').get()) {
+const browserVisitRuleset = 'browser-visits-2026-10-27.2';
+if (db.prepare("SELECT value FROM monitor_metadata WHERE key='browser_visit_ruleset'").get()?.value !== browserVisitRuleset) {
     db.exec(`WITH ordered AS (
         SELECT id, app_id, visitor_hash, session_hash, occurred_at,
-            LAG(occurred_at) OVER (PARTITION BY app_id, visitor_hash, session_hash ORDER BY occurred_at, id) AS previous
+            LAG(occurred_at) OVER (PARTITION BY app_id, visitor_hash ORDER BY occurred_at, id) AS previous
         FROM browser_signals
     ), visits AS (
-        SELECT id, session_hash || ':' || SUM(CASE WHEN previous IS NULL OR
+        SELECT id, visitor_hash || ':' || SUM(CASE WHEN previous IS NULL OR
             (julianday(occurred_at)-julianday(previous))*86400 >= 1800 THEN 1 ELSE 0 END)
-            OVER (PARTITION BY app_id, visitor_hash, session_hash ORDER BY occurred_at, id) AS visit_hash FROM ordered
-    ) UPDATE browser_signals SET visit_hash=(SELECT visit_hash FROM visits WHERE visits.id=browser_signals.id)
-      WHERE visit_hash IS NULL`);
+            OVER (PARTITION BY app_id, visitor_hash ORDER BY occurred_at, id) AS visit_hash FROM ordered
+    ) UPDATE browser_signals SET visit_hash=(SELECT visit_hash FROM visits WHERE visits.id=browser_signals.id)`);
+    db.prepare("INSERT INTO monitor_metadata(key,value) VALUES('browser_visit_ruleset',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=CURRENT_TIMESTAMP").run(browserVisitRuleset);
 }
 
 try {
