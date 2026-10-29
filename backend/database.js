@@ -9,6 +9,8 @@ const db = new Database(dbPath, {
     verbose: process.env.NODE_ENV !== 'production' && process.env.DB_VERBOSE === 'true' ? console.log : undefined
 });
 db.pragma('journal_mode = WAL');
+// Shrink the WAL back after checkpoints instead of keeping its largest size on disk.
+db.pragma('journal_size_limit = 16777216');
 db.pragma('foreign_keys = ON');
 
 // Initialize schema

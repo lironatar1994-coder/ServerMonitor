@@ -99,6 +99,8 @@ if [ -n "${PREBUILT_FRONTEND:-}" ] && [ "$(basename "$PREBUILT_FRONTEND")" = "fr
   chown -R root:root "$FRONTEND_DIR/dist"
   chmod -R u=rwX,go=rX "$FRONTEND_DIR/dist"
   find "$(dirname "$PREBUILT_FRONTEND")" -maxdepth 1 -name 'frontend-dist-*.tar.gz' -delete
+  # Dashboard builds run on the PC; build-only packages would just occupy server disk.
+  rm -rf "$FRONTEND_DIR/node_modules"
 else
   echo "[INFO] No prebuilt dashboard for this commit; building it here at low priority..."
   (cd "$FRONTEND_DIR" && "${LOW_PRIORITY[@]}" npm ci -s && "${LOW_PRIORITY[@]}" npm run build)
