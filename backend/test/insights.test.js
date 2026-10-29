@@ -30,9 +30,10 @@ test('new inquiries are reported once, grouped per site, only after the first ru
 
 test('traffic spikes need a real baseline and a large enough change', () => {
     const site = app('Pinhas Ratzon');
-    const signal = db.prepare("INSERT INTO browser_signals (app_id, event_id, occurred_at, ip, visitor_hash, session_hash, path, automation_hint) VALUES (?, ?, ?, '1.1.1.1', 'v', ?, '/', 0)");
-    for (let d = 2; d <= 8; d++) for (let i = 0; i < 6; i++) signal.run(site.id, `old${d}_${i}_1234567890`, new Date(NOW - d * 86400000 + i * 60000).toISOString(), `s${d}_${i}`);
-    for (let i = 0; i < 40; i++) signal.run(site.id, `new${i}_1234567890ab`, new Date(NOW - 3600000 + i * 1000).toISOString(), `n${i}`);
+    const signal = db.prepare("INSERT INTO browser_signals (app_id, event_id, occurred_at, ip, visitor_hash, session_hash, visit_hash, path, automation_hint) VALUES (?, ?, ?, '1.1.1.1', 'v', ?, ?, '/', 0)");
+    const add = (event, at, session) => signal.run(site.id, event, at, session, session);
+    for (let d = 2; d <= 8; d++) for (let i = 0; i < 6; i++) add(`old${d}_${i}_1234567890`, new Date(NOW - d * 86400000 + i * 60000).toISOString(), `s${d}_${i}`);
+    for (let i = 0; i < 40; i++) add(`new${i}_1234567890ab`, new Date(NOW - 3600000 + i * 1000).toISOString(), `n${i}`);
     const spike = detectInsights(db, NOW).find((item) => item.key.startsWith(`traffic:${site.id}:up`));
     assert.ok(spike);
     assert.match(spike.body, /משוערים/);

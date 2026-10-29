@@ -39,8 +39,8 @@ test('builds per-client comparisons and safe HTML', () => {
     insert.run(appId, 4, '2026-07-10T10:00:00.000Z', '1.1.1.1', '/', 0, 1);
     insert.run(appId, 5, '2026-07-11T13:00:00.000Z', '1.1.1.1', '/images/hero.webp', 0, 0);
     db.prepare(`INSERT INTO browser_signals (
-        app_id, event_id, occurred_at, ip, visitor_hash, session_hash, path
-    ) VALUES (?, 'email-signal-event', '2026-07-11T10:01:00.000Z', '1.1.1.1', 'visitor-hash', 'session-hash', '/pricing')`).run(appId);
+        app_id, event_id, occurred_at, ip, visitor_hash, session_hash, visit_hash, path
+    ) VALUES (?, 'email-signal-event', '2026-07-11T10:01:00.000Z', '1.1.1.1', 'visitor-hash', 'session-hash', 'visit-hash', '/pricing')`).run(appId);
     const action = db.prepare(`INSERT INTO growth_events (app_id,event_id,occurred_at,session_hash,event_type,path,device,automation_hint)
         VALUES (?, ?, ?, 'session', ?, '/', 'desktop', ?)`);
     action.run(appId, 'contact', '2026-07-11T10:00:00.000Z', 'contact_click', 0);

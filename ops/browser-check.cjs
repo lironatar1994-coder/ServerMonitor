@@ -53,8 +53,12 @@ let browser;
   }
   await check('page-drill-down-and-plain-labels', async () => {
     await page.setViewportSize({ width: 390, height: 900 });
-    await page.goto(`${monitor}/visitors/${app.id}`);
+    // A linked 30-day range keeps a quiet day from leaving no page rows; zero traffic is not a failure.
+    const to = new Date(), from = new Date(to - 30 * 86400000);
+    await page.goto(`${monitor}/visitors/${app.id}?${new URLSearchParams({ from: from.toISOString(), to: to.toISOString() })}`);
     await page.locator('.stat__label').filter({ hasText: 'מבקרים משוערים' }).waitFor();
+    await page.locator('.skeleton-stack,.page-loader').waitFor({ state: 'hidden' });
+    if (!await page.locator('.ranked-row__button').count()) { console.log('NOTE page-drill-down: no recorded pages in 30 days'); return; }
     await page.locator('.ranked-row__button').first().click();
     await page.getByRole('heading', { name: 'פעולות המשך', exact: true }).waitFor();
     assert.ok(new URL(page.url()).searchParams.get('page'), 'Selected page missing from URL');
