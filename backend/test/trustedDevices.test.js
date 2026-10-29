@@ -88,7 +88,13 @@ test("cross-site requests, sign-out, password changes and removal end device tru
   const list = await (await call("/auth/devices", { cookie: `monitor-session=${set["monitor-session"]}; monitor-device=${set["monitor-device"]}` })).json();
   assert.equal(list.devices.length, 1);
   assert.equal(list.devices[0].current, true);
-  assert.equal((await call("/auth/logout", { method: "POST", cookie: `monitor-session=${set["monitor-session"]}; monitor-device=${set["monitor-device"]}`, csrf })).status, 200);
+  // The idle timeout ends the session but keeps the device.
+  assert.equal((await call("/auth/logout", { method: "POST", cookie: `monitor-session=${set["monitor-session"]}; monitor-device=${set["monitor-device"]}`, csrf, body: { idle: true } })).status, 200);
+  assert.equal((await call("/auth/devices", { cookie: `monitor-session=${set["monitor-session"]}` })).status, 401);
+  const reopened = await call("/auth/session", { cookie: `monitor-device=${set["monitor-device"]}` });
+  assert.equal((await reopened.json()).next, "ready");
+  Object.assign(set, cookies(reopened));
+  assert.equal((await call("/auth/logout", { method: "POST", cookie: `monitor-session=${set["monitor-session"]}; monitor-device=${set["monitor-device"]}`, csrf: (await (await call("/auth/session", { cookie: `monitor-session=${set["monitor-session"]}` })).json()).csrf })).status, 200);
   assert.equal((await call("/auth/session", { cookie: `monitor-device=${set["monitor-device"]}` })).status, 401);
 
   ({ device } = await signIn(true));

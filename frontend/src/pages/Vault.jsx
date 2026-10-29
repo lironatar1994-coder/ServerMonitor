@@ -70,7 +70,8 @@ export default function Vault() {
     returnFocus = useRef(null),
     detailHeading = useRef(null),
     statusRef = useRef(null),
-    activeEpoch = useRef(null);
+    activeEpoch = useRef(null),
+    autoOpen = useRef(false);
   const owner = user?.role === "owner",
     canEdit = ["owner", "editor"].includes(user?.role);
   const refreshStatus = useCallback(async () => {
@@ -219,8 +220,11 @@ export default function Vault() {
     const timer = setTimeout(() => setNotice(""), 4000);
     return () => clearTimeout(timer);
   }, [notice]);
-  const unlock = async (passphrase) => {
-    const current = await refreshStatus(),
+  // No vault passphrase: the signed-in session receives this person's unlock secret.
+  const unlockSecret = async () => (await apiFetch("/vault/unlock")).secret;
+  const unlock = async () => {
+    const passphrase = await unlockSecret(),
+      current = await refreshStatus(),
       client = ensureWorker();
     await client.call("unlock", {
       userId: user.id,
@@ -250,10 +254,20 @@ export default function Vault() {
       }
     }
   };
-  const create = async (passphrase) => {
+  // Opening the vault page opens the vault; after an automatic lock one click reopens it.
+  useEffect(() => {
+    if (loading || autoOpen.current) return;
+    autoOpen.current = true;
+    const current = statusRef.current;
+    if (current?.keys && (current.membership || (!current.state && owner)))
+      action(unlock);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+  const create = async () => {
     setBusy(true);
     try {
-      const client = ensureWorker(),
+      const passphrase = await unlockSecret(),
+        client = ensureWorker(),
         result = await client.call("setup", { userId: user.id, passphrase });
       await client.call("unlock", {
         userId: user.id,
@@ -298,8 +312,9 @@ export default function Vault() {
         lock("המפתח נוצר. בעלים יכולים כעת לאשר את הגישה.");
       }
     });
-  const recover = async (recoveryCode, passphrase) => {
-    const client = ensureWorker(),
+  const recover = async (recoveryCode) => {
+    const passphrase = await unlockSecret(),
+      client = ensureWorker(),
       record = await client.call("recover", {
         userId: user.id,
         recoveryCode,
@@ -311,8 +326,9 @@ export default function Vault() {
         method: "PUT",
         body: JSON.stringify(record),
       });
-      lock("הסיסמה עודכנה. אפשר לפתוח את הכספת.");
+      lock();
       await refreshStatus();
+      await unlock();
     });
   };
   const select = (entry, event) => {
@@ -511,7 +527,7 @@ export default function Vault() {
             user={user}
             busy={busy}
             setup={setup}
-            onUnlock={(pass) => action(() => unlock(pass))}
+            onUnlock={() => action(unlock)}
             onSetup={create}
             onConfirmSetup={confirmSetup}
             onRecover={recover}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Copy, KeyRound, LockKeyhole, ShieldCheck } from "lucide-react";
 
+// The signed-in session opens the vault; only setup and recovery need anything from the person.
 export default function LockedVault({
   status,
   user,
@@ -12,9 +13,7 @@ export default function LockedVault({
   onReset,
   setup,
 }) {
-  const [passphrase, setPassphrase] = useState(""),
-    [confirm, setConfirm] = useState(""),
-    [saved, setSaved] = useState(false),
+  const [saved, setSaved] = useState(false),
     [recovery, setRecovery] = useState(false),
     [recoveryCode, setRecoveryCode] = useState(""),
     [error, setError] = useState("");
@@ -22,16 +21,10 @@ export default function LockedVault({
   const submit = async (e) => {
     e.preventDefault();
     setError("");
-    if ((creating || recovery) && passphrase !== confirm) {
-      setError("הסיסמאות אינן תואמות.");
-      return;
-    }
     try {
-      if (recovery) await onRecover(recoveryCode, passphrase);
-      else if (creating) await onSetup(passphrase);
-      else await onUnlock(passphrase);
-      setPassphrase("");
-      setConfirm("");
+      if (recovery) await onRecover(recoveryCode);
+      else if (creating) await onSetup();
+      else await onUnlock();
       setRecoveryCode("");
     } catch (e) {
       setError(e.message);
@@ -54,9 +47,11 @@ export default function LockedVault({
       <p className="muted">
         {setup
           ? "שמרו את המפתח במקום נפרד מהמערכת. הוא מאפשר לשחזר את הגישה לכספת."
-          : creating
-            ? "בחרו סיסמה נפרדת מסיסמת הכניסה. פרטי הגישה יוצפנו בדפדפן."
-            : "הזינו את סיסמת הכספת כדי לפתוח את פרטי הגישה."}
+          : recovery
+            ? "הזינו את מפתח השחזור שנשמר בזמן ההגדרה."
+            : creating
+              ? "פרטי הגישה יוצפנו בדפדפן ויפתחו עם ההתחברות שלך."
+              : "הכספת נפתחת עם ההתחברות שלך."}
       </p>
       {error && (
         <p role="alert" className="banner banner--error">
@@ -109,35 +104,6 @@ export default function LockedVault({
               />
             </label>
           )}
-          <label>
-            {creating || recovery ? "סיסמה חדשה לכספת" : "סיסמת הכספת"}
-            <input
-              type="password"
-              dir="ltr"
-              autoComplete={
-                creating || recovery ? "new-password" : "current-password"
-              }
-              minLength={creating || recovery ? 15 : undefined}
-              maxLength={256}
-              value={passphrase}
-              onChange={(e) => setPassphrase(e.target.value)}
-              required
-            />
-          </label>
-          {(creating || recovery) && (
-            <label>
-              אימות סיסמת הכספת
-              <input
-                type="password"
-                dir="ltr"
-                autoComplete="new-password"
-                maxLength={256}
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                required
-              />
-            </label>
-          )}
           <button className="btn btn--primary" disabled={busy}>
             {busy
               ? "מעבד…"
@@ -154,11 +120,11 @@ export default function LockedVault({
               type="button"
               onClick={() => {
                 setRecovery(!recovery);
-                setPassphrase("");
-                setConfirm("");
+                setRecoveryCode("");
+                setError("");
               }}
             >
-              {recovery ? "חזרה לפתיחה" : "שכחתי את סיסמת הכספת"}
+              {recovery ? "חזרה לפתיחה" : "הכספת לא נפתחת — מפתח שחזור"}
             </button>
           )}
           {!creating && user.role !== "owner" && (

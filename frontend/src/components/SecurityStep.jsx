@@ -83,7 +83,7 @@ export default function SecurityStep({ mode = "mfa", onComplete, username, purpo
           לזכור את המכשיר הזה ל־30 יום
         </label>
       )}
-      {purpose === "login" && <small id="remember-device-help">רק במחשב או בטלפון האישי. הכספת עדיין תבקש את סיסמת הכספת.</small>}
+      {purpose === "login" && <small id="remember-device-help">רק במחשב או בטלפון האישי.</small>}
       {error && <p role="alert" className="banner banner--error">{error}</p>}
       <button className="btn btn--primary btn--wide" disabled={busy || (enrolling && !setup) || (!backup && code.length !== 6)}>
         {busy ? "בודק…" : enrolling ? "חיבור והמשך" : purpose === "login" ? "כניסה" : "אישור והמשך"}

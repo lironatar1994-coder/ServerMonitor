@@ -95,6 +95,17 @@ test("sessions require cookies, CSRF, MFA and current roles; monitoring identiti
     ).status,
     403,
   );
+  // The signed-in session opens the vault with a stable per-user secret; service sessions never get it.
+  const first = await (await request(owner, "/vault/unlock")).json();
+  assert.equal(first.secret.length, 43);
+  assert.equal((await (await request(owner, "/vault/unlock")).json()).secret, first.secret);
+  assert.notEqual((await (await request(reader, "/vault/unlock")).json()).secret, first.secret);
+  assert.equal((await request(null, "/vault/unlock")).status, 401);
+  assert.equal(
+    (await request(null, "/vault/unlock", "GET", undefined, { Authorization: `Bearer ${monitor.token}` })).status,
+    403,
+  );
+  assert.notEqual(db.prepare("SELECT secret FROM vault_unlock WHERE user_id=?").get(owner.id).secret, first.secret);
   assert.equal(
     (
       await request(null, "/apps", "GET", undefined, {

@@ -95,10 +95,13 @@ router.post("/logout", pending, (req, res) => {
   db.prepare("DELETE FROM auth_sessions WHERE token_hash=?").run(
     req.session.token_hash,
   );
+  // The dashboard's idle timeout ends only this session; a remembered browser stays remembered.
   // Signing out also forgets this browser, so the next visit asks for password and code.
-  const device = s.currentDeviceId(db, req) ?? req.session.device_id;
-  if (device) s.forgetDeviceById(db, req.user.id, device);
-  s.clearDeviceCookie(res);
+  if (req.body?.idle !== true) {
+    const device = s.currentDeviceId(db, req) ?? req.session.device_id;
+    if (device) s.forgetDeviceById(db, req.user.id, device);
+    s.clearDeviceCookie(res);
+  }
   res.clearCookie(s.cookieName(), {
     path: "/",
     secure: s.production(),

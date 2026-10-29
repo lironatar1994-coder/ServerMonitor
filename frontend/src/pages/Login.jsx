@@ -121,7 +121,7 @@ export default function Login() {
                 </span>
               </label>
               {invitation && (
-                <small>לפחות 15 תווים. בהמשך תוגדר סיסמה נפרדת לכספת.</small>
+                <small>לפחות 15 תווים.</small>
               )}
               <button className="btn btn--primary btn--wide" disabled={busy}>
                 {busy ? (

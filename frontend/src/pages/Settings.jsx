@@ -121,7 +121,7 @@ export default function Settings() {
                 </label>
               </div>
               <small className="muted">
-                לפחות 15 תווים. שינוי זה אינו משנה את סיסמת הכספת.
+                לפחות 15 תווים.
               </small>
               <button className="btn btn--primary" disabled={busy}>
                 <Save /> שמירה

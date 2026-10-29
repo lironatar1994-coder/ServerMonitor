@@ -110,6 +110,9 @@ router.get("/status", (req, res) =>
         .get(req.user.id) || null,
   }),
 );
+router.get("/unlock", (req, res) =>
+  res.json({ secret: v.unlockSecret(db, req.user.id) }),
+);
 router.post("/keys", s.recentMfa, (req, res) => {
   if (!v.keyRecord(req.body)) return fail(res, 400, "מבנה מפתח אינו תקין.");
   if (v.keysFor(db, req.user.id)) return fail(res, 409, "כבר הוגדר מפתח.");
@@ -138,6 +141,7 @@ router.post("/keys/reset", s.recentMfa, (req, res) => {
   db.transaction(() => {
     db.prepare("DELETE FROM vault_members WHERE user_id=?").run(req.user.id);
     db.prepare("DELETE FROM vault_keys WHERE user_id=?").run(req.user.id);
+    db.prepare("DELETE FROM vault_unlock WHERE user_id=?").run(req.user.id);
     db.prepare(
       "UPDATE vault_state SET rotation_required=1,revision=revision+1 WHERE id=1",
     ).run();

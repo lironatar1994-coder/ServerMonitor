@@ -8,7 +8,17 @@ function initVault(db) {
     CREATE TABLE IF NOT EXISTS vault_favorites (user_id INTEGER NOT NULL REFERENCES users(id),entry_id TEXT NOT NULL REFERENCES vault_entries(id) ON DELETE CASCADE,PRIMARY KEY(user_id,entry_id));
     CREATE TABLE IF NOT EXISTS vault_invites (token_hash TEXT PRIMARY KEY,created_by INTEGER NOT NULL REFERENCES users(id),expires_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS vault_audit (id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id INTEGER NOT NULL,action TEXT NOT NULL,entry_id TEXT,created_at INTEGER NOT NULL);
-    CREATE INDEX IF NOT EXISTS vault_audit_time ON vault_audit(created_at);`);
+    CREATE INDEX IF NOT EXISTS vault_audit_time ON vault_audit(created_at);
+    CREATE TABLE IF NOT EXISTS vault_unlock (user_id INTEGER PRIMARY KEY REFERENCES users(id),secret TEXT NOT NULL,created_at INTEGER NOT NULL);`);
+}
+// The signed-in session opens the vault: each member's private key is wrapped with a random
+// per-user secret kept sealed with AUTH_KEY_FILE, so no separate vault passphrase is asked.
+function unlockSecret(db, userId) {
+  const row = db.prepare("SELECT secret FROM vault_unlock WHERE user_id=?").get(userId);
+  if (row) return s.unseal(row.secret);
+  const secret = s.random(32);
+  db.prepare("INSERT OR IGNORE INTO vault_unlock VALUES (?,?,?)").run(userId, s.seal(secret), Date.now());
+  return s.unseal(db.prepare("SELECT secret FROM vault_unlock WHERE user_id=?").get(userId).secret);
 }
 const idValid = (value) =>
   typeof value === "string" && /^[a-f0-9-]{36}$/.test(value);
@@ -94,5 +104,6 @@ module.exports = {
   fingerprint,
   storeKeys,
   keysFor,
+  unlockSecret,
   randomUUID,
 };

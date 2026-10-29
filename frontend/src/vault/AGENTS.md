@@ -10,7 +10,7 @@
 - `LockedVault`, `EntryForm`, `TeamPanel` and `vault.css` own unlock/recovery, credential editing, invitation/permission UI and responsive list/detail geometry.
 
 ## Local Contracts
-- Master passphrases and plaintext keys never leave the browser. Never log worker messages or persist plaintext.
+- Plaintext vault keys never leave the browser. The private key is wrapped with the member's server-held unlock secret (passed to the worker as `passphrase`) instead of a typed passphrase. Never log worker messages or persist plaintext.
 - AES-GCM binds each entry ID, part, version, and epoch as additional authenticated data.
 - User keys use RSA-OAEP-3072/SHA-256; private-key envelopes use PBKDF2-SHA-256 at 600,000 iterations.
 - Terminate the worker on lock. Recovery keys are displayed only for user-controlled offline saving.

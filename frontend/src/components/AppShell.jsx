@@ -18,6 +18,8 @@ import Modal from "./Modal";
 import QuickSwitch from "./QuickSwitch";
 import { apiFetch } from "../lib/api";
 import {
+  bootstrapSession,
+  getCsrf,
   getSessionSnapshot,
   subscribeSession,
   setSession,
@@ -104,29 +106,41 @@ export default function AppShell() {
     const channel = new BroadcastChannel("monitor-session");
     channel.onmessage = (event) => {
       if (event.data === "logout") setSession(null);
+      else if (event.data === "resumed") bootstrapSession().catch(() => {});
       else if (event.data?.active) last = Math.max(last, event.data.active);
     };
-    let last = Date.now();
-    const active = () => {
-      if (Date.now() - last >= 2 * 3600000) {
-        apiFetch("/auth/logout", { method: "POST", body: "{}" }).catch(
-          () => {},
-        );
+    let last = Date.now(),
+      ending = false;
+    // Two idle hours end the session; a remembered device quietly opens a new one.
+    const expire = async () => {
+      if (ending) return;
+      ending = true;
+      await fetch("/serve-monitor/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrf() },
+        body: JSON.stringify({ idle: true }),
+      }).catch(() => {});
+      const resumed = await bootstrapSession().catch(() => null);
+      if (resumed?.next === "ready") {
+        last = Date.now();
+        channel.postMessage("resumed");
+      } else {
         channel.postMessage("logout");
         setSession(null);
+      }
+      ending = false;
+    };
+    const active = () => {
+      if (Date.now() - last >= 2 * 3600000) {
+        expire();
         return;
       }
       last = Date.now();
       channel.postMessage({ active: last });
     };
     const timer = setInterval(() => {
-      if (Date.now() - last >= 2 * 3600000) {
-        apiFetch("/auth/logout", { method: "POST", body: "{}" }).catch(
-          () => {},
-        );
-        channel.postMessage("logout");
-        setSession(null);
-      }
+      if (Date.now() - last >= 2 * 3600000) expire();
     }, 15000);
     window.addEventListener("pointerdown", active);
     window.addEventListener("keydown", active);
