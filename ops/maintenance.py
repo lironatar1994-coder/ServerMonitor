@@ -4,6 +4,7 @@ import argparse
 from contextlib import closing
 import datetime as dt
 import fcntl
+import gzip
 import hashlib
 import json
 import os
@@ -73,6 +74,26 @@ def sha256(path):
     with path.open('rb') as f:
         return hashlib.file_digest(f, 'sha256').hexdigest()
 
+# Large snapshots are stored as <name>.sqlite.gz; restore with `gunzip -k` before use.
+COMPRESSED_DATABASES = {'server-monitor'}
+
+
+def compress_verified(path):
+    """Gzip a verified snapshot and keep only the archive once it decompresses to identical bytes."""
+    archive = path.with_name(path.name + '.gz')
+    with path.open('rb') as src, gzip.open(archive, 'wb', compresslevel=6) as dst:
+        shutil.copyfileobj(src, dst, 1024 * 1024)
+    digest = hashlib.sha256()
+    with gzip.open(archive, 'rb') as f:
+        while chunk := f.read(1024 * 1024):
+            digest.update(chunk)
+    if digest.hexdigest() != sha256(path):
+        archive.unlink()
+        raise RuntimeError(f'Compressed backup verification failed: {path.name}')
+    path.unlink()
+    return archive
+
+
 def snapshot():
     if shutil.disk_usage('/').free < 512 * 1024**2:
         raise RuntimeError('Less than 512 MiB free; backup refused')
@@ -109,6 +130,8 @@ def snapshot():
                     src.backup(dst, pages=256, progress=progress, sleep=0.1)
                     if dst.execute('PRAGMA integrity_check').fetchall() != [('ok',)]:
                         raise RuntimeError(f'Backup integrity failure: {name}')
+            if name in COMPRESSED_DATABASES:
+                compress_verified(dest)
         for name, source in ASSETS.items():
             if not source.is_dir():
                 raise RuntimeError(f'Missing required assets: {source}')

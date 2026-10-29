@@ -1,4 +1,5 @@
 import importlib.util
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -50,6 +51,31 @@ class Backups(unittest.TestCase):
             self.assertTrue((saved / 'manifest.json').is_file())
         finally:
             db.close()
+
+    def test_monitor_database_is_stored_compressed_and_restores(self):
+        import gzip
+        source = self.root / 'monitor.db'
+        with closing(sqlite3.connect(source)) as db:
+            db.execute('CREATE TABLE vault(value TEXT)')
+            db.execute("INSERT INTO vault VALUES ('encrypted entry')")
+            db.commit()
+        m.DATABASES = {'server-monitor': str(source)}
+        saved = Path(m.snapshot())
+        manifest = json.loads((saved / 'manifest.json').read_text())
+        self.assertEqual(list(manifest), ['server-monitor.sqlite.gz'])
+        self.assertFalse((saved / 'server-monitor.sqlite').exists())
+        restored = self.root / 'restored.sqlite'
+        restored.write_bytes(gzip.decompress((saved / 'server-monitor.sqlite.gz').read_bytes()))
+        with closing(sqlite3.connect(restored)) as db:
+            self.assertEqual(db.execute('SELECT value FROM vault').fetchone(), ('encrypted entry',))
+
+    def test_failed_compression_keeps_nothing_partial(self):
+        source = self.root / 'snapshot.sqlite'
+        source.write_bytes(b'data')
+        with patch.object(m, 'sha256', return_value='mismatch'), self.assertRaises(RuntimeError):
+            m.compress_verified(source)
+        self.assertTrue(source.exists())
+        self.assertFalse(source.with_name('snapshot.sqlite.gz').exists())
 
     def test_failed_backup_does_not_publish_or_prune(self):
         old = m.BACKUPS / '20200101T000000Z'

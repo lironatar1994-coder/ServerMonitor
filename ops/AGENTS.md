@@ -17,7 +17,7 @@
 - `visitor-tracker.js` also reports uncaught errors from the site's own scripts (name, message, file name and line; at most three per page; never stacks or other origins).
 - `growth-tracker.js` and `install-growth-coverage.py` collect anonymous contact actions and allow-listed campaign tags on twelve canonical public sites. They compose with the existing navigation injection and add no second native navigation signal.
 - `maintenance.py` is installed as `/usr/local/sbin/lawebs-maintenance`. Its daily run records pending updates from a simulated `apt-get -s upgrade` (no lock, nothing installed) in `updates.json`, keeping when security updates were first seen; the 15-minute health check warns when they are still pending after two days, since unattended-upgrades should have installed them.
-- `test_maintenance.py` covers safe cleanup, verified SQLite backups and update tracking.
+- `test_maintenance.py` covers safe cleanup, verified (and compressed) SQLite backups, browser-check failure areas and update tracking.
 
 - `install-maintenance.sh` owns the systemd timers and removes the legacy cron entry.
 - `install-visitor-coverage.py` and `visitor-tracker.js` add missing navigation signals at the Nginx boundary, preserving application builds and CMS content.
@@ -41,6 +41,7 @@
 - Growth instrumentation must leave customer builds and CMS content untouched. Exclude private/admin routes, never read field values, and preserve Maavar's privacy. Nginx fixes the site identity and keeps the integration key server-only; POST bridges remain bounded at 16 KB.
 - Apply growth installation after visitor installation because the combined head substitution includes both map variables. The 15-minute health probe verifies both installed markers. Back up Nginx edits and roll back failed validation.
 - Keep the existing `/var/lib/lawebs-maintenance/backups` manifest layout and PC acknowledgement protocol compatible.
+- The ServerMonitor snapshot is stored as `server-monitor.sqlite.gz` (`COMPRESSED_DATABASES`): after the integrity check it is gzipped, decompressed again and kept only when the bytes match; the manifest hashes the archive. Other database snapshots stay plain `.sqlite`. Older snapshots may still hold an uncompressed `server-monitor.sqlite`.
 - The off-server copy runs on the user's Windows PC: `install-pc-backup.ps1` copies `pc-backup-pull.ps1` to `%USERPROFILE%\.server-monitor\` (not AppData, which the desktop app sandbox virtualizes) and registers the per-user `ServerMonitor backup copy` task daily at 04:30 with start-when-available. It uses the dedicated key `%USERPROFILE%\.ssh\lawebs_backup_ed25519`, authorized on the server only as `restrict,command="/usr/local/sbin/lawebs-backup-transport"` (list/read/ack). It downloads into `%USERPROFILE%\ServerBackups\<snapshot>`, verifies every file's size and SHA-256 against the manifest before acknowledging, keeps the newest 30 local snapshots and logs to `pull.log`.
 - Never remove current releases, releases used by a running process, shared data, uploads, secrets, or the most recent three release candidates.
 - Verified daily snapshots include `/var/lib/seder/seder.db`, current `/var/lib/seder/whatsapp-auth`, and Manager Site `data/` including its nested `uploads/`. Keep pairing-state archives in protected root-only backups.
@@ -57,7 +58,7 @@
 
 - `deploy_linux.sh` creates/validates `/root/.server-monitor-auth-key` (32 bytes, mode 0600), keeps a separate verified copy under root-only `/root/server-monitor-key-backups/auth.key`, exports production/canonical-origin/vault settings and verifies through the existing bounded browser service.
 - SQLite snapshots contain encrypted vault data and wrapped keys. `maintenance.py` verifies/copies the authentication key separately; never include it in the general PC backup manifest. Disaster recovery also requires a protected offline copy of this server key and the user's separately stored vault recovery key.
-- Before restore, stop only `server-monitor`, preserve current database/WAL/key as a rollback set, restore the verified matching database and authentication key with owner-only permissions, run SQLite integrity_check, delete `auth_sessions`, then restart. Verify ordinary monitoring and let the owner unlock/recover in their own browser; operators never request the vault passphrase.
+- Before restore, stop only `server-monitor`, preserve current database/WAL/key as a rollback set, restore the verified matching database (`gunzip -k server-monitor.sqlite.gz` first when compressed) and authentication key with owner-only permissions, run SQLite integrity_check, delete `auth_sessions`, then restart. Verify ordinary monitoring and let the owner unlock/recover in their own browser; operators never request the vault passphrase.
 - Code rollback must remain on a build supporting opaque sessions and encrypted vault tables once users have enrolled. Do not roll back to JWT/default-password authentication or overwrite live vault rows with a stale backup. Disable `VAULT_ENABLED` to contain a vault incident while preserving encrypted data.
 
 ## Verification
