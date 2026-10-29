@@ -1,0 +1,17 @@
+# Off-server watchdog: a failed run means the monitor's 10-minute check cycle stopped or the server is down.
+# GitHub emails the account that last changed this schedule; scheduled runs can start several minutes late.
+name: Server watchdog
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+permissions: {}
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Monitor check cycle is running
+        run: >-
+          curl --fail --silent --show-error --max-time 20 --retry 3 --retry-delay 30 --retry-all-errors
+          -A 'ServerMonitor-Watchdog/1.0' https://monitor.vee-app.co.il/serve-monitor/api/heartbeat

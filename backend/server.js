@@ -38,6 +38,7 @@ app.use('/serve-monitor/api/remote/agent', require('./routes/remote').agent);
 app.use(express.json({ limit: '128kb' }));
 
 // Routes
+app.get('/serve-monitor/api/heartbeat', require('./heartbeat').cycleHandler(require('./database')));
 app.use('/serve-monitor/api/auth', authRoutes);
 app.use('/serve-monitor/api/vault', require('./routes/vault'));
 app.use('/serve-monitor/api/apps', apiRoutes);

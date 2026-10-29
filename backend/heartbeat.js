@@ -39,7 +39,19 @@ async function sendHeartbeat(db, failure = null) {
 
 function heartbeatStatus(db) {
     const get = (key) => db.prepare('SELECT value FROM monitor_metadata WHERE key = ?').get(key)?.value;
-    return { configured: Boolean(heartbeatUrl()), at: Number(get('heartbeat-at')) || null, error: get('heartbeat-error') || null };
+    return { configured: Boolean(heartbeatUrl()), at: Number(get('heartbeat-at')) || null, error: get('heartbeat-error') || null,
+        watchdogAt: Number(get('watchdog-seen-at')) || null };
 }
 
-module.exports = { sendHeartbeat, heartbeatStatus, heartbeatUrl };
+// Public, data-free answer for the GitHub watchdog: only whether a monitor cycle finished in the last 25 minutes.
+function cycleHandler(db) {
+    return (req, res) => {
+        const at = Number(db.prepare("SELECT value FROM monitor_metadata WHERE key = 'monitor-cycle-at'").get()?.value) || 0;
+        const fresh = Date.now() - at < 25 * 60000;
+        if (/^ServerMonitor-Watchdog\//.test(req.get?.('user-agent') || '')) db.prepare(`INSERT INTO monitor_metadata (key, value) VALUES ('watchdog-seen-at', ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`).run(String(Date.now()));
+        res.set('Cache-Control', 'no-store').status(fresh ? 200 : 503).type('text/plain').send(fresh ? 'ok' : 'stale');
+    };
+}
+
+module.exports = { sendHeartbeat, heartbeatStatus, heartbeatUrl, cycleHandler };

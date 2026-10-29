@@ -34,3 +34,14 @@ test('pings only an https URL, reports failures to /fail and never stores the UR
         delete process.env.HEARTBEAT_URL;
     }
 });
+
+test('the public cycle answer reveals only freshness', () => {
+    const { cycleHandler } = require('../heartbeat');
+    const answer = () => { const res = { headers: {}, set(k, v) { this.headers[k] = v; return this; }, status(c) { this.code = c; return this; }, type() { return this; }, send(b) { this.body = b; return this; } }; cycleHandler(db)({ get: () => 'ServerMonitor-Watchdog/1.0' }, res); return res; };
+    const set = (value) => db.prepare("INSERT INTO monitor_metadata (key, value) VALUES ('monitor-cycle-at', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(String(value));
+    set(Date.now() - 5 * 60000);
+    assert.deepEqual([answer().code, answer().body, answer().headers['Cache-Control']], [200, 'ok', 'no-store']);
+    set(Date.now() - 30 * 60000);
+    assert.deepEqual([answer().code, answer().body], [503, 'stale']);
+    assert.ok(heartbeatStatus(db).watchdogAt);
+});

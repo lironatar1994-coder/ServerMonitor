@@ -207,9 +207,10 @@ function buildOperationalHealth({
     // Only the checker failed: the sites were not reached, which is not a site outage.
     add("browser-check", "בדיקת הדפדפן לא הושלמה", "האתרים לא נבדקו בריצה הזו; הבדיקה תרוץ שוב בתוך שש שעות.", "warning");
   // The off-server watchdog is the only alert when the whole server stops; missing coverage stays visible.
-  if (heartbeat && !heartbeat.configured)
-    add("heartbeat", "אין שומר מחוץ לשרת", "אם השרת כולו ייפול, רק המחשב יתריע, ורק כשהוא דולק.");
-  else if (heartbeat && !fresh(heartbeat.at, now, 30 * 60000))
+  // GitHub schedules can start late, so its watchdog counts as present for 90 minutes.
+  if (heartbeat && !heartbeat.configured && !fresh(heartbeat.watchdogAt, now, 90 * 60000))
+    add("heartbeat", "אין שומר מחוץ לשרת", "שומר GitHub לא בדק בשעה וחצי האחרונות ו־Healthchecks לא הוגדר; אם השרת ייפול, רק המחשב יתריע.");
+  else if (heartbeat?.configured && !fresh(heartbeat.at, now, 30 * 60000))
     add("heartbeat", "האות לשומר החיצוני לא נשלח", heartbeat.error ? `השליחה האחרונה נכשלה (${heartbeat.error}).` : "עדיין לא נשלח אות.", heartbeat.error ? "error" : "warning");
   if (!backupFresh)
     add(

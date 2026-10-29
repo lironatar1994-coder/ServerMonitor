@@ -53,6 +53,8 @@ test('browser-check issues name failing sites and keep checker faults a warning'
 test('the off-server watchdog is visible when missing or silent', () => {
   const issue = (heartbeat) => buildOperationalHealth({ ...base, heartbeat }).issues.find(item => item.id === 'heartbeat');
   assert.equal(issue({ configured: false }).severity, 'warning');
+  assert.equal(issue({ configured: false, watchdogAt: now - 40 * 60000 }), undefined);
+  assert.equal(issue({ configured: false, watchdogAt: now - 100 * 60000 }).severity, 'warning');
   assert.equal(issue({ configured: true, at: now - 40 * 60000, error: 'HTTP 404' }).severity, 'error');
   assert.equal(issue({ configured: true, at: null, error: null }).severity, 'warning');
   assert.equal(issue({ configured: true, at: now - 5 * 60000, error: null }), undefined);
