@@ -42,3 +42,19 @@ test('a stale or missing PC backup copy is a warning, an unreadable check is not
   assert.equal(buildOperationalHealth({ ...base, pcCopiedAt: now / 1000 - 3600 }).issues.some(item => item.id === 'backup-pc'), false);
   assert.equal(buildOperationalHealth({ ...base }).issues.some(item => item.id === 'backup-pc'), false);
 });
+test('browser-check issues name failing sites and keep checker faults a warning', () => {
+  const issue = (browser) => buildOperationalHealth({ ...base, browser: { checked: now, ...browser } }).issues.find(item => item.id === 'browser-check');
+  const sites = issue({ errors: ['a'], failures: [{ check: 'site-browser-signal-Alenu', area: 'site', site: 'Alenu' }] });
+  assert.equal(sites.severity, 'error'); assert.equal(sites.detail, 'Alenu');
+  assert.equal(issue({ errors: ['a'], failures: [{ check: 'monitor-390/visitors', area: 'monitor', site: null }] }).severity, 'error');
+  assert.equal(issue({ errors: ['a'], failures: [{ check: 'runner', area: 'checker', site: null }] }).severity, 'warning');
+  assert.equal(issue({ errors: [] }), undefined);
+});
+test('the off-server watchdog is visible when missing or silent', () => {
+  const issue = (heartbeat) => buildOperationalHealth({ ...base, heartbeat }).issues.find(item => item.id === 'heartbeat');
+  assert.equal(issue({ configured: false }).severity, 'warning');
+  assert.equal(issue({ configured: true, at: now - 40 * 60000, error: 'HTTP 404' }).severity, 'error');
+  assert.equal(issue({ configured: true, at: null, error: null }).severity, 'warning');
+  assert.equal(issue({ configured: true, at: now - 5 * 60000, error: null }), undefined);
+  assert.equal(issue(undefined), undefined);
+});

@@ -15,6 +15,11 @@ const REASONS = [
     [/^PM2 process not online: (.+)$/, (m) => `התהליך ${m[1]} לא פועל`],
     [/^Disk usage ([\d.]+)%$/, (m) => `הדיסק מלא ב־${m[1]}%`],
     [/^host checks stopped$/, () => 'בדיקות השרת לא רצו בחצי השעה האחרונה'],
+    [/^Site browser check failed: (.+)$/, (m) => `בדיקת הדפדפן נכשלה ${m[1].includes(', ') ? 'באתרים' : 'באתר'} ${m[1]}`],
+    [/^Monitor dashboard check failed: (.+)$/, (m) => `מסך במוניטור לא עבר את בדיקת הדפדפן (${m[1]})`],
+    [/^Browser check has not completed for (\d+) hours$/, (m) => `בדיקת הדפדפן לא הושלמה ${m[1]} שעות, והאתרים לא נבדקו`],
+    [/^Portfolio\/monitor browser check is stale$/, () => 'אין תוצאה עדכנית של בדיקת הדפדפן'],
+    [/^Portfolio\/monitor browser or tracking check failed/, () => 'בדיקת הדפדפן נכשלה'],
 ];
 const reason = (text) => {
     for (const [pattern, render] of REASONS) { const m = pattern.exec(text); if (m) return render(m); }

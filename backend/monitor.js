@@ -10,6 +10,7 @@ const { MAINTENANCE_APP, SSH_APP } = require('./catalogNames');
 const { runInsights } = require('./insights');
 const { outsideOnlyFailures } = require('./externalChecks');
 const { sampleHost } = require('./capacity');
+const { sendHeartbeat } = require('./heartbeat');
 
 console.log('Background Monitor Started...');
 
@@ -234,8 +235,10 @@ async function runMonitorCycle() {
         purgeExpiredMonitorData();
         // The PC agents watch this: a cycle that stops running is reported from outside the server.
         metadata.set('monitor-cycle-at', Date.now());
+        await sendHeartbeat(db);
     } catch (err) {
         console.error('Monitor cycle error:', err);
+        await sendHeartbeat(db, `Monitor cycle error: ${err.message}`).catch(() => {});
     }
 }
 

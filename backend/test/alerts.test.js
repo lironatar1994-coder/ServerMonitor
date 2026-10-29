@@ -26,3 +26,11 @@ test('reports an unconfigured mailer as undelivered instead of throwing', async 
     delete process.env.RESEND_API_KEY;
     assert.deepEqual(await sendAlertEmail([{ id: 1, name: 'Desk', status: 'offline', kind: 'down' }]), { sent: false });
 });
+
+test('browser-check maintenance errors read as named Hebrew causes', () => {
+    const { text } = renderAlert([{ id: 7, name: 'תחזוקה לילית', status: 'error', kind: 'down',
+        detail: 'Site browser check failed: Alenu, LA webs; Monitor dashboard check failed: monitor-390/visitors; Browser check has not completed for 14 hours' }]);
+    assert.match(text, /בדיקת הדפדפן נכשלה באתרים Alenu, LA webs/);
+    assert.match(text, /מסך במוניטור לא עבר את בדיקת הדפדפן \(monitor-390\/visitors\)/);
+    assert.match(text, /בדיקת הדפדפן לא הושלמה 14 שעות/);
+});

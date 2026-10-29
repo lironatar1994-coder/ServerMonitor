@@ -482,7 +482,15 @@ def visitor_health(db_path=Path('/root/ServerMonitor/backend/monitor.db'), now=N
         errors.append(f'Visitor ingestion check failed: {exc}')
     return errors
 
-def browser_health(force=False):
+CHECKER_FAULT = re.compile(r'did not complete|could not finish|runtime budget')
+
+
+def last_verified(result):
+    """When the browser last actually reached the sites (older results lack `verified`)."""
+    return result.get('verified', 0 if result.get('errors') else result.get('checked', 0))
+
+
+def browser_health(force=False, warnings=None):
     result_path = STATE / 'browser-check.json'
     try:
         result = json.loads(result_path.read_text())
@@ -490,6 +498,7 @@ def browser_health(force=False):
         result = {}
     started = time.time() * 1000
     if force or started - result.get('checked', 0) >= 6 * 3600000:
+        prior = result
         try:
             # systemd serializes starts and bounds the entire Chromium process tree.
             run(['systemctl', 'start', 'lawebs-browser-check.service'], timeout=210)
@@ -499,16 +508,33 @@ def browser_health(force=False):
             except (FileNotFoundError, ValueError):
                 result = {}
             if result.get('checked', 0) < started or not result.get('errors'):
-                write_json(result_path, {'checked': time.time() * 1000, 'errors': [
-                    'Browser check did not complete; inspect lawebs-browser-check.service'], 'checks': []})
+                write_json(result_path, {'checked': time.time() * 1000, 'verified': last_verified(prior), 'errors': [
+                    'Browser check did not complete; inspect lawebs-browser-check.service'],
+                    'failures': [{'check': 'runner', 'area': 'checker', 'site': None}], 'checks': []})
     try:
         result = json.loads(result_path.read_text())
     except (FileNotFoundError, ValueError):
         return ['Portfolio/monitor browser check result missing']
-    errors = []
-    if result.get('errors'):
+    errors, now = [], time.time() * 1000
+    failures = result.get('failures')
+    if failures is None:
+        failures = [{'area': 'checker' if CHECKER_FAULT.search(text) else 'unknown'} for text in result.get('errors', [])]
+    sites = sorted({item.get('site') for item in failures if item.get('area') == 'site' and item.get('site')})
+    screens = sorted({item.get('check') for item in failures if item.get('area') == 'monitor' and item.get('check')})
+    if sites:
+        errors.append('Site browser check failed: ' + ', '.join(sites))
+    if screens:
+        errors.append('Monitor dashboard check failed: ' + ', '.join(screens[:3]))
+    if any(item.get('area') == 'unknown' for item in failures):
         errors.append('Portfolio/monitor browser or tracking check failed; see browser-check.json')
-    if time.time() * 1000 - result.get('checked', 0) > 7 * 3600000:
+    if any(item.get('area') == 'checker' for item in failures):
+        # A checker fault is not a site outage; it alerts once the sites go unverified for two runs.
+        hours = (now - last_verified(result)) / 3600000
+        if force or hours > 13:
+            errors.append(f'Browser check has not completed for {min(int(hours), 999)} hours')
+        elif warnings is not None:
+            warnings.append('Browser check could not run; sites were not verified this time')
+    if now - result.get('checked', 0) > 7 * 3600000:
         errors.append('Portfolio/monitor browser check is stale')
     return errors
 
@@ -549,7 +575,7 @@ def health():
         except Exception:
             errors.append(f'HTTP check failed: {url}')
     errors.extend(visitor_health())
-    errors.extend(browser_health())
+    errors.extend(browser_health(warnings=warnings))
     for url in set(TRACKER_URLS + GROWTH_URLS):
         try:
             html = run(['curl', '--silent', '--show-error', '--location', '--fail', '--compressed', '--max-time', '10', url], timeout=15)

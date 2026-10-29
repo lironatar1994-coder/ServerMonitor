@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const { execFile } = require("node:child_process");
 const { promisify } = require("node:util");
 const execute = promisify(execFile);
+const { browserFailures } = require("./trackingHealth");
 let discovery = { checked: 0, rows: [], error: false };
 
 function readJson(file) {
@@ -87,6 +88,7 @@ function buildOperationalHealth({
   whatsapp,
   alertsConfigured = true,
   pcCopiedAt = undefined,
+  heartbeat = undefined,
   now = Date.now(),
 }) {
   const issues = [];
@@ -193,15 +195,22 @@ function buildOperationalHealth({
   }
   const browserFresh = fresh(browser?.checked, now, 7 * 3600000);
   const backupFresh = fresh(backup?.completed, now, 36 * 3600000);
-  if (!browserFresh || browser?.errors?.length)
-    add(
-      "browser-check",
-      "בדיקת האתרים דורשת בדיקה",
-      browserFresh
-        ? "הבדיקה האחרונה דיווחה על כשל."
-        : "אין בדיקה אוטומטית עדכנית.",
-      browserFresh ? "error" : "unknown",
-    );
+  const browserItems = browserFailures(browser);
+  const failedSites = [...new Set(browserItems.filter((item) => item.area === "site").map((item) => item.site))];
+  if (!browserFresh)
+    add("browser-check", "בדיקת האתרים דורשת בדיקה", "אין בדיקה אוטומטית עדכנית.", "unknown");
+  else if (failedSites.length)
+    add("browser-check", "בדיקת הדפדפן נכשלה באתרים", failedSites.join(", "), "error");
+  else if (browserItems.some((item) => item.area === "monitor"))
+    add("browser-check", "מסך במוניטור לא עבר את בדיקת הדפדפן", "האתרים עצמם עברו את הבדיקה.", "error");
+  else if (browser?.errors?.length)
+    // Only the checker failed: the sites were not reached, which is not a site outage.
+    add("browser-check", "בדיקת הדפדפן לא הושלמה", "האתרים לא נבדקו בריצה הזו; הבדיקה תרוץ שוב בתוך שש שעות.", "warning");
+  // The off-server watchdog is the only alert when the whole server stops; missing coverage stays visible.
+  if (heartbeat && !heartbeat.configured)
+    add("heartbeat", "אין שומר מחוץ לשרת", "אם השרת כולו ייפול, רק המחשב יתריע, ורק כשהוא דולק.");
+  else if (heartbeat && !fresh(heartbeat.at, now, 30 * 60000))
+    add("heartbeat", "האות לשומר החיצוני לא נשלח", heartbeat.error ? `השליחה האחרונה נכשלה (${heartbeat.error}).` : "עדיין לא נשלח אות.", heartbeat.error ? "error" : "warning");
   if (!backupFresh)
     add(
       "backup",
@@ -304,6 +313,7 @@ async function operationalHealth(db, processes) {
     processes,
     discovered: await applicationServices(),
     pcCopiedAt: latestAcknowledgement(),
+    heartbeat: process.platform === "linux" ? require("./heartbeat").heartbeatStatus(db) : undefined,
     alertsConfigured: Boolean(mail.apiKey && (process.env.ALERT_EMAIL_TO || mail.recipient) && mail.from && !mail.from.includes("<undefined>")),
   });
 }

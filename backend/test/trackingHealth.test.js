@@ -23,3 +23,27 @@ test('browser health allows six-hour cadence but exposes failures and stale resu
         fs.rmSync(dir, { recursive: true, force: true });
     }
 });
+
+test('checker-only faults are incomplete, not failed, and failures keep their site', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tracking-areas-'));
+    const previous = process.env.BROWSER_CHECK_RESULT;
+    process.env.BROWSER_CHECK_RESULT = path.join(dir, 'check.json');
+    const write = (body) => fs.writeFileSync(process.env.BROWSER_CHECK_RESULT, JSON.stringify({ checked: Date.now(), ...body }));
+    try {
+        write({ errors: ['runner: killed'], failures: [{ check: 'runner', area: 'checker', site: null }] });
+        assert.equal(trackingHealth().status, 'incomplete');
+        write({ errors: ['site-browser-signal-Alenu: timeout', 'runner: killed'],
+            failures: [{ check: 'site-browser-signal-Alenu', area: 'site', site: 'Alenu' }, { check: 'runner', area: 'checker', site: null }] });
+        assert.equal(trackingHealth().status, 'failed');
+        assert.deepEqual(trackingHealth().items[0], { check: 'site-browser-signal-Alenu', area: 'site', site: 'Alenu' });
+        // Results written before failure areas existed are classified from their text.
+        write({ errors: ['Browser check did not complete; inspect lawebs-browser-check.service'] });
+        assert.equal(trackingHealth().status, 'incomplete');
+        write({ errors: ['portfolio-project-sos: 500', 'monitor-390/visitors: Horizontal overflow'] });
+        assert.deepEqual(trackingHealth().items.map(item => [item.area, item.site]), [['site', 'LA webs'], ['monitor', null]]);
+    } finally {
+        if (previous === undefined) delete process.env.BROWSER_CHECK_RESULT;
+        else process.env.BROWSER_CHECK_RESULT = previous;
+        fs.rmSync(dir, { recursive: true, force: true });
+    }
+});

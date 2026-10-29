@@ -361,10 +361,30 @@ class BrowserHealth(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder, patch.object(m, 'STATE', Path(folder)), patch.object(m, 'run', side_effect=RuntimeError('killed')) as run:
             result = m.STATE / 'browser-check.json'
             m.write_json(result, {'checked': m.time.time() * 1000 - 8 * 3600000, 'errors': []})
-            self.assertTrue(m.browser_health())
+            warnings = []
+            # A killed checker is a warning while the sites were verified within two runs.
+            self.assertEqual(m.browser_health(warnings=warnings), [])
+            self.assertIn('could not run', warnings[0])
             self.assertIn('did not complete', json.loads(result.read_text())['errors'][0])
-            self.assertTrue(m.browser_health())
+            self.assertEqual(m.browser_health(), [])
             run.assert_called_once()
+            self.assertTrue(m.browser_health(force=True))
+
+    def test_checker_fault_alerts_after_two_unverified_runs(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(m, 'STATE', Path(folder)):
+            now = m.time.time() * 1000
+            m.write_json(m.STATE / 'browser-check.json', {'checked': now, 'verified': now - 14 * 3600000, 'errors': ['runner: x'],
+                                                         'failures': [{'check': 'runner', 'area': 'checker', 'site': None}]})
+            self.assertEqual(m.browser_health(), ['Browser check has not completed for 14 hours'])
+
+    def test_failures_name_the_site_or_dashboard_screen(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(m, 'STATE', Path(folder)):
+            m.write_json(m.STATE / 'browser-check.json', {'checked': m.time.time() * 1000, 'errors': ['a', 'b', 'c'], 'failures': [
+                {'check': 'site-browser-signal-Alenu', 'area': 'site', 'site': 'Alenu'},
+                {'check': 'portfolio-project-sos', 'area': 'site', 'site': 'LA webs'},
+                {'check': 'monitor-390/visitors', 'area': 'monitor', 'site': None}]})
+            self.assertEqual(m.browser_health(), ['Site browser check failed: Alenu, LA webs',
+                                                  'Monitor dashboard check failed: monitor-390/visitors'])
 
     def test_preserves_browser_failure_details(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(m, 'STATE', Path(folder)):

@@ -9,11 +9,28 @@ const { chromium } = fromBackend('playwright');
 const db = fromBackend('./database');
 const { createSessionToken } = fromBackend('./routes/auth');
 const output = process.env.BROWSER_CHECK_RESULT || '/var/lib/lawebs-maintenance/browser-check.json';
-const result = { checked: Date.now(), errors: [], checks: [], timings: {} };
+const result = { checked: Date.now(), errors: [], failures: [], checks: [], timings: {} };
+// Each failure names its area: a monitored site, the monitor dashboard, or the checker itself.
+const areaOf = name => /^(monitor-|login-screen|page-drill-down|legacy-monitor-url)/.test(name) ? 'monitor' : 'site';
+const siteOf = name => name.startsWith('site-browser-signal-') ? name.slice('site-browser-signal-'.length) : 'LA webs';
+let retries = 2;
 const check = async (name, fn) => {
-  try { await fn(); result.checks.push(name); console.log('PASS', name); }
-  catch (error) { result.errors.push(`${name}: ${error.message.slice(0, 350)}`); console.log('FAIL', name, error.message.slice(0, 350)); }
+  const area = areaOf(name);
+  for (;;) {
+    try { await fn(); result.checks.push(name); console.log('PASS', name); return; }
+    catch (error) {
+      const message = error.message.slice(0, 350);
+      // One slow dashboard render is not a broken screen; the cap keeps a real outage within the runtime limit.
+      if (area === 'monitor' && retries > 0) { retries--; console.log('RETRY', name, message); continue; }
+      const checker = /runtime budget/.test(message);
+      result.errors.push(`${name}: ${message}`);
+      result.failures.push({ check: name, area: checker ? 'checker' : area, site: area === 'site' && !checker ? siteOf(name) : null });
+      console.log('FAIL', name, message); return;
+    }
+  }
 };
+let previous = {};
+try { previous = JSON.parse(fs.readFileSync(output, 'utf8')); } catch { /* first run */ }
 let browser;
 (async () => {
   const app = db.prepare("SELECT id FROM apps WHERE name='LA webs'").get();
@@ -162,10 +179,16 @@ let browser;
     } finally { await signalPage.close(); }
   });
   await context.close();
-})().catch(error => { result.errors.push(`Browser check could not finish: ${error.message.slice(0, 350)}`); }).finally(async () => {
+})().catch(error => {
+  result.errors.push(`Browser check could not finish: ${error.message.slice(0, 350)}`);
+  result.failures.push({ check: 'runner', area: 'checker', site: null });
+}).finally(async () => {
   if (browser) await browser.close();
   db.close();
   result.checked = Date.now();
+  // `verified` is the last run that actually reached the sites, so a checker fault cannot hide for long.
+  const previousVerified = previous.verified ?? (previous.errors?.length ? 0 : previous.checked || 0);
+  result.verified = result.failures.some(item => item.area === 'checker') ? previousVerified : result.checked;
   fs.mkdirSync(path.dirname(output), { recursive: true, mode: 0o700 });
   fs.writeFileSync(`${output}.tmp`, JSON.stringify(result, null, 2), { mode: 0o600 });
   fs.renameSync(`${output}.tmp`, output);
