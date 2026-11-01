@@ -60,12 +60,18 @@ function initializeGrowth(db) {
         db.exec('ALTER TABLE growth_goals ADD COLUMN period_days INTEGER NOT NULL DEFAULT 30');
     }
     db.exec('CREATE UNIQUE INDEX IF NOT EXISTS growth_campaign_name ON growth_campaigns(app_id,name)');
-    for (const column of ['placement', 'project', 'browser_session_hash']) {
+    for (const column of ['placement', 'project', 'browser_session_hash', 'content', 'evidence']) {
         if (!db.prepare('PRAGMA table_info(growth_events)').all().some(c => c.name === column)) {
             db.exec(`ALTER TABLE growth_events ADD COLUMN ${column} TEXT NOT NULL DEFAULT ''`);
         }
     }
     db.exec('CREATE INDEX IF NOT EXISTS growth_browser_session ON growth_events(app_id,browser_session_hash,occurred_at)');
+    db.exec(`CREATE TABLE IF NOT EXISTS source_outcomes (
+        id TEXT PRIMARY KEY, app_id INTEGER NOT NULL, occurred_at TEXT NOT NULL,
+        source TEXT NOT NULL DEFAULT '', medium TEXT NOT NULL DEFAULT '', campaign TEXT NOT NULL DEFAULT '',
+        content TEXT NOT NULL DEFAULT '', evidence TEXT NOT NULL DEFAULT '', stage TEXT NOT NULL,
+        first_source TEXT NOT NULL DEFAULT '', latest_source TEXT NOT NULL DEFAULT ''
+    ); CREATE INDEX IF NOT EXISTS source_outcomes_range ON source_outcomes(app_id,occurred_at);`);
     const now = new Date().toISOString();
     const descriptions = {
         'Dfus Reuven': 'בקשות להצעת מחיר לפי שירות', 'Pinhas Ratzon': 'פניות רלוונטיות לפי תחום שירות',

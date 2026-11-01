@@ -751,7 +751,7 @@ router.get('/apps/:id/sources', (req, res) => {
     try {
         const app = assertApp(req.params.id);
         const range = parseRange(req.query);
-        res.json(require('../sources').sourcesSummary(db, app.id, range.from, range.to));
+        res.json(require('../sources').sourcesSummary(db, app.id, range.from, range.to, req.query));
     } catch (error) { respondError(res, error); }
 });
 
@@ -770,8 +770,8 @@ router.post('/links', (req, res) => {
     try {
         if (!canEdit(req)) return res.status(403).json({ error: 'נדרשת הרשאת עריכה.' });
         const link = require('../sources').validateLink(db, req.body);
-        db.prepare(`INSERT INTO tracked_links (app_id, host, code, channel, campaign, path, created_by, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(link.app.id, link.host, link.code, link.channel, link.campaign, link.path, req.user.username, new Date().toISOString());
+        db.prepare(`INSERT INTO tracked_links (app_id, host, code, channel, campaign, path, created_by, created_at,medium)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(link.app.id, link.host, link.code, link.channel, link.campaign, link.path, req.user.username, new Date().toISOString(),link.medium);
         res.status(201).json({ links: require('../sources').listLinks(db, link.app.id) });
     } catch (error) { respondError(res, error); }
 });

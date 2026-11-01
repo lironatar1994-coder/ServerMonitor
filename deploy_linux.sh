@@ -130,6 +130,7 @@ bash "$APP_ROOT/ops/install-retired-sites.sh"
 python3 "$APP_ROOT/ops/tidy-nginx.py"
 python3 "$APP_ROOT/ops/ensure-monitor-logging.py"
 bash "$APP_ROOT/ops/update-asn-db.sh"
+bash "$APP_ROOT/ops/update-city-db.sh"
 
 if [ -r "$GEOIP_DB_PATH" ]; then
   echo "[INFO] GeoIP city database found at $GEOIP_DB_PATH"
@@ -175,6 +176,7 @@ else
 fi
 pm2 save > /dev/null
 bash "$APP_ROOT/ops/install-remote-relay.sh"
+node "$APP_ROOT/ops/configure-attribution.cjs"
 
 echo "[INFO] Verifying production through the resource-limited browser service..."
 curl --silent --show-error --fail --retry 10 --retry-connrefused --retry-delay 1 --max-time 5 \

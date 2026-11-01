@@ -43,12 +43,24 @@ test('short links redirect only to their own site, tag the visit and count real 
     assert.equal(sources.suggestCode(db, site.id, 'whatsapp'), 'wa2');
     assert.throws(() => sources.validateLink(db, { app_id: site.id, channel: 'whatsapp', code: 'wa', path: '/' }), /בשימוש/);
     assert.throws(() => sources.validateLink(db, { app_id: site.id, channel: 'whatsapp', code: 'ok', path: '//evil.example' }), /נתיב/);
-    assert.equal(sources.resolveLink(db, 'lawebs.co.il', 'wa'), 'https://lawebs.co.il/?utm_source=whatsapp&utm_medium=link&utm_campaign=wa');
-    assert.equal(sources.resolveLink(db, 'www.lawebs.co.il', 'WA'), 'https://lawebs.co.il/?utm_source=whatsapp&utm_medium=link&utm_campaign=wa');
+    assert.equal(sources.resolveLink(db, 'lawebs.co.il', 'wa'), 'https://lawebs.co.il/?utm_source=whatsapp&utm_medium=link&utm_campaign=wa&utm_content=wa');
+    assert.equal(sources.resolveLink(db, 'www.lawebs.co.il', 'WA'), 'https://lawebs.co.il/?utm_source=whatsapp&utm_medium=link&utm_campaign=wa&utm_content=wa');
     sources.resolveLink(db, 'lawebs.co.il', 'wa', { automated: true });
     sources.resolveLink(db, 'lawebs.co.il', 'wa', { internal: true });
     assert.equal(sources.resolveLink(db, 'lawebs.co.il', 'missing'), 'https://lawebs.co.il/');
     const [listed] = sources.listLinks(db, site.id);
     assert.equal(listed.short_url, 'https://lawebs.co.il/l/wa');
     assert.equal(listed.clicks, 2);
+});
+
+
+test('coverage and placement evidence keep unknown and Desk stages separate', () => {
+    const site = app('Alenu');
+    db.prepare("UPDATE growth_events SET evidence='tagged',content='pinned' WHERE event_id='e1'").run();
+    db.prepare("INSERT INTO source_outcomes(id,app_id,occurred_at,source,campaign,content,stage) VALUES('outcome',?,'2026-10-21T11:00:00Z','whatsapp','launch','pinned','received')").run(site.id);
+    const result = sources.sourcesSummary(db,site.id,'2026-10-21T00:00:00Z','2026-10-22T00:00:00Z');
+    assert.equal(result.coverage.known,2);
+    assert.equal(result.outcomes[0].stage,'received');
+    assert.equal(result.outcomes[0].count,1);
+    assert.equal(result.recent.length,4);
 });

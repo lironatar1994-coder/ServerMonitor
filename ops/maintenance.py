@@ -446,6 +446,10 @@ def updates_status(simulate=None, now=None):
     return status
 
 def daily():
+    try:
+        run(['bash', '/root/ServerMonitor/ops/update-city-db.sh'], timeout=150)
+    except Exception as exc:
+        print(f'City database refresh: {exc}')
     before = shutil.disk_usage('/').free
     # Cache cleanup must work even when free space is too low for a snapshot.
     pre = cleanup(True, releases=False)
@@ -501,6 +505,11 @@ def visitor_health(db_path=Path('/root/ServerMonitor/backend/monitor.db'), now=N
                 AND (SELECT COUNT(*) FROM browser_signals b WHERE b.app_id = a.id AND b.automation_hint = 0 AND b.occurred_at >= ?) >= 20
                 AND NOT EXISTS (SELECT 1 FROM visitor_events e WHERE e.app_id = a.id AND e.is_page_view = 1 AND e.occurred_at >= ?)''', (week, week)).fetchall()
         errors.extend(f'Server log records no pages: {name}' for (name,) in gaps)
+        with closing(sqlite3.connect(db_path.as_uri() + '?mode=ro', uri=True)) as db:
+            if 'source_outcomes' in tables:
+                state = db.execute("SELECT value FROM monitor_metadata WHERE key='desk-outcomes'").fetchone()
+                if not state or json.loads(state[0]).get('status') != 'ok':
+                    errors.append('Desk attribution export unavailable')
     except Exception as exc:
         errors.append(f'Visitor ingestion check failed: {exc}')
     return errors

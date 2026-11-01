@@ -47,6 +47,7 @@ function BrowserHistory({ appId, appName, range, visitor, onClose }) {
         <ol className="visitor-visit-list">
           {result.visits.map((visit, index) => <li key={`${visit.first_seen}:${index}`}>
             <div className="visitor-visit-list__head"><strong><bdi>{formatDateTime(visit.first_seen)}</bdi></strong><span>{viewsLabel(visit.page_views)} · {visit.in_period ? 'בטווח שנבחר' : 'ביקור קודם'}</span></div>
+            <p className="status-line">מקור: <bdi>{visit.arrival?.source || 'לא ידוע'}</bdi>{visit.arrival?.campaign && <> · <bdi>{visit.arrival.campaign}</bdi></>}{visit.arrival?.content && <> · <bdi>{visit.arrival.content}</bdi></>} · {({tagged:'קישור מתויג',referrer:'אתר מפנה',unknown:'לא ידוע'})[visit.arrival?.evidence] || 'ללא ראיה שמורה'}</p>
             <ol className="visitor-steps">
               {[...visit.pages.map(row => ({ ...row, type: 'page' })), ...visit.actions.map(row => ({ ...row, type: 'action' }))]
                 .sort((a, b) => a.occurred_at.localeCompare(b.occurred_at)).map((row, i) => <li key={`${row.occurred_at}:${i}`}>

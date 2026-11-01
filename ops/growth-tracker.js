@@ -11,6 +11,7 @@
   if (internalParam === '1' || internalParam === '0') {
     document.cookie = `monitor_internal=${internalParam}; Path=/; Max-Age=${internalParam === '1' ? 31536000 : 0}; Secure; SameSite=Lax`;
   }
+  if (document.cookie.split(';').some(c => c.trim() === 'monitor_internal=1')) return;
   const liveSites = { koral: 'https://lawebs.co.il/koralevents', miryam: 'https://miryamzelig.co.il', pinhas: 'https://pinhasratzon.co.il', reuven: 'https://www.dfusreuven.co.il', sos: 'https://sosbaderech.co.il', seder: 'https://lawebs.co.il/seder', pdf: 'https://lawebs.co.il/pdf-studio', pizza: 'https://lawebs.co.il/PizzaManager' };
   const projects = new Set(['koral', 'miryam', 'pinhas', 'reuven', 'sos', 'seder', 'pdf', 'pizza']);
   const projectAt = path => { const name = path.match(/^\/work\/([^/]+)\/?$/)?.[1]; return projects.has(name) ? name : ''; };
@@ -39,14 +40,34 @@
     visitor = session;
     const query = new URLSearchParams(location.search);
     attribution = previous?.session === session ? previous.attribution : null;
-    if (!attribution) {
+    // An explicitly tagged new arrival replaces the session's source, even in the same tab.
+    if (!attribution || safeTag(query.get('utm_source'))) {
       let referrer = '';
       try { const ref = new URL(document.referrer); if (ref.hostname !== location.hostname) referrer = ref.hostname; } catch { /* no referrer */ }
-      attribution = { source: safeTag(query.get('utm_source')) || safeTag(referrer),
-        medium: safeTag(query.get('utm_medium')), campaign: safeTag(query.get('utm_campaign')) };
+      const tagged = safeTag(query.get('utm_source'));
+      attribution = { source: tagged || safeTag(referrer),
+        medium: safeTag(query.get('utm_medium')), campaign: safeTag(query.get('utm_campaign')),
+        content: safeTag(query.get('utm_content')), evidence: tagged ? 'tagged' : referrer ? 'referrer' : 'unknown' };
     }
     sessionStorage.setItem(storageKey, JSON.stringify({ session, attribution, expires: Date.now() + 30 * 60000 }));
-  } catch { session = visitor = random(); attribution = {}; }
+  } catch {
+    session = visitor = random();
+    const query = new URLSearchParams(location.search);
+    let host = ''; try { const ref = new URL(document.referrer); if(ref.hostname!==location.hostname)host=ref.hostname; } catch { /* no referrer */ }
+    const source = safeTag(query.get('utm_source'));
+    attribution = { source: source || safeTag(host), medium: safeTag(query.get('utm_medium')), campaign: safeTag(query.get('utm_campaign')),
+      content: safeTag(query.get('utm_content')), evidence: source ? 'tagged' : host ? 'referrer' : 'unknown' };
+  }
+  // Only allow-listed attribution, never full URLs, form fields or visitor identity.
+  let first = attribution, latest = attribution;
+  const firstKey = `${storageKey}:arrival`;
+  try {
+    const saved = JSON.parse(localStorage.getItem(firstKey) || 'null');
+    if (saved?.expires > Date.now()) { first = saved.first; latest = saved.latest; }
+    if (attribution.source || !latest) latest = attribution;
+    localStorage.setItem(firstKey, JSON.stringify({ first, latest, expires: saved?.expires > Date.now() ? saved.expires : Date.now() + 90 * 86400000 }));
+  } catch { /* storage unavailable: current visit only */ }
+  window.__monitorAttribution = () => ({ first, latest, current: attribution, navigation_session_id: navigationSession() });
   // Core Web Vitals, once per page load, whichever monitor script runs first. Numbers only.
   if (!window.__veeVitals && 'PerformanceObserver' in window && !document.cookie.split(';').some(c => c.trim() === 'monitor_internal=1')) {
     window.__veeVitals = true;

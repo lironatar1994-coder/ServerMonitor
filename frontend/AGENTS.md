@@ -120,3 +120,5 @@
 - `src/pages/` - Route-level dashboard screens; no separate child contract yet.
 - `src/components/` - Reusable dashboard components and app templates; no separate child contract yet.
 - `public/` - Static frontend assets; no separate child contract yet.
+
+- Sources show known-source coverage, evidence, campaign/placement filters, Israel-local activity and separate Desk stages. Unknown sources stay unknown; shared links identify their original placement. GeoIP displays credit DB-IP and describe approximate network location.

@@ -160,3 +160,5 @@
 ## Child DOX Index
 
 - `routes/` - Authentication and monitor API route handlers; no separate child contract yet.
+
+- Source reporting retains explicit evidence (`tagged`, `referrer`, `unknown`, or legacy), UTM content and campaign filters. `deskOutcomes.js` reads only Desk's bounded contact-free attribution export through the existing source sync; it never opens Desk's contact store or infers session-to-person identity. Source outcomes reflect inquiry cohorts and current linked net-payment state.

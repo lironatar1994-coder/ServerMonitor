@@ -48,6 +48,7 @@ function initializeObservability(db) {
         );
         CREATE INDEX IF NOT EXISTS link_clicks_link_time ON link_clicks(link_id, occurred_at);
     `);
+    if (!db.prepare('PRAGMA table_info(tracked_links)').all().some(c=>c.name==='medium')) db.exec("ALTER TABLE tracked_links ADD COLUMN medium TEXT NOT NULL DEFAULT 'link'");
     // Push devices: per-device categories, quiet hours (Israel time) and a daily insight cap.
     db.exec(`
     CREATE TABLE IF NOT EXISTS push_subscriptions (

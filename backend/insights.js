@@ -148,10 +148,21 @@ function digest(db, now) {
     }];
 }
 
+function attributionInsights(db, now) {
+    const from = iso(now - 7 * DAY);
+    return db.prepare(`SELECT a.id,a.name,COUNT(DISTINCT g.session_hash) total,
+        COUNT(DISTINCT CASE WHEN g.source<>'' THEN g.session_hash END) known
+        FROM apps a JOIN growth_events g ON g.app_id=a.id WHERE a.analytics_enabled=1 AND g.automation_hint=0 AND g.occurred_at>=?
+        GROUP BY a.id HAVING total>=10 AND known*1.0/total<0.7`).all(from).map(row => ({
+        key: `attribution:${row.id}:${israelDate(now)}`, category: 'traffic', app_id: row.id,
+        title: `חסר מקור הגעה · ${row.name}`, body: `מקור ידוע ב־${n(row.known)} מתוך ${n(row.total)} ביקורים שנמדדו למקורות בשבוע. כדאי לבדוק את קישורי הפרסום.`,
+        url: `${BASE}/visitors/${row.id}?view=sources`
+    }));
+}
 function detectInsights(db, now = Date.now()) {
     const meta = metadata(db);
     return [...leadInsights(db, now, meta), ...waitingLeads(db, now), ...trafficInsights(db, now), ...campaignInsights(db, now),
-        ...pageInsights(db, now), ...speedInsights(db, now), ...digest(db, now)];
+        ...pageInsights(db, now), ...speedInsights(db, now), ...attributionInsights(db, now), ...digest(db, now)];
 }
 
 /** Stores new insights and pushes each one; returns the insights that were new. */

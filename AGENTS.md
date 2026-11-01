@@ -152,3 +152,5 @@ When the user requests a durable behavior change, record it here or in the relev
 - `frontend/AGENTS.md` - Vite React visitor, infrastructure, services, settings, authentication, responsive design, static assets, and production build.
 - `pc-agent/AGENTS.md` - Windows agent that drives Claude desktop for the owner-only remote screen.
 - Root-owned deployment and host files: `deploy.ps1`, `deploy_linux.sh`, `install_static_visitor_signals.sh`, `server_maintenance.sh`, `monitor.vee-app.co.il.conf`, `nginx-monitor-host-log.conf`, `nginx-tuning.conf`, `ssh-hardening.conf`, `start.bat`, `.claude/launch.json`, `.github/workflows/watchdog.yml`, `.gitignore`, and repository-level operational artifacts.
+
+- Attribution improvements are shared across monitored sites: retain UTM campaign/content and evidence, keep unknown traffic explicit, version page classification to refresh retained history, and connect Alenu outcomes only through Desk's sanitized source export and explicitly linked cases. Keep first/current/latest tags, approximate DB-IP location attribution, and daily low-coverage insights in the existing schedulers.

@@ -193,7 +193,7 @@ const VisitorDetail = ({ diagnostics = false }) => {
           <SourcesPanel appId={id} range={data.range} />
           <LinksPanel appId={Number(id)} siteUrl={data.app?.url} />
         </>}
-        {view === 'audience' && <Panel title="קהל ואתרים מפנים לפי השרת" hint="פילוח לפי פתיחות עמודים שנרשמו בשרת; מיקום משוער לפי כתובת רשת." action={<Tabs tabs={BREAKDOWN_TABS} value={breakdown} onChange={setBreakdown} />}>{breakdown === 'locations' && data?.measurement?.city_available === false ? <Empty text="נתוני עיר אינם זמינים: בסיס נתוני המיקום אינו מותקן בשרת." /> : <RankedList items={data?.[breakdown]} color={breakdownMeta.color} empty={breakdownMeta.empty} />}</Panel>}
+        {view === 'audience' && <Panel title="קהל ואתרים מפנים לפי השרת" hint="פילוח לפי פתיחות עמודים שנרשמו בשרת; מיקום משוער לפי כתובת רשת. נתוני מיקום: DB-IP City Lite, מיקום משוער בלבד." action={<Tabs tabs={BREAKDOWN_TABS} value={breakdown} onChange={setBreakdown} />}>{breakdown === 'locations' && data?.measurement?.city_available === false ? <Empty text="נתוני עיר אינם זמינים: בסיס נתוני המיקום אינו מותקן בשרת." /> : <RankedList items={data?.[breakdown]} color={breakdownMeta.color} empty={breakdownMeta.empty} />}<p className="status-line"><a href="https://db-ip.com" target="_blank" rel="noreferrer">IP Geolocation by DB-IP</a> · מיקום משוער</p></Panel>}
         {view === 'pages' && <>
         <div className={`page-explorer ${selectedPath ? 'has-selection' : ''}`}>
           <Panel title="עמודים שנצפו" hint={PAGE_VIEW_HINT}>

@@ -820,3 +820,9 @@ dialog.mobile-more { margin-block-start: auto; margin-block-end: 80px; inset: 0;
 .trusted-devices li span { display: grid; gap: .1rem; }
 .trusted-devices li b { font-weight: 500; }
 .trusted-devices small { color: var(--ink-muted); font-size: .76rem; font-weight: 400; }
+
+/* Source details wrap at mobile widths; identifiers remain bidi isolated. */
+.source-section .status-line { padding-inline: 1rem; }
+.source-section > summary { padding: .7rem 1rem; min-height: 44px; cursor: pointer; }
+.source-section .source-list b small { display: block; }
+.source-section .source-list li > span { flex-shrink: 0; max-width: 45%; }

@@ -4,7 +4,7 @@ import { Check, Copy, Plus, QrCode, Trash2 } from 'lucide-react';
 import { Empty, IconAction, Panel } from './AnalyticsParts';
 import LinkGuide from './LinkGuide';
 import { apiFetch, rangeQuery } from '../lib/api';
-import { formatNumber } from '../lib/format';
+import { formatNumber, formatDateTime } from '../lib/format';
 import { getSessionSnapshot } from '../lib/session';
 
 const SHORT_CODES = { whatsapp: 'wa', facebook: 'fb', instagram: 'ig', tiktok: 'tt', google_business: 'g', email: 'mail', sms: 'sms', qr: 'qr', linkedin: 'in', youtube: 'yt', telegram: 'tg' };
@@ -12,19 +12,30 @@ const share = (part, total) => (total ? Math.round((part / total) * 100) : 0);
 
 /** Channels, campaigns and referring sites for one site, from the anonymous action tracker. */
 export function SourcesPanel({ appId, range }) {
-  const [data, setData] = useState(null);
+  const [snapshot, setData] = useState(null);
+  const [campaign, setCampaign] = useState('');
+  const [content, setContent] = useState('');
+  const requestKey = `${appId}:${rangeQuery(range)}:${campaign}:${content}`;
+  const data = snapshot?._key === requestKey ? snapshot : null;
   const [error, setError] = useState('');
   useEffect(() => {
     let alive = true;
-    apiFetch(`/visitor-analytics/apps/${appId}/sources?${rangeQuery(range)}`)
-      .then((value) => { if (alive) { setData(value); setError(''); } })
+    const controller = new AbortController();
+    apiFetch(`/visitor-analytics/apps/${appId}/sources?${rangeQuery(range)}&campaign=${encodeURIComponent(campaign)}&content=${encodeURIComponent(content)}`, { signal: controller.signal })
+      .then((value) => { if (alive) { setData({...value,_key:requestKey}); setError(''); } })
       .catch((e) => alive && setError(e.message));
-    return () => { alive = false; };
-  }, [appId, range]);
+    return () => { alive = false; controller.abort(); };
+  }, [appId, range, campaign, content, requestKey]);
   const top = data?.channels?.[0]?.sessions || 1;
   return (
     <Panel title="איך הגיעו" hint="לפי תגית הקמפיין בקישור, ואם אין כזו לפי האתר שממנו הגיעו. וואטסאפ ואפליקציות רבות לא מוסרות מאיפה הגיעו, ולכן מופיעות כ'ישיר' — בשביל זה יש קישורים למעקב. ביקורים הם משוערים; לחיצת קשר אינה פנייה." bleed>
       {error && <p className="status-line is-attention">{error}</p>}
+      <div className="link-form"><label>קמפיין<select value={campaign} onChange={e => {setCampaign(e.target.value);setContent('');}}><option value="">כל הקמפיינים</option>{[...new Set(snapshot?.options?.map(o=>o.campaign).filter(Boolean))].map(v=><option key={v}>{v}</option>)}</select></label><label>פרסום<select value={content} onChange={e=>setContent(e.target.value)}><option value="">כל הפרסומים</option>{[...new Set(snapshot?.options?.filter(o=>!campaign||o.campaign===campaign).map(o=>o.content).filter(Boolean))].map(v=><option key={v}>{v}</option>)}</select></label></div>
+      {!data && !error && <p className="status-line">טוען מקורות…</p>}
+      {data?.coverage && <p className={`status-line ${data.sessions >= 10 && data.coverage.percent < 70 ? 'is-attention' : ''}`}>
+        מקור ידוע ב־{formatNumber(data.coverage.known)} מתוך {formatNumber(data.sessions)} ביקורים שנמדדו למקורות{data.coverage.percent !== null ? ` (${data.coverage.percent}%)` : ''}
+        <small> · קישור מתויג: {formatNumber(data.coverage.tagged)} · אתר מפנה: {formatNumber(data.coverage.referrer)} · רשומה ישנה: {formatNumber(data.coverage.legacy)} · לא ידוע: {formatNumber(data.coverage.unknown)}</small>
+      </p>}
       {data && !data.sessions && <Empty text="אין עדיין ביקורים עם מקור בטווח הזה" />}
       {data?.sessions > 0 && (
         <>
@@ -60,8 +71,17 @@ export function SourcesPanel({ appId, range }) {
               </ul>
             </div>
           )}
+          {data.placements?.length > 0 && <div className="source-section"><h3>פרסומים וקישורים</h3><ul className="source-list source-list--plain">{data.placements.map(item => <li key={`${item.channel}:${item.campaign}:${item.content}`}><b><bdi>{item.content}</bdi><small> · {item.label} · <bdi>{item.campaign}</bdi></small></b><span className="source-list__numbers"><strong>{formatNumber(item.sessions)}</strong><small>{formatNumber(item.contacts)} עם לחיצת קשר</small></span></li>)}</ul></div>}
         </>
       )}
+      {data && <div className="source-section"><h3>תוצאות ב־Desk</h3>
+        <p className="status-line">{data.desk?.status === 'ok' ? `נבדק ${formatDateTime(data.desk.checked_at)}` : 'מקור הפניות אינו זמין — אין להסיק שאין פניות'}</p>
+        <ul className="source-list source-list--plain">{data.outcomes?.map(item => <li key={`${item.source}:${item.campaign}:${item.content}:${item.stage}`}><b><bdi>{item.source || 'מקור לא ידוע'}</bdi><small> · <bdi>{item.campaign} {item.content}</bdi></small></b><span className="source-list__numbers"><strong>{formatNumber(item.count)}</strong><small>{({submitted:'טפסים שנשלחו',received:'פניות שהתקבלו',qualified:'פניות מתאימות',customer:'לקוחות עם תשלום',lost:'לא התקדם'})[item.stage]}</small></span></li>)}</ul>
+        {data.desk?.status === 'ok' && !data.outcomes?.length && <Empty text="אין תוצאות מ־Desk בטווח שנבחר" />}
+        <p className="status-line">לחיצות וטפסים אינם אישור להודעת וואטסאפ. התוצאות משויכות למועד הפנייה; תשלום לפי התיק המקושר.</p>
+      </div>}
+      {data?.bursts?.length > 0 && <details className="source-section"><summary>פתיחות סמוכות שדורשות בדיקה</summary><ul className="source-list source-list--plain">{data.bursts.map((b,i)=><li key={i}><b><bdi>{formatDateTime(b.second+'Z')}</bdi> · <bdi>{b.source || 'מקור לא ידוע'}</bdi></b><span>{formatNumber(b.signals)} ביקורים באותה שנייה</span></li>)}</ul><p className="status-line">הקיבוץ בזמן אינו הוכחה לאוטומציה. הרשומות נשמרו ולא סוננו על בסיס הזמן בלבד.</p></details>}
+      {data?.recent?.length > 0 && <details className="source-section"><summary>פעילות ומקורות לפי זמן</summary><ul className="source-list source-list--plain">{data.recent.map((item,i) => <li key={i}><b><bdi>{formatDateTime(item.occurred_at)}</bdi><small> · {({tagged:'קישור מתויג',referrer:'אתר מפנה',unknown:'לא ידוע'})[item.evidence] || 'רשומה ישנה'} · <bdi>{item.source || 'לא ידוע'}</bdi></small><small><bdi>{item.path}</bdi> · <bdi>{item.campaign} {item.content}</bdi></small></b><span>{({page_view:'פתיחת עמוד',contact_click:'לחיצת קשר',form_submit:'ניסיון שליחה',form_start:'התחלת טופס'})[item.event_type] || 'פעולה'}</span></li>)}</ul><p className="status-line">30 הפעולות האחרונות · שעון ישראל · קישור שהועבר הלאה שומר את תגית הפרסום המקורי.</p></details>}
     </Panel>
   );
 }
@@ -83,7 +103,7 @@ function LinkRow({ link, canEdit, onRemove }) {
         <span className="link-row__numbers" title="לחיצות על הקישור (ללא בוטים ותצוגות מקדימות) · ביקורים שנמדדו באתר">
           <strong>{formatNumber(link.clicks_30d)}</strong><small>לחיצות, 30 יום</small>
         </span>
-        <span className="link-row__numbers"><strong>{formatNumber(link.sessions)}</strong><small>ביקורים{link.contacts ? ` · ${formatNumber(link.contacts)} קשר` : ''}</small></span>
+        <span className="link-row__numbers"><strong>{formatNumber(link.sessions)}</strong><small>ביקורים לפי קוד{link.contacts ? ` · ${formatNumber(link.contacts)} קשר` : ''}</small></span>
         <span className="link-row__actions">
           <IconAction icon={copied ? Check : Copy} label={copied ? 'הועתק' : `העתקת ${link.short_url}`} onClick={copy} />
           <IconAction icon={QrCode} label={qr ? 'הסתרת קוד QR' : 'קוד QR להדפסה'} onClick={toggleQr} />
@@ -118,7 +138,7 @@ export function LinksPanel({ appId, siteUrl }) {
     // The server suggestion avoids codes already in use; the local short form covers a failed lookup.
     setForm((current) => ({ ...current, channel, code: value?.suggestion || SHORT_CODES[channel] || current.code }));
   };
-  const open = async () => { setError(''); setForm({ channel: 'whatsapp', code: '', campaign: '', path: basePath }); await choose('whatsapp'); };
+  const open = async () => { setError(''); setForm({ channel: 'whatsapp', code: '', campaign: '', path: basePath,medium:'link' }); await choose('whatsapp'); };
   const save = async (event) => {
     event.preventDefault();
     try {
@@ -148,6 +168,7 @@ export function LinksPanel({ appId, siteUrl }) {
             </span>
           </label>
           <label>קמפיין (לא חובה)<input value={form.campaign} onChange={(e) => setForm({ ...form, campaign: e.target.value })} maxLength={60} placeholder="למשל: מבצע חגים" /></label>
+          <label>סוג הפרסום<select value={form.medium} onChange={e=>setForm({...form,medium:e.target.value})}>{[['link','קישור רגיל'],['social','פרסום אורגני'],['paid_social','פרסום ממומן'],['messaging','הודעה'],['email','דוא״ל'],['qr','קוד QR']].map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
           <label>עמוד יעד<input dir="ltr" value={form.path} onChange={(e) => setForm({ ...form, path: e.target.value })} required maxLength={200} /></label>
           <div className="btn-group">
             <button className="btn btn--primary">יצירה</button>

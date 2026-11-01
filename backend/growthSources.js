@@ -125,6 +125,7 @@ async function syncGrowthSources(sources = SOURCES) {
     if (running) return;
     running = true;
     try {
+        await require('./deskOutcomes').syncDeskOutcomes(db);
         const grouped = Map.groupBy(sources, source => source.app);
         for (const [appName, appSources] of grouped) {
             const app = db.prepare('SELECT id FROM apps WHERE name=? AND reporting_enabled=1').get(appName);

@@ -45,17 +45,31 @@ function channelOf(source, medium = '') {
 }
 
 /** Sessions per channel and campaign, with how many of them clicked to make contact. */
-function sourcesSummary(db, appId, from, to) {
-    const sessions = db.prepare(`SELECT session_hash, source, medium, campaign,
-            MAX(CASE WHEN event_type = 'contact_click' THEN 1 ELSE 0 END) AS contacted
+function sourcesSummary(db, appId, from, to, filters = {}) {
+    const campaignFilter = String(filters.campaign || '').slice(0,80), contentFilter = String(filters.content || '').slice(0,80);
+    const extra = " AND (?='' OR campaign=?) AND (?='' OR content=?)";
+    const args = [appId,from,to,campaignFilter,campaignFilter,contentFilter,contentFilter];
+    const sessions = db.prepare(`WITH ranked AS (SELECT session_hash, source, medium, campaign, content, evidence,
+            MIN(occurred_at) OVER (PARTITION BY session_hash) first_seen, MAX(occurred_at) OVER (PARTITION BY session_hash) last_seen,
+            MAX(CASE WHEN event_type = 'contact_click' THEN 1 ELSE 0 END) OVER (PARTITION BY session_hash) AS contacted,
+            ROW_NUMBER() OVER (PARTITION BY session_hash ORDER BY occurred_at DESC,id DESC) rn
         FROM growth_events WHERE app_id = ? AND automation_hint = 0 AND occurred_at >= ? AND occurred_at < ?
-        GROUP BY session_hash`).all(appId, from, to);
-    const channels = new Map(), campaigns = new Map(), referrals = new Map();
+        ${extra}) SELECT * FROM ranked WHERE rn=1`).all(...args);
+    const channels = new Map(), campaigns = new Map(), referrals = new Map(), placements = new Map();
+    const coverage = { known: 0, tagged: 0, referrer: 0, unknown: 0, legacy: 0 };
     for (const row of sessions) {
+        const evidence = row.evidence || (row.source ? 'legacy' : 'unknown');
+        coverage[evidence] = (coverage[evidence] || 0) + 1;
+        if (row.source) coverage.known++;
         const channel = channelOf(row.source, row.medium);
         const item = channels.get(channel) || { channel, label: CHANNELS[channel], sessions: 0, contacts: 0 };
         item.sessions++; item.contacts += row.contacted;
         channels.set(channel, item);
+        if (row.content) {
+            const key = `${channel}:${row.campaign}:${row.content}`;
+            const place = placements.get(key) || { channel, label: CHANNELS[channel], campaign: row.campaign, content: row.content, sessions: 0, contacts: 0 };
+            place.sessions++; place.contacts += row.contacted; placements.set(key, place);
+        }
         if (row.campaign) {
             const key = `${channel}:${row.campaign}`;
             const camp = campaigns.get(key) || { campaign: row.campaign, channel, label: CHANNELS[channel], sessions: 0, contacts: 0 };
@@ -65,8 +79,17 @@ function sourcesSummary(db, appId, from, to) {
         if (channel === 'referral') referrals.set(row.source, (referrals.get(row.source) || 0) + 1);
     }
     const sort = (items) => [...items].sort((a, b) => b.sessions - a.sessions);
+    const outcomes = db.prepare(`SELECT source,campaign,content,stage,COUNT(*) count FROM source_outcomes WHERE app_id=? AND occurred_at>=? AND occurred_at<? ${extra} GROUP BY source,campaign,content,stage`).all(...args);
+    const state = db.prepare("SELECT value FROM monitor_metadata WHERE key='desk-outcomes'").get();
+    let desk = { status: 'unavailable' }; try { desk = JSON.parse(state?.value || '{}'); } catch { /* unavailable */ }
+    const recent = db.prepare(`SELECT occurred_at,source,medium,campaign,content,evidence,path,event_type FROM growth_events
+        WHERE app_id=? AND automation_hint=0 AND occurred_at>=? AND occurred_at<? ${extra} ORDER BY occurred_at DESC LIMIT 30`).all(...args);
+    const bursts = db.prepare(`SELECT substr(occurred_at,1,19) second,source,campaign,COUNT(DISTINCT session_hash) signals FROM growth_events WHERE app_id=? AND automation_hint=0 AND event_type='page_view' AND occurred_at>=? AND occurred_at<? GROUP BY second,source,campaign HAVING signals>=3 ORDER BY second DESC LIMIT 5`).all(appId,from,to);
+    const options = db.prepare(`SELECT DISTINCT campaign,content FROM growth_events WHERE app_id=? AND automation_hint=0 AND occurred_at>=? AND occurred_at<? AND (campaign<>'' OR content<>'') LIMIT 200`).all(appId,from,to);
     return {
         sessions: sessions.length,
+        coverage: { ...coverage, percent: sessions.length ? Math.round(coverage.known * 100 / sessions.length) : null },
+        placements: sort(placements.values()).slice(0, 30), outcomes, desk, recent, options, bursts,
         channels: sort(channels.values()),
         campaigns: sort(campaigns.values()).slice(0, 20),
         referrals: [...referrals.entries()].map(([host, count]) => ({ host, sessions: count })).sort((a, b) => b.sessions - a.sessions).slice(0, 10)
@@ -85,20 +108,23 @@ function validateLink(db, body) {
     const channel = LINK_CHANNELS.includes(body?.channel) ? body.channel : null;
     const code = String(body?.code || '').trim().toLowerCase();
     const campaign = String(body?.campaign || '').trim();
+    const medium = body?.medium || 'link';
+    if (!['link','social','paid_social','messaging','email','qr'].includes(medium)) throw Object.assign(new Error('סוג הקישור אינו תקין.'), {status:400});
     let path = String(body?.path || basePath).trim() || '/';
     if (!channel) throw Object.assign(new Error('בחרו ערוץ.'), { status: 400 });
     if (!/^[a-z0-9][a-z0-9-]{0,23}$/.test(code)) throw Object.assign(new Error('קוד הקישור: אותיות באנגלית, ספרות ומקף, עד 24 תווים.'), { status: 400 });
     if (campaign && !/^[\p{L}\p{N}_. -]{1,60}$/u.test(campaign)) throw Object.assign(new Error('שם הקמפיין יכול להכיל אותיות, ספרות, רווח, נקודה ומקף.'), { status: 400 });
     if (!path.startsWith('/') || path.startsWith('//') || /[\s?#]/.test(path) || path.length > 200) throw Object.assign(new Error('נתיב היעד צריך להתחיל ב־/ ובלי פרמטרים.'), { status: 400 });
     if (db.prepare('SELECT 1 FROM tracked_links WHERE host = ? AND code = ?').get(host, code)) throw Object.assign(new Error('הקוד כבר בשימוש באתר הזה.'), { status: 409 });
-    return { app, host, channel, code, campaign, path };
+    return { app, host, channel, code, campaign, path, medium };
 }
 
 function destination(link) {
     const url = new URL(`https://${link.host}${link.path}`);
     url.searchParams.set('utm_source', link.channel);
-    url.searchParams.set('utm_medium', 'link');
+    url.searchParams.set('utm_medium', link.medium || 'link');
     url.searchParams.set('utm_campaign', link.campaign || link.code);
+    if (link.code) url.searchParams.set('utm_content', link.code);
     return url.href;
 }
 
@@ -121,9 +147,11 @@ function listLinks(db, appId) {
             (SELECT COUNT(*) FROM link_clicks c WHERE c.link_id = l.id AND c.automation_hint = 0) AS clicks,
             (SELECT COUNT(*) FROM link_clicks c WHERE c.link_id = l.id AND c.automation_hint = 0 AND c.occurred_at >= ?) AS clicks_30d,
             (SELECT COUNT(DISTINCT g.session_hash) FROM growth_events g WHERE g.app_id = l.app_id AND g.automation_hint = 0
-                AND g.source = l.channel AND g.campaign = CASE WHEN l.campaign <> '' THEN l.campaign ELSE l.code END) AS sessions,
+                AND g.source = l.channel AND g.campaign = CASE WHEN l.campaign <> '' THEN l.campaign ELSE l.code END
+                AND g.content=l.code) AS sessions,
             (SELECT COUNT(DISTINCT g.session_hash) FROM growth_events g WHERE g.app_id = l.app_id AND g.automation_hint = 0
-                AND g.event_type = 'contact_click' AND g.source = l.channel AND g.campaign = CASE WHEN l.campaign <> '' THEN l.campaign ELSE l.code END) AS contacts
+                AND g.event_type = 'contact_click' AND g.source = l.channel AND g.campaign = CASE WHEN l.campaign <> '' THEN l.campaign ELSE l.code END
+                AND g.content=l.code) AS contacts
         FROM tracked_links l JOIN apps a ON a.id = l.app_id ${appId ? 'WHERE l.app_id = ?' : ''} ORDER BY l.created_at DESC`)
         .all(...[since, ...(appId ? [appId] : [])])
         .map((link) => ({ ...link, short_url: `https://${link.host}/l/${link.code}`, destination: destination(link), label: CHANNELS[link.channel] }));

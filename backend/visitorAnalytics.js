@@ -18,6 +18,7 @@ const BACKFILL_BYTES = 64 * 1024 * 1024;
 const GEOIP_DB_PATH = process.env.GEOIP_DB_PATH || '/usr/share/GeoIP/GeoLite2-City.mmdb';
 
 let geoReader = null;
+let geoCheckedAt = 0, geoMtime = 0;
 let ingestTimer = null;
 
 try {
@@ -56,6 +57,13 @@ function getFileId(stat) {
 }
 
 function enrichLocation(ip) {
+    if (Date.now()-geoCheckedAt > 3600000) {
+        geoCheckedAt=Date.now();
+        try {
+            const mtime=fs.statSync(GEOIP_DB_PATH).mtimeMs;
+            if(mtime!==geoMtime){geoReader=new (require('maxmind').Reader)(fs.readFileSync(GEOIP_DB_PATH));geoMtime=mtime;}
+        } catch { /* retain the last working local database */ }
+    }
     if (!geoReader) return { countryCode: null, region: null, city: null };
     try {
         const result = geoReader.get(ip);

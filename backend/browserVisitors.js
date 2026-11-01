@@ -50,6 +50,9 @@ function browserHistory(app, range, query) {
         GROUP BY visit_hash ORDER BY first_seen DESC LIMIT 10 OFFSET ?`)
         .all(app.id, visitor, from, range.to, (page - 1) * 10);
     for (const visit of visits) {
+        visit.arrival = db.prepare(`SELECT source,campaign,content,evidence FROM growth_events WHERE app_id=? AND automation_hint=0
+            AND browser_session_hash IN (SELECT session_hash FROM browser_signals WHERE app_id=? AND visitor_hash=? AND visit_hash=? AND automation_hint=0)
+            AND occurred_at>=? AND occurred_at<=? ORDER BY occurred_at,id LIMIT 1`).get(app.id,app.id,visitor,visit.visit_hash,new Date(Date.parse(visit.first_seen)-30000).toISOString(),new Date(Date.parse(visit.last_seen)+30000).toISOString()) || null;
         visit.pages = db.prepare(`SELECT occurred_at,path FROM browser_signals WHERE app_id=? AND visitor_hash=?
             AND visit_hash=? AND automation_hint=0 AND occurred_at>=? AND occurred_at<?
             ORDER BY occurred_at,id LIMIT 80`).all(app.id, visitor, visit.visit_hash, from, range.to);

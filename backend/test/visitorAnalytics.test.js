@@ -444,3 +444,9 @@ test('a pending hosting-network session counts only after its own interaction', 
         networks._setReaderForTests(null);
     }
 });
+
+
+test('nested font downloads never count as page views', () => {
+    for(const ext of ['ttf','otf','woff','woff2','eot']) assert.equal(isPageView({method:'GET',status:200,path:'/alenu/assets/fonts/heebo.'+ext}),false);
+    assert.equal(isPageView({method:'GET',status:200,path:'/alenu/start.html'}),true);
+});
