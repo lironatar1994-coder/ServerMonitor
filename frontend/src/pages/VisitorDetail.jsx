@@ -292,6 +292,7 @@ const VisitorDetail = ({ diagnostics = false }) => {
       {selectedIp && (
         <ConnectionHistory key={`${id}:${selectedIp}:${data?.range?.from}:${data?.range?.to}`} appId={id} ip={selectedIp} range={data?.range || resolveRange()} onClose={() => setSelectedIp(null)} />
       )}
+      {view !== 'audience' && <p className="status-line"><a href="https://db-ip.com" target="_blank" rel="noreferrer">IP Geolocation by DB-IP</a> · מיקום משוער לפי הרשת</p>}
     </div>
   );
 };

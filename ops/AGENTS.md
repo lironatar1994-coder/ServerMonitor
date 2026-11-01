@@ -85,3 +85,5 @@
 - Visitor installation must back up changed Nginx files, keep the shared key server-only, validate before reload, and roll back on validation failure. Native working trackers must not receive an additional tracker. Alenu (`/alenu`) and Mila Tova CV (`/cv`) receive their own navigation and growth tags; Seder and PDF Studio keep their native collectors; Pizza Manager storefronts (`/PizzaManager/p`) receive their own tag; Pizza kitchen/admin/platform routes and internal `lawebs.co.il` apps receive no tag.
 
 - `update-city-db.sh` atomically validates and refreshes DB-IP City Lite monthly through deployment and existing nightly maintenance, preserving the prior file on failure. `configure-attribution.cjs` seeds distinct Alenu placement links and backfills at most 10,000 retained candidate addresses from the current approximate database. Attribution export failures are checked by the existing visitor health check.
+
+- Recurring browser checks verify Alenu source screens at desktop/mobile widths, the installed attribution hook and Desk public intake validation using an intentionally incomplete request (HTTP 400, never a real inquiry).

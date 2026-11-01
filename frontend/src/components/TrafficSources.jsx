@@ -76,7 +76,7 @@ export function SourcesPanel({ appId, range }) {
       )}
       {data && <div className="source-section"><h3>תוצאות ב־Desk</h3>
         <p className="status-line">{data.desk?.status === 'ok' ? `נבדק ${formatDateTime(data.desk.checked_at)}` : 'מקור הפניות אינו זמין — אין להסיק שאין פניות'}</p>
-        <ul className="source-list source-list--plain">{data.outcomes?.map(item => <li key={`${item.source}:${item.campaign}:${item.content}:${item.stage}`}><b><bdi>{item.source || 'מקור לא ידוע'}</bdi><small> · <bdi>{item.campaign} {item.content}</bdi></small></b><span className="source-list__numbers"><strong>{formatNumber(item.count)}</strong><small>{({submitted:'טפסים שנשלחו',received:'פניות שהתקבלו',qualified:'פניות מתאימות',customer:'לקוחות עם תשלום',lost:'לא התקדם'})[item.stage]}</small></span></li>)}</ul>
+        <ul className="source-list source-list--plain">{data.outcomes?.map(item => <li key={`${item.source}:${item.campaign}:${item.content}:${item.stage}`}><b><bdi>{item.source || 'מקור לא ידוע'}</bdi><small> · <bdi>{item.campaign} {item.content}</bdi></small></b><span className="source-list__numbers"><strong>{formatNumber(item.count)}</strong><small>{({submitted:'טפסים שנשלחו',received:'פניות שהתקבלו',qualified:'פניות מתאימות',customer:'פניות עם תשלום מקושר',lost:'לא התקדם'})[item.stage]}</small></span></li>)}</ul>
         {data.desk?.status === 'ok' && !data.outcomes?.length && <Empty text="אין תוצאות מ־Desk בטווח שנבחר" />}
         <p className="status-line">לחיצות וטפסים אינם אישור להודעת וואטסאפ. התוצאות משויכות למועד הפנייה; תשלום לפי התיק המקושר.</p>
       </div>}
