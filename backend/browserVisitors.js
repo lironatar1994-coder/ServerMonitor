@@ -68,6 +68,9 @@ function browserHistory(app, range, query) {
             .all(app.id, app.id, visitor, visit.visit_hash, visit.first_seen, until);
         visit.actions = [...visit.actions, ...product].sort((a,b) => a.occurred_at.localeCompare(b.occurred_at)).slice(0,80);
         visit.in_period = visit.last_seen >= range.from;
+        visit.outcomes = db.prepare(`SELECT occurred_at,stage FROM source_outcomes WHERE app_id=?
+            AND browser_session_hash<>'' AND browser_session_hash IN (SELECT session_hash FROM browser_signals WHERE app_id=? AND visitor_hash=? AND visit_hash=? AND automation_hint=0)
+            AND occurred_at>=? AND occurred_at<? ORDER BY occurred_at LIMIT 20`).all(app.id,app.id,visitor,visit.visit_hash,visit.first_seen,until);
         delete visit.visit_hash;
     }
     return { visitor_id: visitor, summary, visits, page, limit: 10, has_more: page * 10 < summary.visits,

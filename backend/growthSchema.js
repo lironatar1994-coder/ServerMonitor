@@ -72,6 +72,7 @@ function initializeGrowth(db) {
         content TEXT NOT NULL DEFAULT '', evidence TEXT NOT NULL DEFAULT '', stage TEXT NOT NULL,
         first_source TEXT NOT NULL DEFAULT '', latest_source TEXT NOT NULL DEFAULT ''
     ); CREATE INDEX IF NOT EXISTS source_outcomes_range ON source_outcomes(app_id,occurred_at);`);
+    if (!db.prepare('PRAGMA table_info(source_outcomes)').all().some(c=>c.name==='browser_session_hash')) db.exec("ALTER TABLE source_outcomes ADD COLUMN browser_session_hash TEXT NOT NULL DEFAULT ''");
     const now = new Date().toISOString();
     const descriptions = {
         'Dfus Reuven': 'בקשות להצעת מחיר לפי שירות', 'Pinhas Ratzon': 'פניות רלוונטיות לפי תחום שירות',
