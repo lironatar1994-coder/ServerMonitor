@@ -32,7 +32,7 @@ export function SourcesPanel({ appId, range }) {
       {error && <p className="status-line is-attention">{error}</p>}
       <div className="link-form"><label>קמפיין<select value={campaign} onChange={e => {setCampaign(e.target.value);setContent('');}}><option value="">כל הקמפיינים</option>{[...new Set(snapshot?.options?.map(o=>o.campaign).filter(Boolean))].map(v=><option key={v}>{v}</option>)}</select></label><label>פרסום<select value={content} onChange={e=>setContent(e.target.value)}><option value="">כל הפרסומים</option>{[...new Set(snapshot?.options?.filter(o=>!campaign||o.campaign===campaign).map(o=>o.content).filter(Boolean))].map(v=><option key={v}>{v}</option>)}</select></label></div>
       {!data && !error && <p className="status-line">טוען מקורות…</p>}
-      {data?.coverage && <p className={`status-line ${data.sessions >= 10 && data.coverage.percent < 70 ? 'is-attention' : ''}`}>
+      {data?.coverage && <p className={`source-coverage ${data.sessions >= 10 && data.coverage.percent < 70 ? 'is-attention' : ''}`}>
         מקור ידוע ב־{formatNumber(data.coverage.known)} מתוך {formatNumber(data.sessions)} ביקורים שנמדדו למקורות{data.coverage.percent !== null ? ` (${data.coverage.percent}%)` : ''}
         <small> · קישור מתויג: {formatNumber(data.coverage.tagged)} · אתר מפנה: {formatNumber(data.coverage.referrer)} · רשומה ישנה: {formatNumber(data.coverage.legacy)} · לא ידוע: {formatNumber(data.coverage.unknown)}</small>
       </p>}
@@ -80,7 +80,7 @@ export function SourcesPanel({ appId, range }) {
         {data.desk?.status === 'ok' && !data.outcomes?.length && <Empty text="אין תוצאות מ־Desk בטווח שנבחר" />}
         <p className="status-line">לחיצות וטפסים אינם אישור להודעת וואטסאפ. התוצאות משויכות למועד הפנייה; תשלום לפי התיק המקושר.</p>
       </div>}
-      {data?.bursts?.length > 0 && <details className="source-section"><summary>פתיחות סמוכות שדורשות בדיקה</summary><ul className="source-list source-list--plain">{data.bursts.map((b,i)=><li key={i}><b><bdi>{formatDateTime(b.second+'Z')}</bdi> · <bdi>{b.source || 'מקור לא ידוע'}</bdi></b><span>{formatNumber(b.signals)} ביקורים באותה שנייה</span></li>)}</ul><p className="status-line">הקיבוץ בזמן אינו הוכחה לאוטומציה. הרשומות נשמרו ולא סוננו על בסיס הזמן בלבד.</p></details>}
+      {data?.bursts?.length > 0 && <details className="source-section"><summary>פתיחות סמוכות שדורשות בדיקה</summary><ul className="source-list source-list--plain">{data.bursts.map((b,i)=><li key={i}><b><bdi>{formatDateTime(b.second)}</bdi> · <bdi>{b.source || 'מקור לא ידוע'}</bdi></b><span>{formatNumber(b.signals)} פתיחות סמוכות</span></li>)}</ul><p className="status-line">הקיבוץ בזמן אינו הוכחה לאוטומציה. הרשומות נשמרו ולא סוננו על בסיס הזמן בלבד.</p></details>}
       {data?.recent?.length > 0 && <details className="source-section"><summary>פעילות ומקורות לפי זמן</summary><ul className="source-list source-list--plain">{data.recent.map((item,i) => <li key={i}><b><bdi>{formatDateTime(item.occurred_at)}</bdi><small> · {({tagged:'קישור מתויג',referrer:'אתר מפנה',unknown:'לא ידוע'})[item.evidence] || 'רשומה ישנה'} · <bdi>{item.source || 'לא ידוע'}</bdi></small><small><bdi>{item.path}</bdi> · <bdi>{item.campaign} {item.content}</bdi></small></b><span>{({page_view:'פתיחת עמוד',contact_click:'לחיצת קשר',form_submit:'ניסיון שליחה',form_start:'התחלת טופס'})[item.event_type] || 'פעולה'}</span></li>)}</ul><p className="status-line">30 הפעולות האחרונות · שעון ישראל · קישור שהועבר הלאה שומר את תגית הפרסום המקורי.</p></details>}
     </Panel>
   );

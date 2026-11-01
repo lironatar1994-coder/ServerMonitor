@@ -84,7 +84,12 @@ function sourcesSummary(db, appId, from, to, filters = {}) {
     let desk = { status: 'unavailable' }; try { desk = JSON.parse(state?.value || '{}'); } catch { /* unavailable */ }
     const recent = db.prepare(`SELECT occurred_at,source,medium,campaign,content,evidence,path,event_type FROM growth_events
         WHERE app_id=? AND automation_hint=0 AND occurred_at>=? AND occurred_at<? ${extra} ORDER BY occurred_at DESC LIMIT 30`).all(...args);
-    const bursts = db.prepare(`SELECT substr(occurred_at,1,19) second,source,campaign,COUNT(DISTINCT session_hash) signals FROM growth_events WHERE app_id=? AND automation_hint=0 AND event_type='page_view' AND occurred_at>=? AND occurred_at<? GROUP BY second,source,campaign HAVING signals>=3 ORDER BY second DESC LIMIT 5`).all(appId,from,to);
+    const bursts = db.prepare(`WITH recent AS (
+        SELECT occurred_at,source,campaign FROM growth_events WHERE app_id=? AND automation_hint=0 AND event_type='page_view'
+        AND occurred_at>=? AND occurred_at<? ORDER BY occurred_at DESC LIMIT 200
+    ), windows AS (SELECT occurred_at,source,campaign,LEAD(occurred_at,2) OVER(PARTITION BY source,campaign ORDER BY occurred_at) third FROM recent)
+    SELECT occurred_at second,source,campaign,3 signals FROM windows WHERE (julianday(third)-julianday(occurred_at))*86400 BETWEEN 0 AND 1
+    ORDER BY occurred_at DESC LIMIT 5`).all(appId,from,to);
     const options = db.prepare(`SELECT DISTINCT campaign,content FROM growth_events WHERE app_id=? AND automation_hint=0 AND occurred_at>=? AND occurred_at<? AND (campaign<>'' OR content<>'') LIMIT 200`).all(appId,from,to);
     return {
         sessions: sessions.length,
