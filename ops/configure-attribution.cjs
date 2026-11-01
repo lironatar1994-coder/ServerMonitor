@@ -13,14 +13,16 @@ if (app) {
 }
 if (fs.existsSync(path)) {
     const reader = new (require('../backend/node_modules/maxmind').Reader)(fs.readFileSync(path));
-    const rows = db.prepare('SELECT DISTINCT ip FROM visitor_events WHERE country_code IS NULL AND is_bot=0 AND is_page_view=1 LIMIT 10000').all();
-    const update = db.prepare('UPDATE visitor_events SET country_code=?,region=?,city=? WHERE ip=? AND country_code IS NULL');
+    const rows = db.prepare('SELECT id,ip FROM visitor_events WHERE country_code IS NULL AND is_bot=0 AND is_page_view=1 ORDER BY id DESC LIMIT 10000').all();
+    const update = db.prepare('UPDATE visitor_events SET country_code=?,region=?,city=? WHERE id=? AND country_code IS NULL');
+    const cached = new Map();
     let enriched = 0;
     db.transaction(() => {
-        for (const {ip} of rows) {
-            const geo = reader.get(ip);
+        for (const {id,ip} of rows) {
+            if (!cached.has(ip)) cached.set(ip,reader.get(ip));
+            const geo = cached.get(ip);
             if (!geo?.country?.iso_code) continue;
-            enriched += update.run(geo.country.iso_code,geo.subdivisions?.[0]?.names?.en || null,geo.city?.names?.en || null,ip).changes;
+            enriched += update.run(geo.country.iso_code,geo.subdivisions?.[0]?.names?.en || null,geo.city?.names?.en || null,id).changes;
         }
     })();
     console.log(`Location enrichment: ${rows.length} addresses checked, ${enriched} retained requests enriched (approximate current location)`);
