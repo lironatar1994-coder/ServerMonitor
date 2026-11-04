@@ -341,7 +341,7 @@ class CatalogHealth(unittest.TestCase):
             with sqlite3.connect(db_path) as db:
                 db.execute('CREATE TABLE apps(name,pm2_name,systemd_unit,url,health_url,alerts_enabled,log_host)')
                 db.execute('INSERT INTO apps(name,pm2_name,systemd_unit,url,health_url,alerts_enabled) VALUES(?,?,?,?,?,?)', ('Broken','worker',None,'https://example.test/',None,1))
-            with patch.object(m, 'run', side_effect=RuntimeError('failed')):
+            with patch.object(m, 'run', side_effect=RuntimeError('failed')), patch.object(m, 'unowned_hosts', return_value=[]):
                 errors, warnings = m.catalog_health({}, db_path)
             self.assertEqual(len(errors), 2)
             self.assertEqual(warnings, [])
