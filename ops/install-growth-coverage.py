@@ -16,7 +16,7 @@ SITES = [
     ('lawebs.co.il.conf', 'lawebs.co.il', '/Koralevents', 'https://lawebs.co.il/Koralevents'),
     ('lawebs.co.il.conf', 'lawebs.co.il', '/seder', 'https://lawebs.co.il/seder'),
     ('lawebs.co.il.conf', 'lawebs.co.il', '/pdf-studio', 'https://lawebs.co.il/pdf-studio/'),
-    ('lawebs.co.il.conf', 'lawebs.co.il', '/alenu', 'https://lawebs.co.il/alenu/'),
+    ('alenu.co.il.conf', 'alenu.co.il', '', 'https://alenu.co.il/'),
     ('lawebs.co.il.conf', 'lawebs.co.il', '/cv', 'https://lawebs.co.il/cv/'),
     ('lawebs.co.il.conf', 'lawebs.co.il', '', 'https://lawebs.co.il/'),
     ('vee-app.co.il.conf', 'vee-app.co.il', '/OnYourWay', 'https://vee-app.co.il/OnYourWay'),
@@ -46,7 +46,8 @@ def main():
         write(asset / 'portfolio-tracker.js', (ROOT / 'ops/portfolio-tracker.js').read_text(), 0o644)
         maps = ['map "$host:$uri" $monitor_growth_tag {', '    default "";',
             '    ~*^(www\\.)?vee-app\\.co\\.il:/(maavar|Manager_Site|serve-monitor|pdf-studio|Miryam_Zelig|api|admin|login|dashboard)(/|$) "";',
-            '    ~*^(www\\.)?lawebs\\.co\\.il:/(PinhasRatzon|admin|login|dashboard|PizzaManager|cv-manager|alenu-crm|maavar|desk|allsee|videos|rc)(/|$) "";']
+            '    ~*^(www\\.)?lawebs\\.co\\.il:/(PinhasRatzon|admin|login|dashboard|PizzaManager|cv-manager|alenu|alenu-crm|maavar|desk|allsee|videos|rc)(/|$) "";',
+            '    ~*^(www\\.)?alenu\\.co\\.il:/desk(/|$) "";']
         for config, host, prefix, site in SITES:
             suffix = re.escape(prefix) + '(?:/|$)' if prefix else '/'
             tag = f'<script defer src="/.well-known/server-monitor-growth.js" data-prefix="{prefix}"></script>'
@@ -98,7 +99,7 @@ def main():
                     '    proxy_set_header X-Visitor-IP $remote_addr;',
                     '    proxy_set_header X-Visitor-User-Agent $http_user_agent;', '}']
             write(snippet, '\n'.join(content)+'\n', 0o600)
-            conf = Path('/etc/nginx/sites-available') / config
+            conf = helper.site_config(config)
             conftext = conf.read_text(); include = f'    include {snippet};'
             for start, end in reversed(list(helper.server_blocks(conftext))):
                 block = conftext[start:end]

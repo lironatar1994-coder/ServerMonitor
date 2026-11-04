@@ -24,7 +24,7 @@ test('migration is repeatable and preserves edited goals and canonical-only clie
     require('../growthSchema').initializeGrowth(db);
     assert.equal(db.prepare('SELECT COUNT(*) AS n FROM growth_goals').get().n, before);
     assert.equal(growth.overview({}).sites.length, 13);
-    assert.throws(() => growth.detail(db.prepare("SELECT id FROM apps WHERE name='Alenu CRM'").get().id, {}), /לא נמצא/);
+    assert.throws(() => growth.detail(db.prepare("SELECT id FROM apps WHERE name='Desk'").get().id, {}), /לא נמצא/);
 });
 test('browser actions deduplicate, strip unsupported fields and cannot forge confirmed leads', () => {
     const b = { ...body(), source: 'instagram', campaign: 'sale', phone: 'SECRET', message: 'PRIVATE' };

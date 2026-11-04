@@ -416,12 +416,10 @@ const productionApps = [
     { name: 'Pinhas Ratzon · טופס פניות', pm2_name: 'pinhas-ratzon-form', health_url: 'http://127.0.0.1:3108/health', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Koral Events', url: 'https://lawebs.co.il/Koralevents', systemd_unit: 'koralevents2.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/Koralevents|/koralevents', health_url: 'http://127.0.0.1:3111/Koralevents', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Koral Events 2', url: 'https://lawebs.co.il/Koralevents2', systemd_unit: 'koralevents.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/Koralevents2', health_url: 'http://127.0.0.1:3110/Koralevents2', analytics_enabled: 1, reporting_enabled: 1 },
-    { name: 'Alenu', url: 'https://lawebs.co.il/alenu/', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/alenu', health_url: 'https://lawebs.co.il/alenu/', analytics_enabled: 1, reporting_enabled: 1 },
+    { name: 'Alenu', url: 'https://alenu.co.il/', log_path: sharedNginxLog, log_host: 'alenu.co.il|www.alenu.co.il', log_exclude: '/desk', health_url: 'https://alenu.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Mila Tova CV', url: 'https://lawebs.co.il/cv/', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/cv', health_url: 'https://lawebs.co.il/cv/', analytics_enabled: 1, reporting_enabled: 1 },
     // Storefronts only; kitchen/admin/platform routes stay outside visitor analytics.
     { name: 'Pizza Manager', url: 'https://lawebs.co.il/PizzaManager/', systemd_unit: 'pizza-manager-platform.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/PizzaManager/p', health_url: 'http://127.0.0.1:4180/PizzaManager/p/oven-demo/', analytics_enabled: 1, reporting_enabled: 0 },
-    { name: 'Alenu CRM', url: 'https://lawebs.co.il/alenu-crm', systemd_unit: 'maavar.service', health_url: 'http://127.0.0.1:3127/alenu-crm/api/health', analytics_enabled: 0, reporting_enabled: 0 },
-    { name: 'Alenu CRM · עיבוד מסמכים', systemd_unit: 'maavar-worker.service', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'CV Manager', url: 'https://lawebs.co.il/cv-manager', systemd_unit: 'cv-manager.service', health_url: 'http://127.0.0.1:3139/cv-manager', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Desk', url: 'https://lawebs.co.il/desk/', systemd_unit: 'desk.service', health_url: 'http://127.0.0.1:3150/desk/', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'AllSee', url: 'https://lawebs.co.il/allsee/', systemd_unit: 'allsee.service', health_url: 'http://127.0.0.1:4310/allsee/', analytics_enabled: 0, reporting_enabled: 0 },
@@ -457,7 +455,13 @@ const renamedProductionApps = {
 const retiredProductionApps = ['Pixel Dungeon', 'PDF Generator', 'ToDoFast (inactive)', 'Toren Hazak',
     'Libi Diamonds', 'Libi Diamonds Preview', 'Dfus Reuven Preview', 'WhatsApp Worker',
     // Claude Remote now runs inside the monitor itself (`/serve-monitor/remote`).
-    'Claude RC'];
+    'Claude RC',
+    // The old Next.js CRM stopped on 2026-10-30; Desk replaced it. Its data stays on disk and in backups.
+    'Alenu CRM', 'Alenu CRM · עיבוד מסמכים'];
+
+// A site that changes address keeps its history: stored paths lose the old prefix and the ownership
+// fields move here, so the catalog sync below sees no configuration change and never resets ingestion.
+const movedProductionSites = [{ name: 'Alenu', fromFilter: '/alenu' }];
 
 function renameProductionApps() {
     const rename = db.prepare('UPDATE apps SET name = ? WHERE name = ? AND NOT EXISTS (SELECT 1 FROM apps WHERE name = ?)');
@@ -543,8 +547,33 @@ function syncProductionApps() {
     }).immediate();
 }
 
+function moveProductionSites() {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name)
+        .filter((table) => table !== 'tracked_links' && /^[a-z_]+$/.test(table))
+        .filter((table) => {
+            const columns = db.prepare(`SELECT name FROM pragma_table_info('${table}')`).all().map((row) => row.name);
+            return columns.includes('app_id') && columns.includes('path');
+        });
+    db.transaction(() => {
+        movedProductionSites.forEach(({ name, fromFilter }) => {
+            const existing = db.prepare('SELECT * FROM apps WHERE name = ?').get(name);
+            const next = productionApps.find((app) => app.name === name);
+            if (!existing || !next || existing.log_filter !== fromFilter) return;
+            let moved = 0;
+            tables.forEach((table) => {
+                moved += db.prepare(`UPDATE OR IGNORE ${table} SET path = CASE WHEN path = ? THEN '/' ELSE substr(path, ?) END
+                    WHERE app_id = ? AND (path = ? OR path LIKE ?)`).run(fromFilter, fromFilter.length + 1, existing.id, fromFilter, `${fromFilter}/%`).changes;
+            });
+            db.prepare('UPDATE apps SET url = ?, log_host = ?, log_filter = ?, log_exclude = ?, health_url = ? WHERE id = ?')
+                .run(next.url, next.log_host, next.log_filter ?? null, next.log_exclude ?? null, next.health_url, existing.id);
+            console.log(`Moved ${name} to ${next.url}, kept ${moved} stored records`);
+        });
+    }).immediate();
+}
+
 renameProductionApps();
 purgeRetiredProductionApps();
+moveProductionSites();
 syncProductionApps();
 require('./growthSchema').initializeGrowth(db);
 require('./observability').initializeObservability(db);

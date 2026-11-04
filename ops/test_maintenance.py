@@ -13,6 +13,19 @@ spec = importlib.util.spec_from_file_location('maintenance', Path(__file__).with
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 
+class SiteMoveChecks(unittest.TestCase):
+    def test_a_new_host_is_a_move_but_www_and_https_are_not(self):
+        self.assertEqual(m.moved_host('https://lawebs.co.il/alenu/', 'https://alenu.co.il/'), 'alenu.co.il')
+        self.assertEqual(m.moved_host('https://dfusreuven.co.il/', 'https://www.dfusreuven.co.il/'), '')
+        self.assertEqual(m.moved_host('http://alenu.co.il/', 'https://alenu.co.il/'), '')
+
+    def test_traffic_on_an_unmonitored_domain_is_reported_once_it_is_real(self):
+        with tempfile.TemporaryDirectory() as folder:
+            log = Path(folder) / 'access.log'
+            line = '1.2.3.4 - - [04/Nov/2026:21:00:00 +0200] "GET / HTTP/2.0" 200 1 "-" "x" "{}"\n'
+            log.write_text('skipped partial line\n' + line.format('new-site.co.il') * 3 + line.format('www.owned.co.il') * 3 + line.format('rare.co.il'))
+            self.assertEqual(m.unowned_hosts({'owned.co.il'}, log, 3), ['No monitored site owns new-site.co.il (3 recent requests)'])
+
 class Backups(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -309,8 +322,8 @@ class CatalogHealth(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             db_path = Path(folder) / 'catalog.sqlite'
             with sqlite3.connect(db_path) as db:
-                db.execute('CREATE TABLE apps(name,pm2_name,systemd_unit,url,health_url,alerts_enabled)')
-                db.executemany('INSERT INTO apps VALUES(?,?,?,?,?,?)', [
+                db.execute('CREATE TABLE apps(name,pm2_name,systemd_unit,url,health_url,alerts_enabled,log_host)')
+                db.executemany('INSERT INTO apps(name,pm2_name,systemd_unit,url,health_url,alerts_enabled) VALUES(?,?,?,?,?,?)', [
                     ('New calendar', 'seder-calendar', None, None, None, 1),
                     ('Static site', None, None, 'https://example.test/', 'http://127.0.0.1/health', 1),
                     ('Legacy sender', 'legacy-worker', None, None, None, 0)])
@@ -326,8 +339,8 @@ class CatalogHealth(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             db_path = Path(folder) / 'catalog.sqlite'
             with sqlite3.connect(db_path) as db:
-                db.execute('CREATE TABLE apps(name,pm2_name,systemd_unit,url,health_url,alerts_enabled)')
-                db.execute('INSERT INTO apps VALUES(?,?,?,?,?,?)', ('Broken','worker',None,'https://example.test/',None,1))
+                db.execute('CREATE TABLE apps(name,pm2_name,systemd_unit,url,health_url,alerts_enabled,log_host)')
+                db.execute('INSERT INTO apps(name,pm2_name,systemd_unit,url,health_url,alerts_enabled) VALUES(?,?,?,?,?,?)', ('Broken','worker',None,'https://example.test/',None,1))
             with patch.object(m, 'run', side_effect=RuntimeError('failed')):
                 errors, warnings = m.catalog_health({}, db_path)
             self.assertEqual(len(errors), 2)

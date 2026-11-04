@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+from urllib.parse import urlsplit
 import sqlite3
 import subprocess
 import sys
@@ -40,8 +41,8 @@ ASSETS = {
 }
 AUTH_KEY = Path('/root/.server-monitor-auth-key')
 AUTH_KEY_BACKUP = Path('/root/server-monitor-key-backups/auth.key')
-SERVICES = ['maavar', 'maavar-worker', 'nginx', 'ssh', 'pm2-root', 'koralevents', 'koralevents2', 'fail2ban']
-URLS = ['https://lawebs.co.il/alenu-crm/api/health', 'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents2/api/health',
+SERVICES = ['nginx', 'ssh', 'pm2-root', 'koralevents', 'koralevents2', 'fail2ban']
+URLS = ['https://alenu.co.il/', 'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents2/api/health',
         'https://lawebs.co.il/Koralevents/api/health', 'https://vee-app.co.il/']
 EXPECTED_PM2 = {'dfus-reuven-live', 'manager-site', 'on-your-way-backend',
                 'on-your-way-frontend', 'pinhas-ratzon-form', 'seder-live',
@@ -49,14 +50,18 @@ EXPECTED_PM2 = {'dfus-reuven-live', 'manager-site', 'on-your-way-backend',
                 'video-library-api'}
 TRACKER_URLS = ['https://pinhasratzon.co.il/', 'https://www.dfusreuven.co.il/',
                 'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents',
-                'https://lawebs.co.il/Koralevents2', 'https://lawebs.co.il/alenu/', 'https://lawebs.co.il/cv/',
+                'https://lawebs.co.il/Koralevents2', 'https://alenu.co.il/', 'https://lawebs.co.il/cv/',
                 'https://lawebs.co.il/PizzaManager/p/oven-demo/']
 GROWTH_URLS = ['https://pinhasratzon.co.il/',
                'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents', 'https://lawebs.co.il/Koralevents2',
                'https://lawebs.co.il/seder', 'https://vee-app.co.il/', 'https://vee-app.co.il/OnYourWay',
                'https://lawebs.co.il/pdf-studio/', 'https://www.dfusreuven.co.il/',
                'https://miryamzelig.co.il/', 'https://sosbaderech.co.il/',
-               'https://lawebs.co.il/alenu/', 'https://lawebs.co.il/cv/']
+               'https://alenu.co.il/', 'https://lawebs.co.il/cv/']
+
+MONITOR_LOG = '/var/log/nginx/monitor_host_access.log'
+UNOWNED_HOST_REQUESTS = 40
+INFRASTRUCTURE_HOSTS = {'monitor.vee-app.co.il', '63.250.61.126.sslip.io'}
 
 def run(args, timeout=60):
     p = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
@@ -423,10 +428,50 @@ def catalog_health(pm2_status, db_path=Path('/root/ServerMonitor/backend/monitor
                 errors.append(f'Catalog service not active: {name} ({unit})')
         for url in {public_url, health_url} - {None, ''}:
             try:
-                run(['curl', '--silent', '--show-error', '--location', '--fail', '--max-time', '10', '--output', '/dev/null', url], timeout=15)
+                landed = run(['curl', '--silent', '--show-error', '--location', '--fail', '--max-time', '10', '--output', '/dev/null',
+                              '--write-out', '%{url_effective}', url], timeout=15)
+                moved = moved_host(url, landed)
+                if url == public_url and moved:
+                    errors.append(f'Site moved: {name} now answers at {moved}; update its catalog address and measurement')
             except Exception:
                 errors.append(f'Catalog HTTP check failed: {name}')
+    warnings.extend(unowned_hosts(rows_hosts(db_path)))
     return errors, warnings
+
+def bare_host(url):
+    return (urlsplit(url).hostname or '').lower().removeprefix('www.')
+
+def moved_host(url, landed):
+    """The new host when a site now answers somewhere else; www and http redirects are not moves."""
+    before, after = bare_host(url), bare_host(str(landed).strip())
+    return after if after and after != before else ''
+
+def rows_hosts(db_path):
+    with closing(sqlite3.connect(db_path.as_uri() + '?mode=ro', uri=True)) as db:
+        rows = db.execute('SELECT url,health_url,log_host FROM apps').fetchall()
+    owned = set()
+    for url, health_url, log_host in rows:
+        owned.update(bare_host(value) for value in (url, health_url) if value)
+        owned.update(host.strip().lower().removeprefix('www.') for host in (log_host or '').split('|'))
+    return owned - {''}
+
+def unowned_hosts(owned, log=MONITOR_LOG, minimum=UNOWNED_HOST_REQUESTS):
+    """A real domain getting traffic that no monitored site owns is traffic nobody is measuring."""
+    try:
+        with open(log, 'rb') as source:
+            source.seek(0, 2)
+            source.seek(max(0, source.tell() - 1024 * 1024))
+            lines = source.read().decode('utf8', 'replace').splitlines()[1:]
+    except OSError:
+        return []
+    counts = {}
+    for line in lines:
+        match = re.search(r'"([a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,})"\s*$', line)
+        if match:
+            host = match.group(1).removeprefix('www.')
+            counts[host] = counts.get(host, 0) + 1
+    return [f'No monitored site owns {host} ({count} recent requests)' for host, count in sorted(counts.items())
+            if count >= minimum and host not in owned and host not in INFRASTRUCTURE_HOSTS]
 
 def updates_status(simulate=None, now=None):
     """Pending package updates from a simulated upgrade (no lock, nothing installed), once a day.
@@ -633,12 +678,6 @@ def health():
         errors.append('Last maintenance failed: ' + failed['error'])
     except FileNotFoundError:
         pass
-    try:
-        export = Path('/opt/maavar/shared/export/latest.mvbak')
-        if time.time() - export.stat().st_mtime > 36 * 3600:
-            errors.append('Maavar encrypted export is stale')
-    except FileNotFoundError:
-        errors.append('Maavar encrypted export missing')
     mem = dict((line.split(':')[0], int(line.split()[1]) * 1024) for line in Path('/proc/meminfo').read_text().splitlines() if len(line.split()) >= 2)
     if mem.get('MemAvailable', 0) < 128 * 1024**2:
         warnings.append('Available RAM below 128 MiB; no automatic process termination or cache drops')

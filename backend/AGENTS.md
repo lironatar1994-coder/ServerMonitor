@@ -130,7 +130,7 @@
 
 - `systemd.js` owns bounded, cached systemd unit snapshots. Managed services use the same status, resource, action, and log APIs for PM2 and systemd; preserve systemd users, isolation, environment files, and memory limits.
 - Canonical traffic reports include LA webs, Pinhas Ratzon, PDF Studio, and both separately deployed Koral Events routes. Daily/weekly emails also include a last-check operational inventory of all registered apps, without implying historical uptime or visitor counts for non-analytics services.
-- Alenu CRM (`maavar.service`, served at `lawebs.co.il/alenu-crm`) and its worker remain operational-only: Nginx deliberately disables their access logging. ToDoFast and Toren Hazak are retired; purge their catalog/history entries and keep their production runtimes and storage absent.
+- The old Alenu CRM and its worker are retired from the catalog (stopped 2026-10-30, data preserved). ToDoFast and Toren Hazak are retired; purge their catalog/history entries and keep their production runtimes and storage absent.
 - Koral Events uses `koralevents2.service` on port 3111 at `/Koralevents`; Koral Events 2 uses `koralevents.service` on port 3110 at `/Koralevents2`. Path filters match full path segments, never substring prefixes.
 - Include the new production roots in bounded storage attribution; do not scan arbitrary filesystem roots.
 

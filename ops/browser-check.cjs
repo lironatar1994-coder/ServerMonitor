@@ -12,7 +12,7 @@ const output = process.env.BROWSER_CHECK_RESULT || '/var/lib/lawebs-maintenance/
 const result = { checked: Date.now(), errors: [], failures: [], checks: [], timings: {} };
 // Each failure names its area: a monitored site, the monitor dashboard, or the checker itself.
 const areaOf = name => /^(monitor-|login-screen|page-drill-down|legacy-monitor-url)/.test(name) ? 'monitor' : 'site';
-const siteOf = name => name === 'alenu-desk-intake' ? 'Alenu' : name.startsWith('site-browser-signal-') ? name.slice('site-browser-signal-'.length) : 'LA webs';
+const siteOf = name => name.startsWith('alenu-') ? 'Alenu' : name.startsWith('site-browser-signal-') ? name.slice('site-browser-signal-'.length) : 'LA webs';
 let retries = 2;
 const check = async (name, fn) => {
   const area = areaOf(name);
@@ -55,11 +55,19 @@ let browser;
   await check('login-screen', async () => { await page.goto(`${monitor}/login`); await page.getByRole('button', { name: 'כניסה', exact: true }).waitFor(); });
   await check('alenu-desk-intake', async () => {
     // Deliberately incomplete: tests public routing and validation without storing any lead.
-    const response = await context.request.post('https://lawebs.co.il/desk/api/public/whatsapp', {
-      headers: { Origin: 'https://lawebs.co.il' }, data: { site:'alenu',kind:'form',requestId:'monitor-invalid-probe' }, timeout:15000 });
+    const response = await context.request.post('https://alenu.co.il/desk/api/public/whatsapp', {
+      headers: { Origin: 'https://alenu.co.il' }, data: { site:'alenu',kind:'form',requestId:'monitor-invalid-probe' }, timeout:15000 });
     assert.equal(response.status(),400,'Desk public intake did not validate the incomplete probe');
-    const tracker = await context.request.get('https://lawebs.co.il/.well-known/server-monitor-growth.js');
+    const tracker = await context.request.get('https://alenu.co.il/.well-known/server-monitor-growth.js');
     assert.ok(tracker.ok()); assert.ok((await tracker.text()).includes('__monitorAttribution'),'Attribution collector missing');
+  });
+  await check('alenu-attribution-link', async () => {
+    // The collector must reach the page and hand its envelope to the link into Desk. Only opens the page; submits nothing.
+    const probe = await context.newPage();
+    try {
+      await probe.goto('https://alenu.co.il/miluim.html', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await probe.waitForFunction(() => document.querySelector('[data-reserve-start]')?.href.includes('attribution='), null, { timeout: 8000 });
+    } finally { await probe.close(); }
   });
   await context.addCookies([{ name: '__Host-monitor', value: token, url: new URL(monitor).origin, httpOnly: true, secure: true, sameSite: 'Strict' }]);
   await check('monitor-identity-cannot-open-vault', async () => { const r = await fetch(monitor + '/api/vault/status', { headers: { Authorization: `Bearer ${token}` } }); assert.equal(r.status, 403); });

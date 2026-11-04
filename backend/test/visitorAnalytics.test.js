@@ -87,14 +87,14 @@ test('retires removed production apps and seeds the new lawebs.co.il application
     }
     const app = (name) => db.prepare('SELECT * FROM apps WHERE name = ?').get(name);
     assert.equal(app('Vee Landing').pm2_name, null);
-    assert.equal(app('Alenu CRM').systemd_unit, 'maavar.service');
+    for (const name of ['Alenu CRM', 'Alenu CRM · עיבוד מסמכים']) assert.equal(app(name), undefined, name);
     for (const [name, unit] of [['AllSee', 'allsee.service'], ['CV Manager', 'cv-manager.service'], ['Desk', 'desk.service'], ['Pizza Manager', 'pizza-manager-platform.service']]) {
         assert.equal(app(name).systemd_unit, unit, name);
     }
     assert.equal(app('Video Library').pm2_name, 'video-library-api');
     assert.equal(app('Claude RC'), undefined);
     for (const name of ['Alenu', 'Mila Tova CV', 'Pizza Manager']) assert.equal(app(name).analytics_enabled, 1, name);
-    for (const name of ['Desk', 'AllSee', 'Video Library', 'CV Manager', 'Alenu CRM']) assert.equal(app(name).analytics_enabled, 0, name);
+    for (const name of ['Desk', 'AllSee', 'Video Library', 'CV Manager']) assert.equal(app(name).analytics_enabled, 0, name);
 });
 
 test('seeds Seder with exact host, path, runtime, and client reporting ownership', () => {
@@ -273,7 +273,7 @@ test('resolves every supported public site for first-party browser signals', () 
         ['https://lawebs.co.il/pdf-studio/', 'PDF Studio'],
         ['https://sosbaderech.co.il/', 'SOS Landing'],
         ['https://miryamzelig.co.il/', 'Miryam Zelig'],
-        ['https://lawebs.co.il/alenu/', 'Alenu'],
+        ['https://alenu.co.il/', 'Alenu'],
         ['https://lawebs.co.il/cv/', 'Mila Tova CV'],
         ['https://lawebs.co.il/seder', 'Seder'],
         ['https://vee-app.co.il/OnYourWay', 'On Your Way'],
@@ -382,12 +382,14 @@ test('path segment ownership isolates Koral routes, LA webs and its sibling apps
     assert.equal(matches('LA webs', 'lawebs.co.il', '/work/koral/'), true);
     assert.equal(matches('Mila Tova CV', 'lawebs.co.il', '/cv/'), true);
     assert.equal(matches('Mila Tova CV', 'lawebs.co.il', '/cv-manager/'), false);
-    assert.equal(matches('Alenu', 'lawebs.co.il', '/alenu-crm/'), false);
+    assert.equal(matches('Alenu', 'alenu.co.il', '/'), true);
+    assert.equal(matches('Alenu', 'www.alenu.co.il', '/miluim.html'), true);
+    assert.equal(matches('Alenu', 'alenu.co.il', '/desk/start/reserve'), false);
+    assert.equal(matches('Alenu', 'lawebs.co.il', '/alenu/'), false);
     assert.equal(matches('Pizza Manager', 'lawebs.co.il', '/PizzaManager/p/oven-demo/'), true);
     assert.equal(matches('Pizza Manager', 'lawebs.co.il', '/PizzaManager/admin/'), false);
     assert.equal(matches('Vee Landing', 'vee-app.co.il', '/maavar/documents'), false);
     assert.equal(matches('Seder', 'lawebs.co.il', '/seder-other'), false);
-    assert.equal(db.prepare('SELECT analytics_enabled FROM apps WHERE name = ?').get('Alenu CRM').analytics_enabled, 0);
 });
 
 

@@ -12,7 +12,7 @@ SITES = [
     ('dfusreuven.co.il.conf', ['dfusreuven.co.il', 'www.dfusreuven.co.il'], '', 'https://www.dfusreuven.co.il/', False),
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/Koralevents2', 'https://lawebs.co.il/Koralevents2', False),
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/Koralevents', 'https://lawebs.co.il/Koralevents', False),
-    ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/alenu', 'https://lawebs.co.il/alenu/', False),
+    ('alenu.co.il.conf', ['alenu.co.il', 'www.alenu.co.il'], '', 'https://alenu.co.il/', False),
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/cv', 'https://lawebs.co.il/cv/', False),
     # Customer storefronts only; kitchen, admin and platform routes stay untagged.
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/PizzaManager/p', 'https://lawebs.co.il/PizzaManager/', False),
@@ -20,7 +20,7 @@ SITES = [
 ]
 # Native collectors (Seder, PDF Studio) and internal or unmeasured apps under lawebs.co.il
 # must not inherit the LA webs portfolio tag.
-LAWEBS_UNTRACKED = 'seder|PinhasRatzon|pinhasratzon|pdf-studio|PizzaManager(?!/p(?:/|$))|cv-manager|alenu-crm|maavar|desk|allsee|videos|rc'
+LAWEBS_UNTRACKED = 'seder|PinhasRatzon|pinhasratzon|pdf-studio|PizzaManager(?!/p(?:/|$))|cv-manager|alenu|alenu-crm|maavar|desk|allsee|videos|rc'
 
 def server_blocks(text):
     # Track braces while ignoring quoted strings/comments in the Nginx syntax.
@@ -36,6 +36,10 @@ def server_blocks(text):
             if depth == 0:
                 yield start, token.end()
                 start = None
+
+def site_config(name):
+    available = Path('/etc/nginx/sites-available') / name
+    return available if available.exists() else Path('/etc/nginx/sites-enabled') / name
 
 def main():
     key = Path('/root/.visitor-signal-key').read_text().strip()
@@ -56,7 +60,8 @@ def main():
         write(asset / 'visitor-tracker.js', (ROOT / 'ops/visitor-tracker.js').read_text(), 0o644)
         maps = ['map "$host:$uri" $monitor_navigation_tag {', '    default "";',
                 f'    ~^((www\\.)?lawebs\\.co\\.il):/({LAWEBS_UNTRACKED})(/|$) "";',
-                '    ~^(www\\.)?dfusreuven\\.co\\.il:/(admin|api|supplier)([/.]|$) "";']
+                '    ~^(www\\.)?dfusreuven\\.co\\.il:/(admin|api|supplier)([/.]|$) "";',
+                '    ~^(www\\.)?alenu\\.co\\.il:/desk(/|$) "";']
         for config, hosts, prefix, site, native in SITES:
             host_pattern = '(?:' + '|'.join(re.escape(host) for host in hosts) + ')'
             suffix = re.escape(prefix) + '(?:/|$)' if prefix else '/'
@@ -95,7 +100,7 @@ def main():
                     '    proxy_set_header X-Visitor-IP $remote_addr;',
                     '    proxy_set_header X-Visitor-User-Agent $http_user_agent;', '}']
             write(snippet, '\n'.join(content) + '\n', 0o600)
-            conf = Path('/etc/nginx/sites-available') / config
+            conf = site_config(config)
             text = conf.read_text()
             include = f'    include {snippet};'
             blocks = list(server_blocks(text))

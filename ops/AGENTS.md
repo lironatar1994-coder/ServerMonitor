@@ -16,6 +16,8 @@
 
 - `visitor-tracker.js` also reports uncaught errors from the site's own scripts (name, message, file name and line; at most three per page; never stacks or other origins).
 - `growth-tracker.js` and `install-growth-coverage.py` collect anonymous contact actions and allow-listed campaign tags on twelve canonical public sites. They compose with the existing navigation injection and add no second native navigation signal.
+- Catalog health reports `Site moved` when a site's public address lands on another host (www and https redirects are not moves), and warns `No monitored site owns <host>` when a real domain gets 40 or more of the last megabyte of monitor-log requests with no catalog owner. Domains that are infrastructure go in `INFRASTRUCTURE_HOSTS`.
+- Coverage installers read `sites-available`, falling back to a real file in `sites-enabled` (`alenu.co.il.conf`). `/desk` on `alenu.co.il` stays out of both tag maps: those are customer forms.
 - `maintenance.py` is installed as `/usr/local/sbin/lawebs-maintenance`. Its daily run records pending updates from a simulated `apt-get -s upgrade` (no lock, nothing installed) in `updates.json`, keeping when security updates were first seen; the 15-minute health check warns when they are still pending after two days, since unattended-upgrades should have installed them.
 - `test_maintenance.py` covers safe cleanup, verified (and compressed) SQLite backups, browser-check failure areas and update tracking.
 
