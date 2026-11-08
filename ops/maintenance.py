@@ -467,8 +467,8 @@ def unowned_hosts(owned, log=MONITOR_LOG, minimum=UNOWNED_HOST_REQUESTS):
     counts = {}
     for line in lines:
         match = re.search(r'"([a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,})"\s*$', line)
-        # A retired domain answers 410 on purpose; that traffic is accounted for.
-        if match and '" 410 ' not in line:
+        # Only pages actually served count: a retired domain's 410s and http-to-https redirects are accounted for.
+        if match and re.search(r'" 2\d\d ', line):
             host = match.group(1).removeprefix('www.')
             counts[host] = counts.get(host, 0) + 1
     return [f'No monitored site owns {host} ({count} recent requests)' for host, count in sorted(counts.items())
