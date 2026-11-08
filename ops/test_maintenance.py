@@ -23,7 +23,7 @@ class SiteMoveChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             log = Path(folder) / 'access.log'
             line = '1.2.3.4 - - [04/Nov/2026:21:00:00 +0200] "GET / HTTP/2.0" 200 1 "-" "x" "{}"\n'
-            log.write_text('skipped partial line\n' + line.format('new-site.co.il') * 3 + line.format('www.owned.co.il') * 3 + line.format('rare.co.il'))
+            log.write_text('skipped partial line\n' + line.format('new-site.co.il') * 3 + line.format('www.owned.co.il') * 3 + line.format('rare.co.il') + line.replace('" 200 ', '" 410 ').format('retired.co.il') * 3)
             self.assertEqual(m.unowned_hosts({'owned.co.il'}, log, 3), ['No monitored site owns new-site.co.il (3 recent requests)'])
 
 class Backups(unittest.TestCase):
