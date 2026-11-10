@@ -383,7 +383,8 @@ const VisitorOverview = () => {
                         previous={site.previous}
                       />
                     )}
-                    {!site.browser_signal_page_views ? null : (
+                    {/* The warning qualifies a shown change; "no previous" and "0" need no second caveat. */}
+                    {!site.browser_signal_page_views || !Number(site.previous) || Number(site.previous) === Number(site.browser_signal_sessions) ? null : (
                       site.browser_signal_sessions < 30 && (
                         <TriangleAlert
                           className="sample-warning"

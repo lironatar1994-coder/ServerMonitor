@@ -137,7 +137,8 @@ function timeline(db, appId, from, to) {
     const params = appId ? [from, to, appId] : [from, to];
     const notes = db.prepare(`SELECT id, app_id, at, text, author FROM chart_notes WHERE at >= ? AND at < ? ${scope} ORDER BY at`).all(...params);
     const deploys = db.prepare(`SELECT d.app_id, d.at, d.kind, d.detail, a.name FROM deploy_events d JOIN apps a ON a.id = d.app_id
-        WHERE d.at >= ? AND d.at < ? ${appId ? 'AND d.app_id = ?' : ''} ORDER BY d.at`).all(...params);
+        WHERE d.at >= ? AND d.at < ? ${appId ? 'AND d.app_id = ?' : 'AND a.analytics_enabled = 1'} ORDER BY d.at`).all(...params);
+    // The fleet visitor chart marks only website restarts; internal services' restarts stay on their own pages.
     return { notes, deploys };
 }
 

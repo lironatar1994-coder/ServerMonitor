@@ -36,6 +36,13 @@ test('runtime starts become deploy markers only after a real restart', () => {
     const marks = o.timeline(db, seder.id, '2026-10-01T00:00:00.000Z', '2026-10-03T00:00:00.000Z');
     assert.equal(marks.deploys.length, 1);
     assert.equal(marks.deploys[0].at, '2026-10-02T08:00:00.000Z');
+    // The fleet chart keeps website restarts and leaves out internal services such as Desk.
+    const desk = app('Desk');
+    o.recordRuntimeStarts(db, [{ appId: desk.id, startedAt: '2026-10-01T10:00:00.000Z' }]);
+    o.recordRuntimeStarts(db, [{ appId: desk.id, startedAt: '2026-10-02T09:00:00.000Z' }]);
+    const fleet = o.timeline(db, null, '2026-10-01T00:00:00.000Z', '2026-10-03T00:00:00.000Z');
+    assert.deepEqual(fleet.deploys.map((d) => d.name), ['Seder']);
+    assert.equal(o.timeline(db, desk.id, '2026-10-01T00:00:00.000Z', '2026-10-03T00:00:00.000Z').deploys.length, 1);
 });
 
 test('notes validate length and date', () => {

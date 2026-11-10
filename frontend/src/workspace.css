@@ -623,9 +623,6 @@ dialog.mobile-more { margin-block-start: auto; margin-block-end: 80px; inset: 0;
 .custom-range__error { margin: 0; color: var(--vermilion); font-size: .8rem; line-height: 1.5; }
 .chart-notes__form { display: flex; flex-wrap: wrap; gap: .5rem; }
 .chart-notes__form input { flex: 1 1 16rem; min-height: 44px; padding: .5rem .65rem; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--paper-light); color: var(--ink); font: inherit; }
-.diagnostics-link { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-height: 48px; margin-block-start: 1rem; padding: .6rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-light); color: var(--ink-muted); text-decoration: none; font-size: .86rem; }
-.diagnostics-link:hover { color: var(--accent); background: var(--row-hover); }
-.diagnostics-link svg { width: 1rem; height: 1rem; }
 @media (max-width: 760px) { .vitals-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .push-settings { display: grid; gap: .5rem; margin-block-start: 1rem; padding-block-start: 1rem; border-top: 1px solid var(--line); }
 .push-settings h3 { margin: 0; font-size: .95rem; font-weight: 600; }

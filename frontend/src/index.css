@@ -710,6 +710,8 @@ button, select { max-width: 100%; }
 .site-switcher__menu a { display: flex; align-items: center; min-height: 44px; padding: .5rem; color: var(--accent); overflow-wrap: anywhere; }
 .site-switcher__menu a:hover, .site-switcher__menu a[aria-current] { background: #E8F4F5; }
 .hint__trigger { width: 44px; height: 44px; min-width: 44px; margin-block: -.5rem; }
+/* Keep the 44px target without making a hinted summary label taller than its neighbours. */
+.stat__label .hint__trigger { margin-block: -13px; }
 .hint__trigger::after { display: none; }
 .hint__bubble { font-size: .8rem; line-height: 1.6; }
 .login__card { border: 0; border-top: 3px solid var(--accent); box-shadow: 0 12px 32px #1D2B3D0D; padding: 1.75rem; }

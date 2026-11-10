@@ -211,7 +211,6 @@ const VisitorDetail = ({ diagnostics = false }) => {
         </details>
 
         </>}
-        <Link className="diagnostics-link" to={`/visitors/${id}/diagnostics${rangeSearch(data?.range || resolveRange())}`}>אבחון מדידה: חיבורים, תגובות שרת ובקשות אוטומטיות <ChevronLeft aria-hidden="true" /></Link>
         </>}
         {diagnostics && <>
         {summary.pending_browser_signals > 0 && <p className="status-line is-attention">{formatNumber(summary.pending_browser_signals)} אותות דפדפן מרשתות אירוח ממתינים לאינטראקציה ואינם נכללים בספירת המבקרים.</p>}
