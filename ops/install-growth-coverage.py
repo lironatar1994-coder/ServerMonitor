@@ -46,7 +46,7 @@ def main():
         write(asset / 'portfolio-tracker.js', (ROOT / 'ops/portfolio-tracker.js').read_text(), 0o644)
         maps = ['map "$host:$uri" $monitor_growth_tag {', '    default "";',
             '    ~*^(www\\.)?vee-app\\.co\\.il:/(maavar|Manager_Site|serve-monitor|pdf-studio|Miryam_Zelig|api|admin|login|dashboard)(/|$) "";',
-            '    ~*^(www\\.)?lawebs\\.co\\.il:/(PinhasRatzon|admin|login|dashboard|PizzaManager|cv-manager|alenu|alenu-crm|maavar|desk|allsee|videos|rc)(/|$) "";',
+            '    ~*^(www\\.)?lawebs\\.co\\.il:/(PinhasRatzon|admin|login|dashboard|PizzaManager|cv-manager|alenu|alenu-crm|maavar|desk|allsee|videos|rc|yomuledet|ball-coaster)(/|$) "";',
             '    ~*^(www\\.)?alenu\\.co\\.il:/desk(/|$) "";']
         for config, host, prefix, site in SITES:
             suffix = re.escape(prefix) + '(?:/|$)' if prefix else '/'

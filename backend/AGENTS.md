@@ -82,6 +82,7 @@
 - Register PDF Studio as the static canonical site at `https://lawebs.co.il/pdf-studio/`, with exact `/pdf-studio` log ownership on the canonical and redirect hosts and no PM2 dependency.
 - Register Seder as the canonical app at `https://lawebs.co.il/seder`, tied to PM2 process `seder-live`, exact `lawebs.co.il|www.lawebs.co.il` host ownership, and the `/seder` path.
 - Register `Seder Calendar` as operational-only through `seder-calendar`, alongside `Seder WhatsApp`. Do not restart a message sender as part of monitoring maintenance.
+- Register `Ball Coaster` (`ball-coaster-api.service`, exact `/ball-coaster` ownership on `lawebs.co.il`) as an analytics site without client reports; its native collector posts through its own bridge with the site URL `https://lawebs.co.il/ball-coaster/`.
 - Register `יומולדת` (`yomuledet.service`, health `/yomuledet/api/health`) and `Desk · וואטסאפ` (`whatsapp-bot.service`, loopback `/health`) as operational-only. The gateway answers 200 even when unlinked, so operational health reads its `state` (2-second timeout, state word only) and raises `desk-whatsapp` unless it is `open`.
 - Do not hard-code local-only paths into server monitoring logic unless they are explicitly production paths.
 - Avoid logging secrets or authentication tokens.
@@ -89,7 +90,7 @@
 - Website attribution must use `log_host` against the hostname appended by `nginx-monitor-host-log.conf`. `log_filter` includes paths and `log_exclude` removes paths; do not infer a domain from referrers or a shared hostless access log.
 - `retiredProductionApps` purges Libi Diamonds, Libi Diamonds Preview, Dfus Reuven Preview, the Vee WhatsApp Worker and the standalone Claude RC service; `renamedProductionApps` keeps IDs and history for `Maavar`→`Alenu CRM`, `Maavar Worker`→`Alenu CRM Worker` and `Vee Main App`→`Vee Landing`.
 - When a catalog change only adds `log_exclude` paths, delete just those paths' rows from `visitor_events` and the browser/growth/engagement tables instead of resetting ingestion. Any other ownership change resets and re-backfills that app.
-- LA webs excludes every path segment owned by a sibling `lawebs.co.il` app (Seder, Koral, Pinhas, Alenu, Alenu CRM, CV, CV Manager, Desk, AllSee, Videos, RC, PizzaManager, PDF Studio, יומולדת).
+- LA webs excludes every path segment owned by a sibling `lawebs.co.il` app (Seder, Koral, Pinhas, Alenu, Alenu CRM, CV, CV Manager, Desk, AllSee, Videos, RC, PizzaManager, PDF Studio, יומולדת, Ball Coaster).
 - `/apps/:id/unique-visitors` groups the current access-log tail by IP and reports first seen, last seen, request counts, top paths, statuses, and human/bot/mixed classification; it is a bounded log-window view, not a permanent analytics ledger.
 - `/apps/:id/traffic-history?days=7|30` returns fixed daily buckets from sampled `metrics` rows for visitor charts; it is monitored traffic history, not exact per-visit or per-day unique analytics.
 - `visitor_events` is the persistent 90-day request ledger. It stores the requested host and full IPs for private analysis, and deduplicates by app, source-file identity, and byte offset.

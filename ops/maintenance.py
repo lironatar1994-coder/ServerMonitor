@@ -40,6 +40,7 @@ ASSETS = {
     'dfus-store': Path('/var/lib/dfus-reuven/store'),
     'dfus-legacy-quotes': Path('/var/lib/dfus-reuven/quotes'),
     'yomuledet-uploads': Path('/var/lib/yomuledet/uploads'),
+    'ball-coaster-library': Path('/var/lib/private/ball-coaster'),
 }
 AUTH_KEY = Path('/root/.server-monitor-auth-key')
 AUTH_KEY_BACKUP = Path('/root/server-monitor-key-backups/auth.key')
