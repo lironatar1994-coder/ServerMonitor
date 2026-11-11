@@ -416,7 +416,9 @@ const productionApps = [
     { name: 'Pinhas Ratzon · טופס פניות', pm2_name: 'pinhas-ratzon-form', health_url: 'http://127.0.0.1:3108/health', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Koral Events', url: 'https://lawebs.co.il/Koralevents', systemd_unit: 'koralevents2.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/Koralevents|/koralevents', health_url: 'http://127.0.0.1:3111/Koralevents', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Koral Events 2', url: 'https://lawebs.co.il/Koralevents2', systemd_unit: 'koralevents.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/Koralevents2', health_url: 'http://127.0.0.1:3110/Koralevents2', analytics_enabled: 1, reporting_enabled: 1 },
-    { name: 'Alenu', url: 'https://alenu.co.il/', log_path: sharedNginxLog, log_host: 'alenu.co.il|www.alenu.co.il', log_exclude: '/desk', health_url: 'https://alenu.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
+    { name: 'Alenu', url: 'https://alenu.co.il/', log_path: sharedNginxLog, log_host: 'alenu.co.il|www.alenu.co.il', log_exclude: '/desk|/miluim*', health_url: 'https://alenu.co.il/', analytics_enabled: 1, reporting_enabled: 1 },
+    // The reserve-duty pages (/miluim, /miluim-guide, ...) are measured as their own site since 2026-11-11.
+    { name: 'Alenu Miluim', url: 'https://alenu.co.il/miluim', log_path: sharedNginxLog, log_host: 'alenu.co.il|www.alenu.co.il', log_filter: '/miluim*', health_url: 'https://alenu.co.il/miluim', analytics_enabled: 1, reporting_enabled: 1 },
     { name: 'Mila Tova CV', url: 'https://lawebs.co.il/cv/', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/cv', health_url: 'https://lawebs.co.il/cv/', analytics_enabled: 1, reporting_enabled: 1 },
     // Storefronts only; kitchen/admin/platform routes stay outside visitor analytics.
     { name: 'Pizza Manager', url: 'https://lawebs.co.il/PizzaManager/', systemd_unit: 'pizza-manager-platform.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/PizzaManager/p', health_url: 'http://127.0.0.1:4180/PizzaManager/p/oven-demo/', analytics_enabled: 1, reporting_enabled: 0 },
@@ -468,6 +470,10 @@ const retiredProductionApps = ['Pixel Dungeon', 'PDF Generator', 'ToDoFast (inac
 // A site that changes address keeps its history: stored paths lose the old prefix and the ownership
 // fields move here, so the catalog sync below sees no configuration change and never resets ingestion.
 const movedProductionSites = [{ name: 'Alenu', fromFilter: '/alenu' }];
+
+// A section that becomes its own site takes its stored history with it (same rows, new app ID)
+// before the parent's narrowed ownership would delete those paths. `prefix` matches like a `*` filter.
+const splitProductionSites = [{ from: 'Alenu', to: 'Alenu Miluim', prefix: '/miluim' }];
 
 function renameProductionApps() {
     const rename = db.prepare('UPDATE apps SET name = ? WHERE name = ? AND NOT EXISTS (SELECT 1 FROM apps WHERE name = ?)');
@@ -523,6 +529,10 @@ function syncProductionApps() {
     const pathTables = ['visitor_events', 'browser_signals', 'growth_events', 'engagement_signals', 'engagement_zones', 'engagement_zone_views', 'engagement_heatmap_cells'];
     const existingTables = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name));
     const deleteExcluded = pathTables.filter((table) => existingTables.has(table)).map((table) => db.prepare(`DELETE FROM ${table} WHERE app_id = ? AND (path = ? OR substr(path, 1, ?) = ?)`));
+    // `/a` removes `/a` and `/a/...`; `/a*` removes every path starting with `/a`.
+    const exclusionArgs = (prefix) => prefix.endsWith('*')
+        ? [prefix.slice(0, -1), prefix.length - 1, prefix.slice(0, -1)]
+        : [prefix, prefix.length + 1, prefix + '/'];
 
     db.transaction(() => {
         productionApps.forEach((definition) => {
@@ -541,7 +551,7 @@ function syncProductionApps() {
             if (addedExclusions) {
                 // Narrowing ownership removes only the newly excluded paths and keeps the rest of the history.
                 const removed = addedExclusions.reduce((total, prefix) => total + deleteExcluded.reduce((sum, statement) => sum
-                    + statement.run(existing.id, prefix, prefix.length + 1, prefix + '/').changes, 0), 0);
+                    + statement.run(existing.id, ...exclusionArgs(prefix)).changes, 0), 0);
                 console.log(`Removed ${removed} records now owned by other apps: ${definition.name}`);
             } else if (visitorConfigChanged) {
                 clearEvents.run(existing.id);
@@ -577,14 +587,41 @@ function moveProductionSites() {
     }).immediate();
 }
 
+function splitOffProductionSites() {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name)
+        .filter((table) => table !== 'tracked_links' && /^[a-z_]+$/.test(table))
+        .filter((table) => {
+            const columns = db.prepare(`SELECT name FROM pragma_table_info('${table}')`).all().map((row) => row.name);
+            return columns.includes('app_id') && columns.includes('path');
+        });
+    db.transaction(() => {
+        splitProductionSites.forEach(({ from, to, prefix }) => {
+            const parent = db.prepare('SELECT id FROM apps WHERE name = ?').get(from);
+            const definition = productionApps.find((app) => app.name === to);
+            if (!parent || !definition || db.prepare('SELECT 1 FROM apps WHERE name = ?').get(to)) return;
+            const child = db.prepare(`INSERT INTO apps (name, url, log_path, log_filter, log_host, health_url, analytics_enabled, reporting_enabled)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(to, definition.url, definition.log_path, definition.log_filter, definition.log_host,
+                definition.health_url, definition.analytics_enabled ?? 1, definition.reporting_enabled ?? 1).lastInsertRowid;
+            let moved = 0;
+            tables.forEach((table) => {
+                moved += db.prepare(`UPDATE OR IGNORE ${table} SET app_id = ? WHERE app_id = ? AND substr(path, 1, ?) = ?`)
+                    .run(child, parent.id, prefix.length, prefix).changes;
+            });
+            console.log(`Split ${to} from ${from}, moved ${moved} stored records`);
+        });
+    }).immediate();
+}
+
 renameProductionApps();
 purgeRetiredProductionApps();
 moveProductionSites();
+splitOffProductionSites();
 syncProductionApps();
 require('./growthSchema').initializeGrowth(db);
 require('./observability').initializeObservability(db);
 require('./externalChecks').initializeExternalChecks(db);
 require('./capacity').initializeCapacity(db);
 require('./jsErrors').initializeJsErrors(db);
+require('./internalNetworks').initializeInternalNetworks(db);
 
 module.exports = db;

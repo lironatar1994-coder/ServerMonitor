@@ -205,14 +205,15 @@ const VisitorDetail = ({ diagnostics = false }) => {
         {data?.range && <ScriptErrorsPanel appId={id} range={data.range} />}
         <details className="measurement-details"><summary>מעורבות</summary>
         {engagementError && <div className="banner banner--error" role="alert">מדידת השימוש לא נטענה. {engagementError}<button className="btn" onClick={fetchAnalytics}>ניסיון נוסף</button></div>}
-        {(data?.app?.name === 'PDF Studio' || data?.app?.name === 'LA webs' || data?.app?.name === 'Miryam Zelig' || data?.app?.name === 'Seder' || Boolean(engagement?.engagement_samples) || Boolean(engagement?.product?.summary?.sessions)) && (
-          <ProductAnalytics engagement={engagement || {}} mode={data?.app?.name === 'PDF Studio' ? 'product' : 'site'} />
+        {(data?.app?.name === 'PDF Studio' || data?.app?.name === 'LA webs' || data?.app?.name === 'Miryam Zelig' || data?.app?.name === 'Seder' || data?.app?.name === 'Alenu' || data?.app?.name === 'Alenu Miluim' || Boolean(engagement?.engagement_samples) || Boolean(engagement?.product?.summary?.sessions)) && (
+          <ProductAnalytics engagement={engagement || {}} mode={data?.app?.name === 'PDF Studio' ? 'product' : 'site'} appName={data?.app?.name || ''} />
         )}
         </details>
 
         </>}
         </>}
         {diagnostics && <>
+        {summary.internal_browser_signals > 0 && <p className="status-line">{formatNumber(summary.internal_browser_signals)} אותות דפדפן מהרשתות של המחשבים שלך סומנו כפנימיים ואינם נכללים בספירה.</p>}
         {summary.pending_browser_signals > 0 && <p className="status-line is-attention">{formatNumber(summary.pending_browser_signals)} אותות דפדפן מרשתות אירוח ממתינים לאינטראקציה ואינם נכללים בספירת המבקרים.</p>}
         <StatRow>
           <Stat label="כתובות רשת שונות" value={summary.unique_candidates} previous={data?.comparison?.previous?.unique_candidates} hint={CANDIDATE_HINT} />

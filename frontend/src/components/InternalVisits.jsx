@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { EyeOff, Eye } from 'lucide-react';
-import { Panel, Empty } from './AnalyticsParts';
+import { Panel, Empty, Hint } from './AnalyticsParts';
 import { apiFetch } from '../lib/api';
+import { formatDateTime } from '../lib/format';
 import { safeSiteUrl } from '../lib/siteLinks';
 
 // One row per public domain: the flag is a per-domain cookie in this browser only.
@@ -25,14 +26,28 @@ const open = (origin, value) => window.open(`${origin}/?monitor_internal=${value
 export default function InternalVisits() {
   const [domains, setDomains] = useState(null);
   const [error, setError] = useState('');
+  const [networks, setNetworks] = useState(null);
   useEffect(() => {
     apiFetch('/apps').then(apps => setDomains(domainsOf(apps))).catch(e => setError(e.message));
+    apiFetch('/visitor-analytics/internal-networks').then(value => setNetworks(value.networks || [])).catch(() => setNetworks([]));
   }, []);
   return (
     <Panel title="ביקורים פנימיים" hint="סימון פותח את האתר פעם אחת ושומר בדפדפן הזה סימון לשנה. ביקורים מהדפדפן המסומן לא נספרים, גם לא ביומן השרת. אפשר לבטל בכל רגע. קישורי 'פתיחת האתר' במוניטור כבר מסמנים אוטומטית.">
       {error && <div className="banner banner--error" role="alert">{error}</div>}
       {!domains && !error && <p className="muted">טוען…</p>}
       {domains && !domains.length && <Empty text="אין אתרים במדידה" />}
+      {networks?.length > 0 && (
+        <div className="internal-networks">
+          <h3>הרשתות של המחשבים שלך <Hint text="כל ביקור מרשת שממנה מתחבר מחשב עם סוכן המוניטור לא נספר באף אתר, גם בדיעבד. הביקורים נשמרים מסומנים כפנימיים ולא נמחקים. גם מי שגולש מאותה רשת לא ייספר. טלפון בגלישה סלולרית צריך סימון חד־פעמי למטה." /></h3>
+          <ul className="internal-domains">
+            {networks.map(item => (
+              <li key={item.network}>
+                <span><b dir="ltr">{item.network}</b><small>{item.host || 'מחשב'} · נראה לאחרונה <bdi>{formatDateTime(item.last_seen)}</bdi>{item.active ? '' : ' · לא פעיל'}</small></span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {domains?.length > 0 && (
         <ul className="internal-domains">
           {domains.map(item => (

@@ -16,6 +16,7 @@ const {
     getBotReason,
     isPageView,
     isTargetAppLine,
+    pathMatches,
     parseAccessLogTimestamp,
     parseNginxAccessLine
 } = require('../logParser');
@@ -397,7 +398,11 @@ test('path segment ownership isolates Koral routes, LA webs and its sibling apps
     assert.equal(matches('Mila Tova CV', 'lawebs.co.il', '/cv/'), true);
     assert.equal(matches('Mila Tova CV', 'lawebs.co.il', '/cv-manager/'), false);
     assert.equal(matches('Alenu', 'alenu.co.il', '/'), true);
-    assert.equal(matches('Alenu', 'www.alenu.co.il', '/miluim.html'), true);
+    // The reserve-duty pages are their own site since 2026-11-11.
+    assert.equal(matches('Alenu', 'www.alenu.co.il', '/miluim.html'), false);
+    assert.equal(matches('Alenu Miluim', 'www.alenu.co.il', '/miluim.html'), true);
+    assert.equal(matches('Alenu Miluim', 'alenu.co.il', '/miluim-guide'), true);
+    assert.equal(matches('Alenu Miluim', 'alenu.co.il', '/start'), false);
     assert.equal(matches('Alenu', 'alenu.co.il', '/desk/start/reserve'), false);
     assert.equal(matches('Alenu', 'lawebs.co.il', '/alenu/'), false);
     assert.equal(matches('Pizza Manager', 'lawebs.co.il', '/PizzaManager/p/oven-demo/'), true);
@@ -465,4 +470,16 @@ test('a pending hosting-network session counts only after its own interaction', 
 test('nested font downloads never count as page views', () => {
     for(const ext of ['ttf','otf','woff','woff2','eot']) assert.equal(isPageView({method:'GET',status:200,path:'/alenu/assets/fonts/heebo.'+ext}),false);
     assert.equal(isPageView({method:'GET',status:200,path:'/alenu/start.html'}),true);
+});
+
+test('a trailing * owns a page family; plain filters own whole path segments', () => {
+    for (const path of ['/miluim', '/miluim.html', '/miluim-guide', '/miluim-guide.html']) assert.equal(pathMatches(path, '/miluim*'), true, path);
+    for (const path of ['/', '/start', '/mil']) assert.equal(pathMatches(path, '/miluim*'), false, path);
+    assert.equal(pathMatches('/cv/', '/cv'), true);
+    assert.equal(pathMatches('/cv-manager', '/cv'), false);
+    assert.equal(pathMatches('/anything', '/*'), false);
+    const line = (path) => `1.1.1.1 - - [11/Nov/2026:10:00:00 +0200] "GET ${path} HTTP/1.1" 200 10 "-" "Mozilla/5.0" "alenu.co.il"`;
+    assert.equal(isTargetAppLine(line('/miluim-guide'), 'Alenu', null, 'alenu.co.il', '/desk|/miluim*'), false);
+    assert.equal(isTargetAppLine(line('/start'), 'Alenu', null, 'alenu.co.il', '/desk|/miluim*'), true);
+    assert.equal(isTargetAppLine(line('/miluim-guide'), 'Alenu Miluim', '/miluim*', 'alenu.co.il', null), true);
 });

@@ -215,6 +215,10 @@ async function runMonitorCycle() {
               .run(app.id, metrics.visitors, metrics.requests, metrics.attacks, appCpu, appMemory, responseMs);
         }
         if (processes) recordRuntimeStarts(db, starts);
+        try {
+            const marked = require('./internalNetworks').markPastInternalVisits(db);
+            if (marked) console.log(`[Monitor] Marked ${marked} earlier visits from your own networks as internal`);
+        } catch (error) { console.error('[Monitor] Internal-network marking failed:', error.message); }
 
         // Hourly: sites whose visitors still arrive but whose browser measurement went quiet.
         if (Date.now() - lastSilentCheckAt > 3600000) {

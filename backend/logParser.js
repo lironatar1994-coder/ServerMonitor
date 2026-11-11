@@ -168,6 +168,15 @@ function splitConfig(value) {
         .filter(Boolean);
 }
 
+// `/cv` owns the whole segment (`/cv`, `/cv/...`, never `/cv-manager`); `/miluim*` owns every path
+// that starts with `/miluim` (`/miluim`, `/miluim-guide.html`), for page families outside one folder.
+function pathMatches(path, filter) {
+    const value = String(filter || '').trim();
+    if (value.endsWith('*')) return value.length > 2 && String(path).startsWith(value.slice(0, -1));
+    const base = value.replace(/\/$/, '');
+    return path === base || String(path).startsWith(base + '/');
+}
+
 function isTargetAppLine(line, appName, logFilter, logHost, logExclude, parsedEntry) {
     const entry = parsedEntry || parseNginxAccessLine(line);
     if (!entry) return false;
@@ -178,10 +187,10 @@ function isTargetAppLine(line, appName, logFilter, logHost, logExclude, parsedEn
     }
 
     const excludedPaths = splitConfig(logExclude);
-    if (excludedPaths.some((filter) => (entry.path === filter.replace(/\/$/, '') || entry.path.startsWith(filter.replace(/\/$/, '') + '/')))) return false;
+    if (excludedPaths.some((filter) => pathMatches(entry.path, filter))) return false;
 
     if (logFilter) {
-        return splitConfig(logFilter).some((filter) => (entry.path === filter.replace(/\/$/, '') || entry.path.startsWith(filter.replace(/\/$/, '') + '/')));
+        return splitConfig(logFilter).some((filter) => pathMatches(entry.path, filter));
     }
     if (appName === 'PDF Generator') return entry.path.includes('/text-to-pdf');
     if (appName === 'Vee Main App' && !logExclude) {
@@ -532,6 +541,7 @@ module.exports = {
     getUniqueVisitors,
     isPageView,
     isTargetAppLine,
+    pathMatches,
     parseAccessLogTimestamp,
     parseNginxAccessLine,
     parseNginxLogMetrics

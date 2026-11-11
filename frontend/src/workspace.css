@@ -558,6 +558,9 @@ dialog.mobile-more { margin-block-start: auto; margin-block-end: 80px; inset: 0;
 .internal-domains li > span:first-child { display: grid; gap: .15rem; min-width: 0; flex: 1 1 16rem; }
 .internal-domains small { color: var(--ink-muted); font-size: .76rem; }
 @media (max-width: 760px) { .internal-domains .btn-group { width: 100%; } }
+.reach-list--wide > div { grid-template-columns: 4.75rem minmax(0, 1fr) 2.8rem; }
+.internal-networks { margin-block-end: 1rem; padding-block-end: .75rem; border-bottom: 1px solid var(--line); }
+.internal-networks h3 { display: flex; align-items: center; gap: .25rem; margin: 0; font-size: .9rem; font-weight: 600; }
 
 /* Count of unavailable services on the server destination (rail, collapsed rail, bottom bar). */
 .rail-link { position: relative; }

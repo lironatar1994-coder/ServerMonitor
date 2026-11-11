@@ -2,8 +2,20 @@ export const VISITOR_HINT = 'הערכה לפי דפדפנים שבהם העמו�
 export const CONNECTION_HINT = 'כתובות רשת שונות שביקשו עמוד בהצלחה ולא זוהו כאוטומציה. כמה אנשים יכולים לחלוק כתובת אחת. זהו נתון עזר מהשרת, לא ספירת אנשים.';
 export const PAGE_HINT = 'עמודים שהשרת החזיר בהצלחה, לאחר סינון אוטומציה מוכרת. תמונות, קוד ובקשות שנכשלו אינם נכללים.';
 export const PROJECT_NAMES = { koral: 'קורל אירועים', miryam: 'מרים זליג', pinhas: 'פנחס רצון', libi: 'ליבי יהלומים', reuven: 'דפוס ראובן', sos: 'בדרך אליך', seder: 'סדר', pdf: 'PDF Studio', pizza: 'פיצת התנור' };
+// Alenu and its reserve-duty pages (clean URLs and their .html twins).
+const ALENU_PAGES = {
+  '/index': 'עמוד הבית', '/start': 'טופס התחלה', '/privacy': 'פרטיות', '/accessibility': 'נגישות',
+  '/miluim': 'מילואים · עמוד ראשי', '/miluim-guide': 'מילואים · מדריך הנחת ארנונה', '/miluim-cities': 'מילואים · לפי עיר',
+  '/miluim-commanders': 'מילואים · למפקדים', '/miluim-certificate': 'מילואים · אישור שירות', '/miluim-missing': 'מילואים · הנחה שחסרה',
+  '/miluim-retro': 'מילואים · החזר רטרואקטיבי'
+};
+
 export function pageName(path, appName) {
   if (path === '/') return 'עמוד הבית';
+  if (appName === 'Alenu' || appName === 'Alenu Miluim') {
+    const name = ALENU_PAGES[String(path || '').replace(/\.html$/, '').replace(/\/$/, '')];
+    if (name) return name;
+  }
   const project = appName === 'LA webs' && path?.match(/^\/work\/([^/]+)\/?$/)?.[1];
   return project && PROJECT_NAMES[project] ? `פרויקט ${PROJECT_NAMES[project]}` : path;
 }

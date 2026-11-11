@@ -4,7 +4,10 @@
   window.__veeGrowthTracker = true;
   const script = document.currentScript;
   const prefix = script?.dataset.prefix || '';
-  const endpoint = `${prefix}/.well-known/vee-growth-signal`;
+  // Matches the navigation tag: a page family with its own endpoint and identity (Alenu's /miluim*).
+  const scope = /^[a-z0-9-]{1,32}$/.test(script?.dataset.scope || '') ? script.dataset.scope : '';
+  const endpoint = /^\/\.well-known\/vee-growth-signal(?:-[a-z0-9-]{1,32})?$/.test(script?.dataset.endpoint || '')
+    ? script.dataset.endpoint : `${prefix}/.well-known/vee-growth-signal`;
   const portfolio = /^(www\.)?lawebs\.co\.il$/.test(location.hostname) && !prefix;
   // Native collectors share this host-wide flag; the monitor also drops flagged requests server-side.
   const internalParam = new URLSearchParams(location.search).get('monitor_internal');
@@ -16,7 +19,7 @@
   const projects = new Set(['koral', 'miryam', 'pinhas', 'reuven', 'sos', 'seder', 'pdf', 'pizza']);
   const projectAt = path => { const name = path.match(/^\/work\/([^/]+)\/?$/)?.[1]; return projects.has(name) ? name : ''; };
   const placementAt = el => el?.closest('.wa-float') ? 'floating' : el?.closest('header') ? 'header' : el?.closest('footer') ? 'footer' : el?.closest('#contact') ? 'contact' : el?.closest('.hero') ? 'hero' : 'content';
-  const storageKey = `vee.growth:${prefix || '/'}`;
+  const storageKey = `vee.growth:${scope || prefix || '/'}`;
   const random = () => crypto.randomUUID();
   // Read only the installed collector's anonymous ID. Never infer identity from IP or timing.
   function navigationSession() {

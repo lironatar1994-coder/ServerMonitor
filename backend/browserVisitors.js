@@ -67,6 +67,25 @@ function browserHistory(app, range, query) {
             AND automation_hint=0 AND occurred_at>=? AND occurred_at<? ORDER BY occurred_at,id LIMIT 80`)
             .all(app.id, app.id, visitor, visit.visit_hash, visit.first_seen, until);
         visit.actions = [...visit.actions, ...product].sort((a,b) => a.occurred_at.localeCompare(b.occurred_at)).slice(0,80);
+        // Active seconds and deepest scroll per page from this visit's engagement slices (where measured).
+        const engagement = db.prepare(`SELECT path,SUM(dwell_ms) AS active_ms,MAX(scroll_depth) AS scroll FROM engagement_signals
+            WHERE app_id=? AND automation_hint=0 AND occurred_at>=? AND occurred_at<?
+            AND session_hash IN (SELECT session_hash FROM browser_signals WHERE app_id=? AND visitor_hash=? AND visit_hash=? AND automation_hint=0)
+            GROUP BY path LIMIT 80`).all(app.id, visit.first_seen, until, app.id, visitor, visit.visit_hash);
+        if (engagement.length) {
+            const byPath = new Map(engagement.map((row) => [row.path, row]));
+            const seen = new Set();
+            visit.pages = visit.pages.map((row) => {
+                const measured = byPath.get(row.path);
+                if (!measured || seen.has(row.path)) return row;
+                seen.add(row.path);
+                return { ...row, active_seconds: Math.round((Number(measured.active_ms) || 0) / 1000), scroll_depth: Number(measured.scroll) || 0 };
+            });
+            visit.engagement = {
+                active_seconds: Math.round(engagement.reduce((sum, row) => sum + (Number(row.active_ms) || 0), 0) / 1000),
+                max_scroll_depth: Math.max(...engagement.map((row) => Number(row.scroll) || 0))
+            };
+        }
         visit.in_period = visit.last_seen >= range.from;
         visit.outcomes = db.prepare(`SELECT occurred_at,stage FROM source_outcomes WHERE app_id=?
             AND browser_session_hash<>'' AND browser_session_hash IN (SELECT session_hash FROM browser_signals WHERE app_id=? AND visitor_hash=? AND visit_hash=? AND automation_hint=0)

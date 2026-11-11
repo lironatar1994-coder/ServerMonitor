@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Empty, Panel, Stat, StatRow, Tabs } from './AnalyticsParts';
 import { formatNumber } from '../lib/format';
+import { pageName } from '../lib/analyticsLabels';
 
 const TOOL_LABELS = {
   editor: 'עורך PDF',
@@ -66,7 +67,13 @@ const ZONE_LABELS = {
   faq: 'שאלות נפוצות',
   contact: 'יצירת קשר',
   'contact-whatsapp': 'וואטסאפ מיצירת קשר',
-  footer: 'תחתית האתר'
+  footer: 'תחתית האתר',
+  // Alenu and Alenu Miluim page sections, named by their element ids.
+  top: 'כותרת וניווט עליון', after: 'איך זה עובד', ours: 'הבירוקרטיה עלינו', form: 'הטופס בטלפון', accounts: 'ארבעת החשבונות',
+  price: 'מחיר', updates: 'אחרי המעבר', closing: 'סיום והנעה לפעולה', how: 'שלושה צעדים', handling: 'הטיפול שלנו',
+  short: 'בקצרה', 'check-bill': 'בדיקת החשבון', 'is-there': 'האם יש הנחה', 'how-much': 'כמה הנחה', who: 'מי זכאי',
+  apply: 'איך מגישים', docs: 'מסמכים נדרשים', lose: 'מה מבטל את ההנחה', income: 'הנחה לפי הכנסה', refused: 'כשהרשות מסרבת',
+  sources: 'מקורות', content: 'שאר העמוד'
 };
 
 const VIEWPORT_LABELS = { mobile: 'נייד', tablet: 'טאבלט', desktop: 'מחשב' };
@@ -78,6 +85,8 @@ function labelTool(label) {
 
 function labelZone(zone) {
   if (ZONE_LABELS[zone]) return ZONE_LABELS[zone];
+  const contact = zone.match(/^(whatsapp|phone):(.+)$/);
+  if (contact) return `${contact[1] === 'whatsapp' ? 'וואטסאפ' : 'טלפון'} · ${labelZone(contact[2])}`;
   const tool = zone.match(/^(?:tool|home-tool|tools-nav):(.+)$/)?.[1];
   if (tool) return labelTool(tool);
   const editorTool = zone.match(/^editor-tool:(.+)$/)?.[1];
@@ -207,7 +216,45 @@ function ScrollReach({ engagement }) {
   );
 }
 
-export default function ProductAnalytics({ engagement, mode = 'product' }) {
+const DWELL_BANDS = [['0-10', 'עד 10 שנ׳'], ['10-30', '10–30 שנ׳'], ['30-60', '30–60 שנ׳'], ['60-180', '1–3 דק׳'], ['180+', 'מעל 3 דק׳']];
+
+function DwellBands({ bands }) {
+  const counts = new Map((bands || []).map((row) => [row.band, Number(row.visits) || 0]));
+  const total = [...counts.values()].reduce((sum, value) => sum + value, 0);
+  if (!total) return <Empty text="התפלגות הזמן תופיע אחרי המדידות הראשונות." />;
+  return (
+    <div className="reach-list reach-list--wide">
+      {DWELL_BANDS.map(([band, label]) => {
+        const share = Math.round((counts.get(band) || 0) / total * 100);
+        return <div key={band}><span>{label}</span><i><b style={{ inlineSize: `${share}%` }} /></i><strong dir="ltr">{formatNumber(share)}%</strong></div>;
+      })}
+    </div>
+  );
+}
+
+function PageEngagement({ pages, appName }) {
+  if (!pages?.length) return <Empty text="זמן וגלילה לפי עמוד יופיעו אחרי המדידות הראשונות." />;
+  return (
+    <div className="product-table-wrap">
+      <table className="product-table">
+        <thead><tr><th>עמוד</th><th>ביקורים</th><th>זמן ממוצע</th><th>גלילה ממוצעת</th><th>הגיעו לסוף</th></tr></thead>
+        <tbody>
+          {pages.map((page) => (
+            <tr key={page.path}>
+              <th><bdi>{pageName(page.path, appName)}</bdi></th>
+              <td data-label="ביקורים">{formatNumber(page.visits)}</td>
+              <td data-label="זמן ממוצע">{formatNumber(page.average_dwell_seconds)} שנ׳</td>
+              <td data-label="גלילה ממוצעת" dir="ltr">{formatNumber(page.average_scroll_depth)}%</td>
+              <td data-label="הגיעו לסוף" dir="ltr">{formatNumber(page.reached_end)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default function ProductAnalytics({ engagement, mode = 'product', appName = '' }) {
   const [zoneMode, setZoneMode] = useState('clicks');
   const summary = engagement?.product?.summary || {};
   const filtered = (Number(summary.automated_events) || 0) + (Number(engagement?.automated_engagement_samples) || 0);
@@ -246,16 +293,26 @@ export default function ProductAnalytics({ engagement, mode = 'product' }) {
         </Panel>
       </div>
 
-      <div className={`grid ${isSite ? '' : 'grid--2-1'}`}>
+      <div className={`grid ${isSite ? (engagement?.engagement_unit === 'page_visits' ? 'grid--1-1' : '') : 'grid--2-1'}`}>
         {!isSite && (
           <Panel title="שימוש לפי כלי" hint="פתיחה היא בחירת כלי; השלמה נספרת כשהופק קובץ להורדה." bleed>
             <ToolTable tools={engagement?.product?.tools || []} />
           </Panel>
         )}
-        <Panel title="עומק צפייה" hint="אחוז ממדידות המסך שהגיעו לכל עומק.">
+        <Panel title="עומק צפייה" hint={engagement?.engagement_unit === 'page_visits' ? 'אחוז מהביקורים בעמודים שגללו עד כל עומק.' : 'אחוז ממדידות המסך שהגיעו לכל עומק.'}>
           <ScrollReach engagement={engagement || {}} />
         </Panel>
+        {isSite && engagement?.engagement_unit === 'page_visits' && (
+          <Panel title="כמה זמן נשארו" hint="זמן פעיל בעמוד בכל ביקור: נספר רק כשהלשונית גלויה, ונעצר אחרי 30 שניות בלי גלילה, לחיצה או הקלדה.">
+            <DwellBands bands={engagement?.dwell_bands} />
+          </Panel>
+        )}
       </div>
+      {isSite && engagement?.engagement_unit === 'page_visits' && (
+        <Panel title="זמן וגלילה לפי עמוד" hint="כל שורה סופרת ביקור של דפדפן בעמוד. ״הגיעו לסוף״ הוא גלילה של 90% ומעלה." bleed>
+          <PageEngagement pages={engagement?.pages} appName={appName} />
+        </Panel>
+      )}
     </section>
   );
 }

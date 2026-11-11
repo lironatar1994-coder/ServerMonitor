@@ -25,7 +25,7 @@ function getPageInsights(app, range, path) {
         FROM growth_events WHERE app_id=? AND occurred_at>=? AND occurred_at<? AND automation_hint=0 AND event_type='page_view')
         SELECT next_path AS path,COUNT(*) AS transitions,COUNT(DISTINCT session_hash) AS visits FROM steps
         WHERE path=? AND next_path IS NOT NULL AND next_path<>path GROUP BY next_path ORDER BY visits DESC LIMIT 10`).all(...args);
-    const engagement = app.name === 'LA webs' ? db.prepare(`SELECT COUNT(*) AS visits,AVG(dwell) AS active_ms,AVG(depth) AS scroll
+    const engagement = require('./browserSignals').slicedEngagement(app) ? db.prepare(`SELECT COUNT(*) AS visits,AVG(dwell) AS active_ms,AVG(depth) AS scroll
         FROM (SELECT session_hash,SUM(dwell_ms) AS dwell,MAX(scroll_depth) AS depth FROM engagement_signals
         WHERE app_id=? AND occurred_at>=? AND occurred_at<? AND path=? AND automation_hint=0 GROUP BY session_hash)`).get(...args) : null;
     return { path, log, visits, contact_visits: contacts, actions, next, engagement,

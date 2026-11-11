@@ -11,13 +11,17 @@ async function syncDeskOutcomes(db, file = '/var/lib/desk/attribution-outcomes.j
         db.transaction(() => {
             db.prepare('DELETE FROM source_outcomes').run();
             for (const row of data.rows) {
-                const name = { alenu: 'Alenu', cv: 'Mila Tova CV' }[row.site];
-                const app = name && db.prepare('SELECT id FROM apps WHERE name=?').get(name);
-                if (!app || !/^[a-f0-9]{64}$/.test(row.id) || !Number.isFinite(Date.parse(row.at)) || !['submitted','received','qualified','customer','lost'].includes(row.stage)) continue;
+                // Alenu's reserve-duty pages are their own site; an inquiry belongs to whichever measured the visit.
+                const names = { alenu: ['Alenu', 'Alenu Miluim'], cv: ['Mila Tova CV'] }[row.site] || [];
+                const apps = names.map((name) => db.prepare('SELECT id FROM apps WHERE name=?').get(name)).filter(Boolean);
+                if (!apps.length || !/^[a-f0-9]{64}$/.test(row.id) || !Number.isFinite(Date.parse(row.at)) || !['submitted','received','qualified','customer','lost'].includes(row.stage)) continue;
                 const a = row.attribution?.current || {};
                 const session = row.attribution?.navigation_session_id || '';
                 const key = require('./browserSignals').getSignalKey();
-                const hash = key && /^[A-Za-z0-9_-]{16,96}$/.test(session) ? require('node:crypto').createHmac('sha256',key).update(`${app.id}:${session}`).digest('hex') : '';
+                const hashFor = (id) => key && /^[A-Za-z0-9_-]{16,96}$/.test(session) ? require('node:crypto').createHmac('sha256',key).update(`${id}:${session}`).digest('hex') : '';
+                const app = apps.find((candidate) => hashFor(candidate.id)
+                    && db.prepare('SELECT 1 FROM browser_signals WHERE app_id=? AND session_hash=? LIMIT 1').get(candidate.id, hashFor(candidate.id))) || apps[0];
+                const hash = hashFor(app.id);
                 insert.run(row.id, app.id, row.at, tag(a.source), tag(a.medium), tag(a.campaign), tag(a.content), tag(a.evidence), row.stage,
                     tag(row.attribution?.first?.source), tag(row.attribution?.latest?.source),hash);
             }

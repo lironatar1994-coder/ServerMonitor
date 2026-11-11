@@ -84,7 +84,11 @@ function ingestLine(app, line, sourceFileId, sourceOffset) {
     const timestamp = parseAccessLogTimestamp(entry.timestamp);
     if (!timestamp) return 0;
 
-    const bot = getBotClassification(entry, line);
+    let bot = getBotClassification(entry, line);
+    // The owner's own network is internal browsing: kept for diagnostics, never a candidate.
+    if (bot.classification === 'candidate' && require('./internalNetworks').isInternalAddress(db, entry.ip)) {
+        bot = { classification: 'internal', confidence: 100, reason: 'internal network' };
+    }
     const location = enrichLocation(entry.ip);
     return insertEvent.run(
         app.id,
@@ -273,7 +277,7 @@ function refreshStoredEventClassifications() {
             let bot = getBotClassification(entry, row.path || '');
             if (bot.classification === 'candidate' && Number(row.is_bot) === 1) {
                 bot = {
-                    classification: row.bot_classification === 'likely_bot' ? 'likely_bot' : 'bot',
+                    classification: ['likely_bot', 'internal'].includes(row.bot_classification) ? row.bot_classification : 'bot',
                     confidence: Number(row.bot_confidence) || 100,
                     reason: row.bot_reason || 'previous bot classification'
                 };

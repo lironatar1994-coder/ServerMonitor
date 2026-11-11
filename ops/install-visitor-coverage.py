@@ -12,7 +12,11 @@ SITES = [
     ('dfusreuven.co.il.conf', ['dfusreuven.co.il', 'www.dfusreuven.co.il'], '', 'https://www.dfusreuven.co.il/', False),
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/Koralevents2', 'https://lawebs.co.il/Koralevents2', False),
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/Koralevents', 'https://lawebs.co.il/Koralevents', False),
-    ('alenu.co.il.conf', ['alenu.co.il', 'www.alenu.co.il'], '', 'https://alenu.co.il/', False),
+    # Alenu's reserve-duty pages (/miluim, /miluim-guide, ...) are a separate site with their own
+    # endpoint and identity; listed first because the first matching map entry wins.
+    ('alenu.co.il.conf', ['alenu.co.il', 'www.alenu.co.il'], '', 'https://alenu.co.il/miluim', False,
+     {'scope': 'miluim', 'match': '/miluim', 'engagement': True}),
+    ('alenu.co.il.conf', ['alenu.co.il', 'www.alenu.co.il'], '', 'https://alenu.co.il/', False, {'engagement': True}),
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/cv', 'https://lawebs.co.il/cv/', False),
     # Customer storefronts only; kitchen, admin and platform routes stay untagged.
     ('lawebs.co.il.conf', ['lawebs.co.il', 'www.lawebs.co.il'], '/PizzaManager/p', 'https://lawebs.co.il/PizzaManager/', False),
@@ -36,6 +40,15 @@ def server_blocks(text):
             if depth == 0:
                 yield start, token.end()
                 start = None
+
+def scope_suffix(extra):
+    scope = (extra[0] if extra else {}).get('scope', '')
+    if scope and not re.fullmatch('[a-z0-9-]{1,32}', scope): raise RuntimeError('Invalid scope: ' + scope)
+    return '-' + scope if scope else ''
+
+def endpoint_attributes(kind, opts):
+    suffix = scope_suffix([opts])
+    return f' data-scope="{opts["scope"]}" data-endpoint="/.well-known/vee-{kind}-signal{suffix}"' if suffix else ''
 
 def site_config(name):
     available = Path('/etc/nginx/sites-available') / name
@@ -62,10 +75,12 @@ def main():
                 f'    ~^((www\\.)?lawebs\\.co\\.il):/({LAWEBS_UNTRACKED})(/|$) "";',
                 '    ~^(www\\.)?dfusreuven\\.co\\.il:/(admin|api|supplier)([/.]|$) "";',
                 '    ~^(www\\.)?alenu\\.co\\.il:/desk(/|$) "";']
-        for config, hosts, prefix, site, native in SITES:
+        for config, hosts, prefix, site, native, *extra in SITES:
+            opts = extra[0] if extra else {}
             host_pattern = '(?:' + '|'.join(re.escape(host) for host in hosts) + ')'
-            suffix = re.escape(prefix) + '(?:/|$)' if prefix else '/'
-            tag = f'<script defer src="/.well-known/server-monitor-visitor.js" data-prefix="{prefix}" data-native-rewrite="{int(native)}"></script>'
+            suffix = re.escape(opts['match']) if opts.get('match') else re.escape(prefix) + '(?:/|$)' if prefix else '/'
+            attributes = endpoint_attributes('visitor', opts) + (' data-engagement="1"' if opts.get('engagement') else '')
+            tag = f'<script defer src="/.well-known/server-monitor-visitor.js" data-prefix="{prefix}" data-native-rewrite="{int(native)}"{attributes}></script>'
             maps.append(f"    ~^{host_pattern}:{suffix} '{tag}';")
         maps.append('}')
         write('/etc/nginx/conf.d/server-monitor-navigation.conf', '\n'.join(maps) + '\n', 0o644)
@@ -90,8 +105,8 @@ def main():
                        '    alias /var/lib/server-monitor/visitor-tracker.js;',
                        '    default_type application/javascript;',
                        '    add_header Cache-Control "no-cache";', '}']
-            for _, hosts, prefix, site, native in rows:
-                content += [f'location = {prefix}/.well-known/vee-visitor-signal {{',
+            for _, hosts, prefix, site, native, *extra in rows:
+                content += [f'location = {prefix}/.well-known/vee-visitor-signal{scope_suffix(extra)} {{',
                     '    limit_except POST { deny all; }', '    client_max_body_size 16k;',
                     '    proxy_pass http://127.0.0.1:4010/serve-monitor/api/browser-signals/site;',
                     '    proxy_set_header Content-Type application/json;',

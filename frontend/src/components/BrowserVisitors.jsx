@@ -10,6 +10,11 @@ import Modal from './Modal';
 const deviceName = value => ({ Mobile: 'נייד', Desktop: 'מחשב' })[value] || 'מכשיר לא ידוע';
 const visitsLabel = value => `${formatNumber(value)} ${value === 1 ? 'ביקור' : 'ביקורים'}`;
 const viewsLabel = value => `${formatNumber(value)} ${value === 1 ? 'צפייה' : 'צפיות'}`;
+// Active time on screen: seconds under a minute, then minutes and seconds.
+const durationLabel = value => {
+  const seconds = Math.max(0, Math.round(Number(value) || 0));
+  return seconds < 60 ? `${formatNumber(seconds)} שנ׳` : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')} דק׳`;
+};
 const actionName = row => ({ contact_click: `לחיצה ל${({ whatsapp: 'וואטסאפ', phone: 'טלפון', email: 'דוא״ל' })[row.label] || 'יצירת קשר'}`,
   form_start: 'התחלת מילוי טופס', form_submit: 'ניסיון שליחת טופס', form_error: 'שגיאה בטופס',
   form_success_observed: 'הוצגה הודעת הצלחה בטופס', project_open: 'פתיחת פרויקט', outbound_click: 'מעבר לאתר חיצוני',
@@ -46,14 +51,14 @@ function BrowserHistory({ appId, appName, range, visitor, onClose }) {
         <p className="status-line">היסטוריה שנשמרה עד 90 יום, עד סוף הטווח שנבחר.</p>
         <ol className="visitor-visit-list">
           {result.visits.map((visit, index) => <li key={`${visit.first_seen}:${index}`}>
-            <div className="visitor-visit-list__head"><strong><bdi>{formatDateTime(visit.first_seen)}</bdi></strong><span>{viewsLabel(visit.page_views)} · {visit.in_period ? 'בטווח שנבחר' : 'ביקור קודם'}</span></div>
+            <div className="visitor-visit-list__head"><strong><bdi>{formatDateTime(visit.first_seen)}</bdi></strong><span>{viewsLabel(visit.page_views)}{visit.engagement && <> · {durationLabel(visit.engagement.active_seconds)} פעילות · גלילה עד <bdi>{formatNumber(visit.engagement.max_scroll_depth)}%</bdi></>} · {visit.in_period ? 'בטווח שנבחר' : 'ביקור קודם'}</span></div>
             <p className="status-line">מקור: <bdi>{visit.arrival?.source || 'לא ידוע'}</bdi>{visit.arrival?.campaign && <> · <bdi>{visit.arrival.campaign}</bdi></>}{visit.arrival?.content && <> · <bdi>{visit.arrival.content}</bdi></>} · {({tagged:'קישור מתויג',referrer:'אתר מפנה',unknown:'לא ידוע'})[visit.arrival?.evidence] || 'ללא ראיה שמורה'}</p>
             {visit.outcomes?.map((o,i)=><p className="status-line" key={i}><bdi>{formatDateTime(o.occurred_at)}</bdi> · {({submitted:'טופס נשמר ב־Desk',received:'פנייה התקבלה לפי Desk',qualified:'פנייה מתאימה לפי Desk',customer:'תשלום נרשם בתיק המקושר',lost:'לא התקדם לפי Desk'})[o.stage]}</p>)}
             <ol className="visitor-steps">
               {[...visit.pages.map(row => ({ ...row, type: 'page' })), ...visit.actions.map(row => ({ ...row, type: 'action' }))]
                 .sort((a, b) => a.occurred_at.localeCompare(b.occurred_at)).map((row, i) => <li key={`${row.occurred_at}:${i}`}>
                   <time><bdi>{formatDateTime(row.occurred_at)}</bdi></time>
-                  <span><bdi>{row.type === 'page' ? pageName(row.path, appName) : actionName(row)}</bdi>{row.type === 'action' && <small><bdi>{row.path}</bdi></small>}</span>
+                  <span><bdi>{row.type === 'page' ? pageName(row.path, appName) : actionName(row)}</bdi>{row.type === 'action' && <small><bdi>{row.path}</bdi></small>}{row.type === 'page' && row.active_seconds !== undefined && <small>{durationLabel(row.active_seconds)} פעילות · גלילה עד <bdi>{formatNumber(row.scroll_depth)}%</bdi></small>}</span>
                 </li>)}
             </ol>
             {visit.page_views > visit.pages.length && <p className="status-line">מוצגות {formatNumber(visit.pages.length)} הצפיות הראשונות בביקור הזה.</p>}

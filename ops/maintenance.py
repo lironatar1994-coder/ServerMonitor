@@ -53,14 +53,14 @@ EXPECTED_PM2 = {'dfus-reuven-live', 'manager-site', 'on-your-way-backend',
                 'video-library-api'}
 TRACKER_URLS = ['https://pinhasratzon.co.il/', 'https://www.dfusreuven.co.il/',
                 'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents',
-                'https://lawebs.co.il/Koralevents2', 'https://alenu.co.il/', 'https://lawebs.co.il/cv/',
+                'https://lawebs.co.il/Koralevents2', 'https://alenu.co.il/', 'https://alenu.co.il/miluim', 'https://lawebs.co.il/cv/',
                 'https://lawebs.co.il/PizzaManager/p/oven-demo/']
 GROWTH_URLS = ['https://pinhasratzon.co.il/',
                'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents', 'https://lawebs.co.il/Koralevents2',
                'https://lawebs.co.il/seder', 'https://vee-app.co.il/', 'https://vee-app.co.il/OnYourWay',
                'https://lawebs.co.il/pdf-studio/', 'https://www.dfusreuven.co.il/',
                'https://miryamzelig.co.il/', 'https://sosbaderech.co.il/',
-               'https://alenu.co.il/', 'https://lawebs.co.il/cv/']
+               'https://alenu.co.il/', 'https://alenu.co.il/miluim', 'https://lawebs.co.il/cv/']
 
 MONITOR_LOG = '/var/log/nginx/monitor_host_access.log'
 UNOWNED_HOST_REQUESTS = 40

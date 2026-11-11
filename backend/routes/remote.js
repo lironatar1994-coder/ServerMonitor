@@ -9,6 +9,8 @@ const agent = express.Router();
 agent.use((req, res, next) => {
     if (!remote.agentAuthorized(req.headers.authorization)) return res.status(401).json({ error: 'Unauthorized' });
     res.set('Cache-Control', 'no-store');
+    // The PC's public address is the owner's own network; visits from it are not counted.
+    require('../internalNetworks').noteAgentAddress(db, req.ip, req.query.host);
     next();
 });
 agent.get('/poll', (req, res) => {

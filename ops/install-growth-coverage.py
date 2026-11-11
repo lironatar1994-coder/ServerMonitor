@@ -16,6 +16,7 @@ SITES = [
     ('lawebs.co.il.conf', 'lawebs.co.il', '/Koralevents', 'https://lawebs.co.il/Koralevents'),
     ('lawebs.co.il.conf', 'lawebs.co.il', '/seder', 'https://lawebs.co.il/seder'),
     ('lawebs.co.il.conf', 'lawebs.co.il', '/pdf-studio', 'https://lawebs.co.il/pdf-studio/'),
+    ('alenu.co.il.conf', 'alenu.co.il', '', 'https://alenu.co.il/miluim', {'scope': 'miluim', 'match': '/miluim'}),
     ('alenu.co.il.conf', 'alenu.co.il', '', 'https://alenu.co.il/'),
     ('lawebs.co.il.conf', 'lawebs.co.il', '/cv', 'https://lawebs.co.il/cv/'),
     ('lawebs.co.il.conf', 'lawebs.co.il', '', 'https://lawebs.co.il/'),
@@ -48,9 +49,10 @@ def main():
             '    ~*^(www\\.)?vee-app\\.co\\.il:/(maavar|Manager_Site|serve-monitor|pdf-studio|Miryam_Zelig|api|admin|login|dashboard)(/|$) "";',
             '    ~*^(www\\.)?lawebs\\.co\\.il:/(PinhasRatzon|admin|login|dashboard|PizzaManager|cv-manager|alenu|alenu-crm|maavar|desk|allsee|videos|rc|yomuledet|ball-coaster)(/|$) "";',
             '    ~*^(www\\.)?alenu\\.co\\.il:/desk(/|$) "";']
-        for config, host, prefix, site in SITES:
-            suffix = re.escape(prefix) + '(?:/|$)' if prefix else '/'
-            tag = f'<script defer src="/.well-known/server-monitor-growth.js" data-prefix="{prefix}"></script>'
+        for config, host, prefix, site, *extra in SITES:
+            opts = extra[0] if extra else {}
+            suffix = re.escape(opts['match']) if opts.get('match') else re.escape(prefix) + '(?:/|$)' if prefix else '/'
+            tag = f'<script defer src="/.well-known/server-monitor-growth.js" data-prefix="{prefix}"{helper.endpoint_attributes("growth", opts)}></script>'
             if host == 'lawebs.co.il' and not prefix:
                 tag += '<script defer src="/.well-known/server-monitor-portfolio.js"></script>'
             maps.append(f"    ~^(?:www\\.)?{re.escape(host)}:{suffix} '{tag}';")
@@ -89,8 +91,8 @@ def main():
                 content += ['location = /.well-known/server-monitor-portfolio.js {',
                     '    alias /var/lib/server-monitor/portfolio-tracker.js;',
                     '    default_type application/javascript;', '    add_header Cache-Control "no-cache";', '}']
-            for _, host, prefix, site in [row for row in SITES if row[0] == config]:
-                content += [f'location = {prefix}/.well-known/vee-growth-signal {{',
+            for _, host, prefix, site, *extra in [row for row in SITES if row[0] == config]:
+                content += [f'location = {prefix}/.well-known/vee-growth-signal{helper.scope_suffix(extra)} {{',
                     '    limit_except POST { deny all; }', '    client_max_body_size 16k;',
                     '    proxy_pass http://127.0.0.1:4010/serve-monitor/api/browser-signals/site;',
                     '    proxy_set_header Content-Type application/json;',

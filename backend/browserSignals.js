@@ -63,6 +63,10 @@ function validateSignalBody(body) {
     return { eventId, visitorId, sessionId, path };
 }
 
+// Sites whose engagement arrives as 15-second slices of one page visit: summed time, deepest scroll.
+const SLICED_ENGAGEMENT_SITES = new Set(['LA webs', 'Alenu', 'Alenu Miluim']);
+const slicedEngagement = (app) => SLICED_ENGAGEMENT_SITES.has(app?.name);
+
 const ZONE_PATTERN = /^[A-Za-z0-9_.:\-֐-׿ ]{1,64}$/;
 const MAX_ZONES_PER_EVENT = 30;
 const MAX_VIEWS_PER_EVENT = 24;
@@ -159,6 +163,8 @@ function validateProductEventBody(body) {
 }
 
 function getAutomationHint({ body, ip, userAgent, path, appId }) {
+    // 3 = the owner's own network (a monitor PC agent connects from it): kept, never counted.
+    if (require('./internalNetworks').isInternalAddress(db, ip)) return 3;
     if (body?.webdriver === true) return 1;
     const classification = getBotClassification({
         ip,
@@ -386,7 +392,7 @@ function recordInteraction({ body, ip, userAgent, siteUrl }) {
         error.status = 400;
         throw error;
     }
-    if (getAutomationHint({ body, ip: normalizedIp, userAgent, path: '/' }) === 1) return { accepted: true, released: 0, app: app.name };
+    if ([1, 3].includes(getAutomationHint({ body, ip: normalizedIp, userAgent, path: '/' }))) return { accepted: true, released: 0, app: app.name };
     let released = 0;
     const scope = body.scope === 'growth' ? 'growth' : 'browser';
     const sessionHash = hashIdentifier(`${app.id}:${scope === 'growth' ? 'growth:' : ''}${sessionId}`, key);
@@ -453,6 +459,7 @@ module.exports = {
     normalizePath,
     recordBrowserSignal,
     recordEngagementSignal,
+    slicedEngagement,
     recordProductEvent,
     validateSignalBody,
     validateEngagementBody,

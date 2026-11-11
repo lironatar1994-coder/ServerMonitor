@@ -68,3 +68,34 @@ test('a site that moves to its own domain keeps its history and ingestion positi
     assert.equal(db.prepare("SELECT COUNT(*) AS n FROM visitor_events WHERE source_file_id = 'moved'").get().n, 4);
     db.close();
 });
+
+test('Alenu Miluim takes its stored pages from Alenu and both keep their own history', () => {
+    delete require.cache[databasePath];
+    let db = require('../database');
+    const alenu = db.prepare("SELECT id FROM apps WHERE name = 'Alenu'").get().id;
+    // Recreate the state before the split: one Alenu site that owned every path.
+    db.prepare("DELETE FROM apps WHERE name = 'Alenu Miluim'").run();
+    db.prepare("UPDATE apps SET log_exclude = '/desk' WHERE id = ?").run(alenu);
+    const event = db.prepare(`INSERT INTO visitor_events (app_id, source_file_id, source_offset, occurred_at, ip, path, is_page_view)
+        VALUES (?, 'alenu-log', ?, '2026-11-01T00:00:00Z', '1.1.1.1', ?, 1)`);
+    const signal = db.prepare(`INSERT INTO browser_signals (app_id, event_id, occurred_at, ip, visitor_hash, session_hash, path)
+        VALUES (?, ?, '2026-11-01T00:00:00Z', '1.1.1.1', 'v', 's', ?)`);
+    ['/', '/start', '/miluim', '/miluim.html', '/miluim-guide', '/privacy.html'].forEach((item, index) => {
+        event.run(alenu, 500 + index, item);
+        signal.run(alenu, `alenu-${index}`, item);
+    });
+    db.close();
+    delete require.cache[databasePath];
+
+    db = require('../database');
+    const miluim = db.prepare("SELECT * FROM apps WHERE name = 'Alenu Miluim'").get();
+    assert.equal(miluim.log_filter, '/miluim*');
+    assert.equal(db.prepare("SELECT log_exclude FROM apps WHERE id = ?").get(alenu).log_exclude, '/desk|/miluim*');
+    const marker = { visitor_events: "source_file_id = 'alenu-log'", browser_signals: "event_id LIKE 'alenu-%'" };
+    const paths = (table, id) => db.prepare(`SELECT path FROM ${table} WHERE app_id = ? AND ${marker[table]} ORDER BY path`).all(id).map((row) => row.path);
+    assert.deepEqual(paths('visitor_events', alenu), ['/', '/privacy.html', '/start']);
+    assert.deepEqual(paths('visitor_events', miluim.id), ['/miluim', '/miluim-guide', '/miluim.html']);
+    assert.deepEqual(paths('browser_signals', miluim.id), ['/miluim', '/miluim-guide', '/miluim.html']);
+    db.close();
+    delete require.cache[databasePath];
+});

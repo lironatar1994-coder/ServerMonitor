@@ -55,7 +55,8 @@ function getBrowserSignalSummary(appId, range) {
             COUNT(DISTINCT CASE WHEN automation_hint = 0 THEN visit_hash END) AS browser_signal_sessions,
             SUM(CASE WHEN automation_hint = 0 THEN 1 ELSE 0 END) AS browser_signal_page_views,
             SUM(CASE WHEN automation_hint = 1 THEN 1 ELSE 0 END) AS automated_browser_signals,
-            SUM(CASE WHEN automation_hint = 2 THEN 1 ELSE 0 END) AS pending_browser_signals
+            SUM(CASE WHEN automation_hint = 2 THEN 1 ELSE 0 END) AS pending_browser_signals,
+            SUM(CASE WHEN automation_hint = 3 THEN 1 ELSE 0 END) AS internal_browser_signals
         FROM browser_signals
         WHERE occurred_at >= ? AND occurred_at < ? ${appId ? 'AND app_id = ?' : ''}
     `).get(...params);
@@ -64,7 +65,8 @@ function getBrowserSignalSummary(appId, range) {
         browser_signal_sessions: Number(result.browser_signal_sessions) || 0,
         browser_signal_page_views: Number(result.browser_signal_page_views) || 0,
         automated_browser_signals: Number(result.automated_browser_signals) || 0,
-        pending_browser_signals: Number(result.pending_browser_signals) || 0
+        pending_browser_signals: Number(result.pending_browser_signals) || 0,
+        internal_browser_signals: Number(result.internal_browser_signals) || 0
     };
 }
 
@@ -461,7 +463,8 @@ function getEngagement(app, range) {
     const params = [app.id, range.from, range.to];
     const filteredSamples = `SELECT session_hash,scroll_depth,dwell_ms FROM engagement_signals
         WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0`;
-    const sampleSource = app.name === 'LA webs'
+    const sliced = require('../browserSignals').slicedEngagement(app);
+    const sampleSource = sliced
         ? `(SELECT session_hash,MAX(scroll_depth) AS scroll_depth,SUM(dwell_ms) AS dwell_ms
             FROM engagement_signals WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0
             GROUP BY session_hash,path)`
@@ -511,7 +514,7 @@ function getEngagement(app, range) {
         LIMIT 20
     `).all(...params);
 
-    const viewedZones = app.name === 'LA webs' ? db.prepare(`
+    const viewedZones = sliced ? db.prepare(`
         SELECT z.zone,SUM(z.views) AS views,COUNT(DISTINCT e.session_hash) AS samples,
             SUM(z.dwell_ms) * 1.0 / COUNT(DISTINCT e.session_hash) AS average_dwell_ms
         FROM engagement_zone_views z JOIN engagement_signals e ON e.app_id=z.app_id AND e.event_id=z.event_id
@@ -525,6 +528,24 @@ function getEngagement(app, range) {
         ORDER BY samples DESC, average_dwell_ms DESC
         LIMIT 20
     `).all(...params);
+
+    // Per page and per time band, counted as page visits (one browser visit on one page).
+    const pageEngagement = sliced ? db.prepare(`
+        SELECT path, COUNT(*) AS visits, AVG(dwell_ms) AS average_dwell_ms, AVG(scroll_depth) AS average_scroll_depth,
+            SUM(CASE WHEN scroll_depth >= 90 THEN 1 ELSE 0 END) AS reached_end
+        FROM (SELECT session_hash, path, MAX(scroll_depth) AS scroll_depth, SUM(dwell_ms) AS dwell_ms
+            FROM engagement_signals WHERE app_id = ? AND occurred_at >= ? AND occurred_at < ? AND automation_hint = 0
+            GROUP BY session_hash, path)
+        GROUP BY path ORDER BY visits DESC LIMIT 20`).all(...params).map((row) => ({
+            path: row.path, visits: Number(row.visits) || 0,
+            average_dwell_seconds: Math.round((Number(row.average_dwell_ms) || 0) / 1000),
+            average_scroll_depth: Math.round(Number(row.average_scroll_depth) || 0),
+            reached_end: row.visits ? Math.round(Number(row.reached_end) / Number(row.visits) * 100) : 0
+        })) : [];
+    const dwellBands = sliced ? db.prepare(`
+        SELECT CASE WHEN dwell_ms < 10000 THEN '0-10' WHEN dwell_ms < 30000 THEN '10-30' WHEN dwell_ms < 60000 THEN '30-60'
+            WHEN dwell_ms < 180000 THEN '60-180' ELSE '180+' END AS band, COUNT(*) AS visits
+        FROM ${sampleSource} GROUP BY band`).all(...params) : [];
 
     const heatmapPages = db.prepare(`
         SELECT path, viewport_class, SUM(taps) AS taps, COUNT(DISTINCT event_id) AS samples
@@ -603,7 +624,9 @@ function getEngagement(app, range) {
     return {
         app: { id: app.id, name: app.name, url: app.url },
         range,
-        engagement_unit: app.name === 'LA webs' ? 'page_visits' : 'samples',
+        engagement_unit: sliced ? 'page_visits' : 'samples',
+        pages: pageEngagement,
+        dwell_bands: dwellBands,
         engagement_sessions: sessions,
         engagement_samples: samples,
         automated_engagement_samples: Number(automatedSamples) || 0,
@@ -652,6 +675,12 @@ function respondError(res, error) {
     if (error.code) payload.code = error.code;
     res.status(error.status || 500).json(payload);
 }
+
+// Networks the monitor's own PCs connect from; visits from them are the owner's and are not counted.
+router.get('/internal-networks', (req, res) => {
+    try { res.json({ networks: require('../internalNetworks').listInternalNetworks(db), window_days: 30 }); }
+    catch (error) { respondError(res, error); }
+});
 
 router.get('/overview', (req, res) => {
     try {
