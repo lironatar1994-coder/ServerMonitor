@@ -37,8 +37,18 @@ function purgeExpiredMonitorData() {
     lastDataPurgeAt = now;
 }
 
-// One PM2 listing per cycle instead of one per monitored process.
-function getPm2Processes() {
+// One PM2 listing per cycle instead of one per monitored process. A failed listing (PM2 busy
+// restarting during a deployment) is retried once and then reported as null, never as "all stopped".
+async function getPm2Processes(retryMs = 3000) {
+    const first = await listPm2Once();
+    if (first || !retryMs) return first;
+    await new Promise((resolve) => setTimeout(resolve, retryMs));
+    const second = await listPm2Once();
+    if (!second) console.warn('[Monitor] PM2 listing unavailable; keeping last known process states');
+    return second;
+}
+
+function listPm2Once() {
     return new Promise((resolve) => {
         execFile('/usr/bin/pm2', ['jlist'], {
             env: { ...process.env, PM2_HOME: '/root/.pm2' }, maxBuffer: 8 * 1024 * 1024, timeout: 15000
@@ -110,7 +120,10 @@ async function runMonitorCycle() {
             let detail = null;
 
             // 1. Runtime state
-            if (app.pm2_name) {
+            if (app.pm2_name && processes === null) {
+                // PM2 could not be read: keep the last known state rather than invent an outage.
+                status = app.status || 'unknown';
+            } else if (app.pm2_name) {
                 const pm2Info = pm2Status(processes, app.pm2_name);
                 status = pm2Info.status;
                 appCpu = pm2Info.cpu;
