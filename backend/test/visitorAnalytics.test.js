@@ -150,6 +150,20 @@ test('catches production scanner signatures previously counted as candidates', (
     assert.equal(getBotReason({ userAgent: 'Python/3.11 aiohttp/3.8.4', path: '/', method: 'GET' }), 'bot user agent');
     assert.equal(getBotReason({ userAgent: 'Mozilla/5.0 (compatible; Odin; https://docs.getodin.com/)', path: '/', method: 'GET' }), 'bot user agent');
     assert.equal(getBotReason({ userAgent: 'Mozilla/5.0 (compatible; CyberConvoyScout/1.0)', path: '/', method: 'GET' }), 'bot user agent');
+    // Seen on Alenu and Dfus Reuven in 2026-11, where they set off false "silent measurement" alerts.
+    for (const ua of ['Mozilla/5.0', 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.6312.86 Safari/537.36',
+        'Mozilla/5.0 (compatible; URLCleaner/1.0; +https://github.com/x)', 'Mozilla/5.0 (compatible; WP-Safe-Scanner/1.0)',
+        'nameserver-checker-http-validator/1.0', 'Python-urllib/3.13', 'RealCyber-enricher/0.2 (+internal research)',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0']) {
+        assert.equal(getBotReason({ userAgent: ua, path: '/', method: 'GET' }), 'bot user agent', ua);
+    }
+    // Ordinary browsers, including old Internet Explorer, stay candidates.
+    for (const ua of ['Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36 Edg/156.0.0.0',
+        'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)']) {
+        assert.equal(getBotReason({ userAgent: ua, path: '/', method: 'GET', ip: '1.1.1.1' }), '', ua);
+    }
 });
 
 test('marks only the observed distributed hosting fingerprints as likely bots', () => {
@@ -177,10 +191,10 @@ test('stores deduplicated first-party browser signals against an exact configure
     const siteUrl = 'https://www.dfusreuven.co.il/';
     assert.equal(findSignalApp(siteUrl).name, 'Dfus Reuven');
     assert.equal(findSignalApp('https://unknown.example/'), null);
-    assert.deepEqual(recordBrowserSignal({ body: payload, ip: '1.2.3.4', userAgent: 'Mozilla/5.0', siteUrl }), {
+    assert.deepEqual(recordBrowserSignal({ body: payload, ip: '1.2.3.4', userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36', siteUrl }), {
         accepted: true, duplicate: false, app: 'Dfus Reuven'
     });
-    assert.deepEqual(recordBrowserSignal({ body: payload, ip: '1.2.3.4', userAgent: 'Mozilla/5.0', siteUrl }), {
+    assert.deepEqual(recordBrowserSignal({ body: payload, ip: '1.2.3.4', userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36', siteUrl }), {
         accepted: true, duplicate: true, app: 'Dfus Reuven'
     });
     const stored = db.prepare(`
@@ -193,7 +207,7 @@ test('stores deduplicated first-party browser signals against an exact configure
     assert.equal(stored.path, '/product/aura-solitaire-ring');
     assert.equal(stored.automation_hint, 0);
     assert.throws(
-        () => recordBrowserSignal({ body: { ...payload, event_id: 'event_unknown_12345678' }, ip: '1.2.3.4', userAgent: 'Mozilla/5.0', siteUrl: 'https://unknown.example/' }),
+        () => recordBrowserSignal({ body: { ...payload, event_id: 'event_unknown_12345678' }, ip: '1.2.3.4', userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36', siteUrl: 'https://unknown.example/' }),
         /not configured/
     );
 });
@@ -345,11 +359,11 @@ test('reclassifies stored automation and page views when rules change', () => {
     db.prepare(`INSERT INTO visitor_events (
         app_id, source_file_id, source_offset, occurred_at, ip, method, path,
         status, user_agent, is_bot, bot_reason, is_page_view
-    ) VALUES (?, 'preserve-bot', 1002, '2026-07-12T10:01:00.000Z', '8.8.4.4', 'GET', '/', 200, 'Mozilla/5.0', 1, 'attack signature', 1)`).run(app.id);
+    ) VALUES (?, 'preserve-bot', 1002, '2026-07-12T10:01:00.000Z', '8.8.4.4', 'GET', '/', 200, 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36', 1, 'attack signature', 1)`).run(app.id);
     db.prepare(`INSERT INTO visitor_events (
         app_id, source_file_id, source_offset, occurred_at, ip, method, path,
         status, user_agent, is_bot, is_page_view
-    ) VALUES (?, 'stale-page-rule', 1003, '2026-07-12T10:02:00.000Z', '8.8.4.4', 'GET', '/seder/_next/image', 200, 'Mozilla/5.0', 0, 1)`).run(app.id);
+    ) VALUES (?, 'stale-page-rule', 1003, '2026-07-12T10:02:00.000Z', '8.8.4.4', 'GET', '/seder/_next/image', 200, 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36', 0, 1)`).run(app.id);
     const result = refreshStoredEventClassifications();
     const event = db.prepare("SELECT is_bot, bot_reason, bot_classification, bot_confidence, is_page_view FROM visitor_events WHERE source_file_id = 'reclassify'").get();
     assert.ok(result.scanned > 0);
@@ -435,12 +449,12 @@ test('a pending hosting-network session counts only after its own interaction', 
         const { recordInteraction } = require('../browserSignals');
         const siteUrl = 'https://www.dfusreuven.co.il/';
         const body = { event_id: 'event_vpn_1234567890abcd', visitor_id: 'visitor_vpn_1234567890ab', session_id: 'session_vpn_1234567890ab', path: '/' };
-        recordBrowserSignal({ body, ip: '34.140.1.1', userAgent: 'Mozilla/5.0 Chrome/131.0', siteUrl });
+        recordBrowserSignal({ body, ip: '34.140.1.1', userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36', siteUrl });
         const hint = () => db.prepare('SELECT automation_hint FROM browser_signals WHERE event_id = ?').get(body.event_id).automation_hint;
         assert.equal(hint(), 2);
         assert.equal(recordInteraction({ body: { event_id: 'event_vpnbot_1234567890a', session_id: body.session_id, webdriver: true }, ip: '34.140.1.1', userAgent: 'Mozilla/5.0', siteUrl }).released, 0);
         assert.equal(hint(), 2);
-        assert.equal(recordInteraction({ body: { event_id: 'event_vpnhit_1234567890a', session_id: body.session_id }, ip: '34.140.1.1', userAgent: 'Mozilla/5.0 Chrome/131.0', siteUrl }).released, 1);
+        assert.equal(recordInteraction({ body: { event_id: 'event_vpnhit_1234567890a', session_id: body.session_id }, ip: '34.140.1.1', userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36', siteUrl }).released, 1);
         assert.equal(hint(), 0);
     } finally {
         networks._setReaderForTests(null);

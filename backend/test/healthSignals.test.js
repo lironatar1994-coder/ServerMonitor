@@ -75,7 +75,7 @@ test('host samples are hourly and the disk forecast follows the growth trend', (
 const sendError = (body, extra = {}) => fetch(base, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Visitor-Signal-Key': 'health-signal-test-key', 'X-Visitor-Site-Url': 'https://pinhasratzon.co.il/',
-        'X-Visitor-IP': '1.2.3.4', 'X-Visitor-User-Agent': 'Mozilla/5.0 (Windows NT 10.0) Chrome/130', ...extra },
+        'X-Visitor-IP': '1.2.3.4', 'X-Visitor-User-Agent': 'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36', ...extra },
     body: JSON.stringify({ kind: 'error', event_id: 'event_error_1234567890', path: '/contact', name: 'TypeError', source: 'https://pinhasratzon.co.il/assets/app.js?v=3', line: 12, ...body })
 });
 

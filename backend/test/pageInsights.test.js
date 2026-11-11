@@ -21,7 +21,7 @@ const session = crypto.randomUUID();
 let offset = 0;
 function event(type, page, extras = {}, site = app) {
   const body = { event_id: crypto.randomUUID(), visitor_id: session, session_id: session, path: page, event_type: type, ...extras };
-  recordGrowthSignal({ body, ip: '1.2.3.4', userAgent: 'Mozilla/5.0', siteUrl: site.url });
+  recordGrowthSignal({ body, ip: '1.2.3.4', userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36', siteUrl: site.url });
   db.prepare('UPDATE growth_events SET occurred_at=? WHERE event_id=?').run(new Date(Date.now() - 60000 + offset++ * 1000).toISOString(), body.event_id);
   return body;
 }
@@ -52,7 +52,7 @@ test('portfolio action dimensions are allow-listed and a lead remains a separate
 test('portfolio engagement sums active-time deltas and uses max scroll per visit/page', () => {
   for (const [dwell, depth] of [[15000, 25], [12000, 80]]) recordEngagementSignal({
     body: { event_id: crypto.randomUUID(), visitor_id: session, session_id: session, path: '/work/miryam/', scroll_depth: depth, dwell_ms: dwell },
-    ip: '1.2.3.4', userAgent: 'Mozilla/5.0', siteUrl: app.url
+    ip: '1.2.3.4', userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36', siteUrl: app.url
   });
   const summary = getEngagement(app, range);
   assert.equal(summary.engagement_samples, 1); assert.equal(summary.average_dwell_seconds, 27);

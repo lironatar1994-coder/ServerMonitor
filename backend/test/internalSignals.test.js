@@ -24,7 +24,7 @@ test.after(() => { server.close(); db.close(); fs.rmSync(temp, { recursive: true
 const send = (id, cookie) => fetch(base, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Visitor-Signal-Key': 'internal-signal-test-key', 'X-Visitor-Site-Url': 'https://www.dfusreuven.co.il/',
-        'X-Visitor-IP': '1.2.3.4', 'X-Visitor-User-Agent': 'Mozilla/5.0', ...(cookie ? { Cookie: cookie } : {}) },
+        'X-Visitor-IP': '1.2.3.4', 'X-Visitor-User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36', ...(cookie ? { Cookie: cookie } : {}) },
     body: JSON.stringify({ event_id: `event_${id}_1234567890ab`, visitor_id: 'visitor_1234567890abcd', session_id: 'session_1234567890abcd', path: '/' })
 });
 

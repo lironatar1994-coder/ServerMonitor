@@ -407,7 +407,7 @@ const veeExcludedPaths = [
 const lawebsExcludedPaths = [
     '/seder', '/Koralevents', '/koralevents', '/Koralevents2', '/PinhasRatzon', '/pinhasratzon',
     '/alenu', '/alenu-crm', '/cv', '/cv-manager', '/desk', '/allsee', '/videos', '/rc',
-    '/PizzaManager', '/pdf-studio', '/maavar'
+    '/PizzaManager', '/pdf-studio', '/maavar', '/yomuledet'
 ].join('|');
 
 const productionApps = [
@@ -424,6 +424,10 @@ const productionApps = [
     { name: 'Desk', url: 'https://lawebs.co.il/desk/', systemd_unit: 'desk.service', health_url: 'http://127.0.0.1:3150/desk/', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'AllSee', url: 'https://lawebs.co.il/allsee/', systemd_unit: 'allsee.service', health_url: 'http://127.0.0.1:4310/allsee/', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Video Library', url: 'https://lawebs.co.il/videos/', pm2_name: 'video-library-api', health_url: 'http://127.0.0.1:3192/videos/api/health', analytics_enabled: 0, reporting_enabled: 0 },
+    // Birthday gift sites (builder, published sites and API), live since 2026-11-03.
+    { name: 'יומולדת', url: 'https://lawebs.co.il/yomuledet/', systemd_unit: 'yomuledet.service', health_url: 'http://127.0.0.1:3170/yomuledet/api/health', analytics_enabled: 0, reporting_enabled: 0 },
+    // Desk's WhatsApp gateway; its connection state is checked separately in operational health.
+    { name: 'Desk · וואטסאפ', systemd_unit: 'whatsapp-bot.service', health_url: 'http://127.0.0.1:3160/health', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'מסד נתונים PostgreSQL', systemd_unit: 'postgresql@16-main.service', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Seder WhatsApp', pm2_name: 'seder-whatsapp', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'Seder Calendar', pm2_name: 'seder-calendar', analytics_enabled: 0, reporting_enabled: 0 },

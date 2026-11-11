@@ -29,6 +29,7 @@ DATABASES = {
     'koralevents2': '/opt/koralevents2/shared/data/koral.sqlite',
     'seder': '/var/lib/seder/seder.db',
     'dfus-suppliers': '/var/lib/dfus-reuven/store/suppliers.db',
+    'yomuledet': '/var/lib/yomuledet/yomuledet.db',
 }
 ASSETS = {
     'maavar-encrypted': Path('/opt/maavar/shared/export'),
@@ -38,6 +39,7 @@ ASSETS = {
     'koral2-uploads': Path('/opt/koralevents2/shared/uploads'),
     'dfus-store': Path('/var/lib/dfus-reuven/store'),
     'dfus-legacy-quotes': Path('/var/lib/dfus-reuven/quotes'),
+    'yomuledet-uploads': Path('/var/lib/yomuledet/uploads'),
 }
 AUTH_KEY = Path('/root/.server-monitor-auth-key')
 AUTH_KEY_BACKUP = Path('/root/server-monitor-key-backups/auth.key')
@@ -189,7 +191,8 @@ def prune_snapshots():
                'removed': removed, 'over_budget': total > 2 * 1024**3})
 
 RELEASE_BASES = [Path('/opt') / name for name in ('koralevents', 'koralevents2', 'maavar', 'lawebs-portfolio',
-                                                  'cv-manager', 'pizza-manager-platform', 'desk', 'allsee')]
+                                                  'cv-manager', 'pizza-manager-platform', 'desk', 'allsee',
+                                                  'yomuledet', 'whatsapp-bot')]
 BUILD_ROOTS = [Path(p) for p in (
     '/root/OnYourWay/frontend', '/root/sos-landing-standalone',
     '/root/DfusReuven-live', '/root/Seder', '/root/PDFStudio')]

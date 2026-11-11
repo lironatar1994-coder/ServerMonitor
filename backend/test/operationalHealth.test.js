@@ -60,3 +60,13 @@ test('the off-server watchdog is visible when missing or silent', () => {
   assert.equal(issue({ configured: true, at: now - 5 * 60000, error: null }), undefined);
   assert.equal(issue(undefined), undefined);
 });
+
+test('Desk WhatsApp counts as connected only in state "open"', () => {
+  const desk = [{ id: 41, name: 'Desk · וואטסאפ', status: 'online', systemd_unit: 'whatsapp-bot.service' }];
+  const ids = (deskWhatsapp) => buildOperationalHealth({ ...base, apps: desk, deskWhatsapp }).issues.map((item) => item.id);
+  assert.deepEqual(ids({ state: 'open' }), []);
+  assert.deepEqual(ids({ state: 'qr' }), ['desk-whatsapp']);
+  assert.equal(buildOperationalHealth({ ...base, apps: desk, deskWhatsapp: { state: null } }).issues[0].severity, 'unknown');
+  // Not checked (non-Linux or unavailable) never invents a gap.
+  assert.deepEqual(ids(undefined), []);
+});

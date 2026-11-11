@@ -16,7 +16,7 @@ const app = db.prepare("SELECT * FROM apps WHERE name='Dfus Reuven'").get();
 const second = db.prepare("SELECT * FROM apps WHERE name='Pinhas Ratzon'").get();
 const at = new Date().toISOString();
 const body = () => ({ event_id: crypto.randomUUID(), visitor_id: crypto.randomUUID(), session_id: crypto.randomUUID(), path: '/', event_type: 'page_view' });
-const record = b => recordGrowthSignal({ body: b, ip: '1.2.3.4', userAgent: 'Mozilla/5.0', siteUrl: app.url });
+const record = b => recordGrowthSignal({ body: b, ip: '1.2.3.4', userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36', siteUrl: app.url });
 test.after(() => { db.close(); fs.rmSync(temp, { recursive: true, force: true }); });
 
 test('migration is repeatable and preserves edited goals and canonical-only clients', () => {

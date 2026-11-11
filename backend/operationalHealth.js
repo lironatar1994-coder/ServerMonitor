@@ -86,6 +86,7 @@ function buildOperationalHealth({
   processes = [],
   discovered = { rows: [], error: false },
   whatsapp,
+  deskWhatsapp = undefined,
   alertsConfigured = true,
   pcCopiedAt = undefined,
   heartbeat = undefined,
@@ -193,6 +194,14 @@ function buildOperationalHealth({
         seder.id,
       );
   }
+  // Desk's gateway answers its health URL even while unlinked; only state "open" is a live connection.
+  const desk = apps.find((app) => app.systemd_unit === "whatsapp-bot.service");
+  if (desk && desk.status === "online" && deskWhatsapp !== undefined) {
+    if (!deskWhatsapp?.state)
+      add("desk-whatsapp", "חיבור WhatsApp של Desk לא אומת", "השירות פועל; מצב החיבור לא התקבל.", "unknown", desk.id);
+    else if (deskWhatsapp.state !== "open")
+      add("desk-whatsapp", "WhatsApp של Desk אינו מחובר", "השירות פועל; הודעות WhatsApp לא יישלחו עד לחיבור מחדש.", "warning", desk.id);
+  }
   const browserFresh = fresh(browser?.checked, now, 7 * 3600000);
   const backupFresh = fresh(backup?.completed, now, 36 * 3600000);
   const browserItems = browserFailures(browser);
@@ -238,7 +247,7 @@ function buildOperationalHealth({
       ),
     };
   };
-  const priorities = { 'alert-delivery': 0, 'seder-whatsapp': 1, coverage: 2, disk: 3, reboot: 5 };
+  const priorities = { 'alert-delivery': 0, 'seder-whatsapp': 1, 'desk-whatsapp': 1, coverage: 2, disk: 3, reboot: 5 };
   issues.sort(
     (a, b) =>
       ({ error: 0, warning: 1, unknown: 2 })[a.severity] -
@@ -282,6 +291,18 @@ function buildOperationalHealth({
   };
 }
 
+// Desk's WhatsApp gateway state from its loopback health URL: only the state word is kept.
+async function deskWhatsappState(url = "http://127.0.0.1:3160/health") {
+  if (process.platform !== "linux") return undefined;
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
+    const body = await response.json();
+    return { state: typeof body?.state === "string" ? body.state.slice(0, 20) : null };
+  } catch {
+    return { state: null };
+  }
+}
+
 // Newest PC acknowledgement (seconds), null when none, undefined when unreadable.
 function latestAcknowledgement(dir = "/var/lib/lawebs-maintenance/pc-acknowledgements") {
   try {
@@ -301,6 +322,7 @@ async function operationalHealth(db, processes) {
     browser: readJson("/var/lib/lawebs-maintenance/browser-check.json"),
     backup: readJson("/var/lib/lawebs-maintenance/backup-status.json"),
     whatsapp: readJson("/var/lib/seder/whatsapp-status.json"),
+    deskWhatsapp: await deskWhatsappState(),
     reports: db
       .prepare(
         "SELECT report_type,status,sent_at FROM email_report_deliveries ORDER BY id DESC LIMIT 30",

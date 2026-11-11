@@ -2,7 +2,7 @@ const fs = require('fs');
 
 const DEFAULT_TAIL_BYTES = 65536;
 const VISITOR_TAIL_BYTES = 2097152;
-const CLASSIFICATION_RULESET_VERSION = '2026-11-01.1';
+const CLASSIFICATION_RULESET_VERSION = '2026-11-11.1';
 
 const botUserAgentPatterns = [
     /bot/i,
@@ -73,7 +73,13 @@ const botUserAgentPatterns = [
     /builtwith/i,
     /visionheight/i,
     /websiphon/i,
-    /^mozilla\/5\.0 \(compatible\)$/i
+    /^mozilla\/5\.0 \(compatible\)$/i,
+    // Shapes no real browser sends: no platform section, a `compatible; Tool/1.0` tag,
+    // Chrome without its engine token, and self-described checking tools.
+    /^mozilla\/5\.0(?:$|\s+(?!\())/i,
+    /\(compatible; (?!msie|konqueror)[^;)]*\/\d/i,
+    /^mozilla\/5\.0 \([^)]*\) chrome\//i,
+    /scanner|checker|validator|enricher|urllib/i
 ];
 
 const distributedAutomationFingerprints = [
