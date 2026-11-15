@@ -1,11 +1,20 @@
-// The Desk-owned export contains only anonymous source tags and business stages.
+// The exports of Desk (the CV site) and alenu-crm (Alenu and Alenu Miluim, since 2026-11-15) contain only anonymous
+// source tags and business stages. Each is read when present; the rows of both are kept together.
 const fs = require('node:fs/promises');
-async function syncDeskOutcomes(db, file = '/var/lib/desk/attribution-outcomes.json') {
+const FILES = ['/var/lib/desk/attribution-outcomes.json', '/var/lib/alenu-crm/attribution-outcomes.json'];
+async function readExport(file) {
+    if ((await fs.stat(file)).size > 2 * 1024 * 1024) throw new Error('oversized');
+    const data = JSON.parse(await fs.readFile(file, 'utf8'));
+    if (!Array.isArray(data.rows) || data.rows.length > 1000 || !Number.isFinite(Date.parse(data.generated_at))) throw new Error('invalid');
+    return data;
+}
+async function syncDeskOutcomes(db, files = FILES) {
     const now = new Date().toISOString();
     try {
-        if ((await fs.stat(file)).size > 2 * 1024 * 1024) throw new Error('oversized');
-        const data = JSON.parse(await fs.readFile(file, 'utf8'));
-        if (!Array.isArray(data.rows) || data.rows.length > 1000 || !Number.isFinite(Date.parse(data.generated_at))) throw new Error('invalid');
+        const exports = (await Promise.all([].concat(files).map((file) => readExport(file).catch(() => null)))).filter(Boolean);
+        if (!exports.length) throw new Error('unavailable');
+        const seen = new Set();
+        const data = { generated_at: exports.map((e) => e.generated_at).sort()[0], rows: exports.flatMap((e) => e.rows).filter((row) => !seen.has(row?.id) && seen.add(row?.id)) };
         const insert = db.prepare('INSERT OR REPLACE INTO source_outcomes(id,app_id,occurred_at,source,medium,campaign,content,evidence,stage,first_source,latest_source,browser_session_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)');
         const tag = v => typeof v === 'string' && /^[\p{L}\p{N}_. -]{1,80}$/u.test(v) ? v : '';
         db.transaction(() => {

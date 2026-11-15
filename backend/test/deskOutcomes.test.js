@@ -15,3 +15,12 @@ test('Desk source receipt hashes the shared session per site and keeps stale dat
  assert.equal(JSON.parse(db.prepare("SELECT value FROM monitor_metadata WHERE key='desk-outcomes'").get().value).status,'unavailable');
  assert.equal(db.prepare('SELECT COUNT(*) n FROM source_outcomes').get().n,1,'unavailable export retains last data without declaring it current');
 });
+test('Desk and alenu-crm exports are read together; one missing file leaves the other in use',async()=>{
+ const at=new Date().toISOString(),row=(id,site)=>({id,site,at,stage:'submitted',attribution:{current:{source:'google',evidence:'tagged'}}});
+ const desk=path.join(temp,'desk.json'),crm=path.join(temp,'crm.json');
+ fs.writeFileSync(desk,JSON.stringify({generated_at:at,rows:[row('c'.repeat(64),'cv')]}));
+ fs.writeFileSync(crm,JSON.stringify({generated_at:at,rows:[row('d'.repeat(64),'alenu')]}));
+ await syncDeskOutcomes(db,[desk,crm,path.join(temp,'missing')]);
+ assert.equal(JSON.parse(db.prepare("SELECT value FROM monitor_metadata WHERE key='desk-outcomes'").get().value).status,'ok');
+ assert.ok(db.prepare('SELECT 1 FROM source_outcomes WHERE id=?').get('d'.repeat(64)),'the alenu-crm row');
+});
