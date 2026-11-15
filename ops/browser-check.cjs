@@ -95,7 +95,7 @@ let browser;
     if (!await page.locator('.ranked-row__button').count()) { console.log('NOTE page-drill-down: no recorded pages in 30 days'); return; }
     await page.locator('.ranked-row__button').first().click();
     await page.getByRole('heading', { name: 'פעולות המשך', exact: true }).waitFor();
-    await page.getByRole('heading', { name: 'הצפיות בעמוד', exact: true }).waitFor();
+    await page.locator('.page-view-history h3').waitFor();
     assert.equal(await page.getByRole('group', { name: 'מקור רשימת הצפיות', exact: true }).count(), 1);
     assert.ok(new URL(page.url()).searchParams.get('page'), 'Selected page missing from URL');
     assert.equal(Math.round((await page.locator('.page-insights').boundingBox()).y), 0, 'Mobile panel is not full-screen');
