@@ -85,6 +85,23 @@ test('a site with prior browser activity, recent server visitors and no recent s
     const visit = db.prepare("INSERT INTO visitor_events (app_id, source_file_id, source_offset, occurred_at, ip, path, status, is_bot, is_page_view) VALUES (?, 'silent', ?, ?, ?, '/', 200, 0, 1)");
     ['7.7.7.1', '7.7.7.2', '7.7.7.3'].forEach((ip, i) => visit.run(site.id, i, new Date(now - 3600000).toISOString(), ip));
     assert.deepEqual(o.silentTrackers(db, now).map((row) => row.name), ['Pinhas Ratzon']);
+    const automated = db.prepare(`INSERT INTO browser_signals
+        (app_id, event_id, occurred_at, ip, visitor_hash, session_hash, path, automation_hint, user_agent)
+        VALUES (?, ?, ?, '1.1.1.1', 'check-v', 'check-s', '/', 1, ?)`);
+    const checkerAgent = 'Mozilla/5.0 ServerMonitor-Audit-Bot/1.0';
+    const hourAgo = new Date(now - 3600000).toISOString();
+    automated.run(site.id, 'generic-bot', hourAgo, 'HeadlessChrome');
+    automated.run(app('Alenu').id, 'other-site-check', hourAgo, checkerAgent);
+    automated.run(site.id, 'expired-check', new Date(now - 7 * 3600000).toISOString(), checkerAgent);
+    automated.run(site.id, 'future-check', new Date(now + 3600000).toISOString(), checkerAgent);
+    assert.deepEqual(o.silentTrackers(db, now).map((row) => row.name), ['Pinhas Ratzon'],
+        'other bots, other sites, expired and future checks cannot hide a tracking failure');
+    automated.run(site.id, 'healthy-site-check', hourAgo, checkerAgent);
+    assert.deepEqual(o.silentTrackers(db, now), [], 'a signed navigation from our checker proves a quiet site still collects');
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM browser_signals WHERE app_id = ? AND automation_hint = 0 AND occurred_at >= ?')
+        .get(site.id, new Date(now - 6 * 3600000).toISOString()).n, 0, 'checker evidence never counts as visitors');
+    db.prepare("DELETE FROM browser_signals WHERE event_id = 'healthy-site-check'").run();
+    assert.deepEqual(o.silentTrackers(db, now).map((row) => row.name), ['Pinhas Ratzon'], 'missing checker evidence still alerts');
     signal.run(site.id, 'recent_1234567890abcd', new Date(now - 600000).toISOString());
     assert.deepEqual(o.silentTrackers(db, now), []);
 });

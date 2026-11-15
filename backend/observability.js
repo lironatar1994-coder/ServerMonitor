@@ -199,19 +199,25 @@ function vitalsSummary(db, appId, from, to) {
 }
 
 /**
- * Real visitors reached the server but no browser signal arrived: the tracker probably
- * stopped working. Requires prior browser activity so new or quiet sites never trigger it.
+ * Server page candidates arrived but visitor browser signals stopped. A recent signed
+ * navigation from our browser checker proves collection still works on a quiet site;
+ * other automated traffic is not health evidence and never becomes visitor traffic.
  */
 function silentTrackers(db, now = Date.now()) {
+    const until = new Date(now).toISOString();
     const recentFrom = new Date(now - 6 * 3600000).toISOString();
     const priorFrom = new Date(now - 7 * DAY).toISOString();
     const apps = db.prepare("SELECT id, name FROM apps WHERE analytics_enabled = 1 AND reporting_enabled = 1 AND url IS NOT NULL AND trim(url) <> ''").all();
     return apps.filter((app) => {
         const prior = db.prepare('SELECT COUNT(*) AS n FROM browser_signals WHERE app_id = ? AND automation_hint = 0 AND occurred_at >= ? AND occurred_at < ?').get(app.id, priorFrom, recentFrom).n;
         if (prior < 30) return false;
-        const recent = db.prepare('SELECT COUNT(*) AS n FROM browser_signals WHERE app_id = ? AND automation_hint = 0 AND occurred_at >= ?').get(app.id, recentFrom).n;
+        const recent = db.prepare('SELECT COUNT(*) AS n FROM browser_signals WHERE app_id = ? AND automation_hint = 0 AND occurred_at >= ? AND occurred_at <= ?').get(app.id, recentFrom, until).n;
         if (recent > 0) return false;
-        const server = db.prepare('SELECT COUNT(DISTINCT ip) AS n FROM visitor_events WHERE app_id = ? AND is_bot = 0 AND is_page_view = 1 AND occurred_at >= ?').get(app.id, recentFrom).n;
+        const checked = db.prepare(`SELECT 1 FROM browser_signals WHERE app_id = ? AND automation_hint = 1
+            AND user_agent = 'Mozilla/5.0 ServerMonitor-Audit-Bot/1.0'
+            AND occurred_at >= ? AND occurred_at <= ? LIMIT 1`).get(app.id, recentFrom, until);
+        if (checked) return false;
+        const server = db.prepare('SELECT COUNT(DISTINCT ip) AS n FROM visitor_events WHERE app_id = ? AND is_bot = 0 AND is_page_view = 1 AND occurred_at >= ? AND occurred_at <= ?').get(app.id, recentFrom, until).n;
         return server >= 3;
     });
 }
