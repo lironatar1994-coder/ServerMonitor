@@ -284,7 +284,7 @@ Keep `מבקרים משוערים` explicit; `ביקורים` and `צפיות` r
 
 The per-site `מבקרים` tab opens anonymous-browser history directly, with returning status, first/last seen, retained visits, ordered pages and exactly linked actions. Keep the same compact ledger and native modal primitives on desktop and mobile; put the diagnostics link in the site header and label connection controls `פרטים והיסטוריה`. History is bounded to retained data up to the selected period's end. A shared network address never identifies a returning person.
 
-A page drill-down shows friendly names, recorded next pages and later contact/outbound actions, with low samples visible. The row is one keyboard-operable control and closing restores focus. Exact dates and page context survive navigation and authentication.
+A page drill-down shows friendly names, individual page-view dates/times in Israel time, device and first-recorded/returning browser visit status before recorded next pages and later contact/outbound actions. Use compact rows and the shared toggle group to separate browser and server sources, with 20-row pagination. Server-only views explicitly leave visit type unknown; low samples remain visible. The page row is one keyboard-operable control and closing restores focus. Exact dates and page context survive navigation and authentication.
 
 ### Operational attention
 

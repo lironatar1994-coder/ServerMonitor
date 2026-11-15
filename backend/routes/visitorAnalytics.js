@@ -728,7 +728,7 @@ router.get('/apps/:id/engagement', (req, res) => {
 router.get('/apps/:id/page', (req, res) => {
     try {
         const app = assertApp(req.params.id);
-        res.json(require('../pageInsights').getPageInsights(app, parseRange(req.query), req.query.path));
+        res.json(require('../pageInsights').getPageInsights(app, parseRange(req.query), req.query.path, req.query));
     } catch (error) { respondError(res, error); }
 });
 

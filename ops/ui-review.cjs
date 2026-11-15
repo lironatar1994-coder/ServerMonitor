@@ -31,6 +31,59 @@ const check = async (name, fn) => { try { await fn(); results.push({ name, ok: t
       await page.route('**/api/apps/operational-health', route => route.fulfill({json:operational}));
     }
     const ready = async route => { await page.goto(base + route); await page.locator('.page h1, .login h1').waitFor(); await page.locator('.skeleton-stack,.page-loader').first().waitFor({ state: 'hidden' }); await page.evaluate(() => document.fonts.ready); assert.equal(await page.locator('.error-state').count(), 0); };
+    if (process.env.UI_REVIEW_PAGE_HISTORY_ONLY) {
+      let failHistory = false;
+      await page.route('**/api/visitor-analytics/apps/*/page?**', async route => {
+        if (failHistory) { failHistory = false; return route.fulfill({ status: 500, json: { error: 'בדיקת תקלה סינתטית' } }); }
+        const q = new URL(route.request().url()).searchParams;
+        const source = q.get('historySource') === 'server' ? 'server' : 'browser';
+        const current = Number(q.get('historyPage')) || 1;
+        const count = source === 'browser' ? 3 : 23;
+        const rows = Array.from({ length: source === 'browser' || current === 2 ? 3 : 20 }, (_, i) => ({
+          id: current * 100 + i, occurred_at: new Date(Date.UTC(2026, 10, 14, 12, 40 - i)).toISOString(),
+          device: i % 2 ? 'Mobile' : 'Desktop', returning: source === 'server' || i === 2 ? null : Boolean(i)
+        }));
+        return route.fulfill({ json: { path: '/', log: { views: 23 }, visits: 3, contact_visits: 0,
+          actions: [], next: [], low_sample: true, coverage_since: '2026-11-01T00:00:00Z',
+          history: { source, page: current, limit: 20, total: count, has_more: source === 'server' && current === 1, browser_views: 3, rows } } });
+      });
+      for (const width of [1440,390,320]) await check(`page-view-history-${width}`, async () => {
+        await page.setViewportSize({ width, height: 960 });
+        await ready(`/visitors/${id}?view=pages&page=%2F`);
+        const panel = page.locator('.page-insights');
+        await panel.locator('.page-view-list li').nth(2).waitFor();
+        assert.equal(await panel.getByText('ראשון שנשמר', { exact: true }).count(), 1);
+        assert.equal(await panel.getByText('ביקור חוזר', { exact: true }).count(), 1);
+        assert.match(await panel.locator('time').first().innerText(), /14\.11\.2026/);
+        await panel.getByRole('button', { name: 'דפדפן (3)', exact: true }).click();
+        await panel.locator('[aria-busy="false"]').waitFor();
+        await page.addStyleTag({ content: '*,*::before,*::after { transition:none!important; animation:none!important; }' });
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        await page.screenshot({ path: path.join(out, `${width}-page-history-browser.png`) });
+        await panel.getByRole('button', { name: 'שרת (23)', exact: true }).click();
+        await panel.locator('.page-view-list li').nth(19).waitFor();
+        assert.equal(await panel.getByText('לא ידוע', { exact: true }).count(), 20);
+        assert.equal(await panel.getByText('ביקור חוזר', { exact: true }).count(), 0);
+        await panel.getByRole('button', { name: 'צפיות קודמות', exact: true }).click();
+        await panel.getByText('21–23 מתוך 23 · שעון ישראל', { exact: true }).waitFor();
+        assert.equal(await panel.locator('.page-view-list li').count(), 3);
+        await panel.getByRole('button', { name: 'צפיות חדשות יותר', exact: true }).click();
+        await panel.locator('.page-view-list li').nth(19).waitFor();
+        if (width < 760) assert.equal(Math.round((await panel.boundingBox()).y), 0);
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        await panel.evaluate(el => { el.scrollTop = 0; });
+        await page.screenshot({ path: path.join(out, `${width}-page-history-server.png`) });
+        failHistory = true;
+        await panel.getByRole('button', { name: 'דפדפן (3)', exact: true }).click();
+        await panel.locator('.error-state button').click();
+        await panel.locator('.page-view-list li').nth(2).waitFor();
+        await page.keyboard.press('Escape'); await panel.waitFor({ state: 'hidden' });
+        assert.equal(await page.locator('[inert]').count(), 0);
+      });
+      assert.deepEqual(errors, []);
+      process.exitCode = results.some(r => !r.ok) ? 1 : 0;
+      return;
+    }
     const routes = ['/visitors', `/visitors/${id}`, '/clients', `/clients/${id}`, '/infrastructure', '/services', `/services/${id}`, '/operations/availability', '/operations/backups', '/settings'];
     if (process.env.UI_REVIEW_EXTRA_ONLY) {
       routes.splice(0, routes.length, ...apps.filter(app => ['PDF Studio','Seder','Miryam Zelig','אבטחת SSH'].includes(app.name))

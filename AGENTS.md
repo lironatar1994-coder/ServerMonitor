@@ -80,6 +80,7 @@ When the user requests a durable behavior change, record it here or in the relev
 
 - Visitor screens must use plain Hebrew for nontechnical readers: estimated visitors, measured visits, page views and contact actions. Keep browser/IP methodology in hints and expandable diagnostics; never turn estimates into confirmed people.
 - Page rankings must open a useful drill-down with friendly names, recorded next pages and later contact/outbound actions within the same anonymous visit. Keep low samples explicit and distinguish observed sequences from causes or confirmed inquiries.
+- Within that same page drill-down, show individual page-view dates/times in Israel time, device and first-recorded/returning visit status when anonymous browser history supports it. Server-only views keep their timestamps but say the visit type is unknown; never infer a returning browser from an IP address.
 - LA webs must measure project/button attribution and bounded engagement, and keep contacted/qualified/won business outcomes separate from clicks. Run recurring browser and telemetry checks through the existing health scheduler.
 - Keep lightweight health checks every 15 minutes and full browser checks every six hours plus after deployment. Bound browser CPU, memory and runtime so verification cannot crowd out production websites.
 - Report emails use natural, professional Hebrew with minimal instructions; avoid patronizing prompts such as `גלה עוד`. Prioritize useful comparisons and observed actions, and link each app directly to its own Server Monitor page.

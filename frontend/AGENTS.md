@@ -30,6 +30,7 @@
 
 - `SiteLink` (with `lib/siteLinks.js`) is the only way to link a public site: a clean href for copying and an ordinary click that opens it with `?monitor_internal=1`. `InternalVisits` lists monitored domains in Settings with mark/clear actions.
 - Page drill-downs release inert backgrounds and restore their originating row during the layout phase before paint, including when switching from the overview to the pages tab. Their public-page action uses `SiteLink` too.
+- `PageInsights` lists individual page views inside the same panel: full Israel-local date/time, device, and first-recorded/returning visit when known. Its browser/server toggles keep sources separate, paginate 20 rows and preserve panel focus during reads. Server-only views explicitly show unknown visit type, never a claimed new/returning person.
 - Chart notes show the latest two events by default with an accessible expander for the complete returned list; chart markers retain all events. Storage failures show unmeasured values and retry guidance, never zero totals.
 - `RangePicker` binds keys 1–4 and R outside fields and dialogs; `AppShell` binds `/` to the page search and polls `/apps` every minute while visible for the tab-title count and the server-destination badge.
 - `QuickSwitch.jsx` owns global Ctrl/Cmd+K navigation, keyboard selection, app/domain matching and explicit-date preservation. Fetch only the monitoring catalog; never search decrypted vault content. Reuse the native modal and keep the shortcut inactive while another dialog is open.

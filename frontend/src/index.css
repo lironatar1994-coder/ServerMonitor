@@ -15,6 +15,15 @@
 .insight-list li b { flex-shrink: 0; }
 .insight-note { margin-block: 1rem; }
 .insight-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: 1rem; }
+.page-view-history h3 { display: flex; align-items: center; gap: .4rem; }
+.page-view-caption { font-size: .8rem; color: var(--ink-muted); margin-block: .75rem .25rem; }
+.page-view-list { list-style: none; padding: 0; margin: 0; }
+.page-view-list li { display: flex; justify-content: space-between; align-items: start; gap: .65rem; padding-block: .75rem; border-block-end: 1px solid var(--line); font-size: .86rem; }
+.page-view-list time { min-width: 0; }
+.page-view-list time bdi { font-variant-numeric: tabular-nums; }
+.page-view-list small { display: block; color: var(--ink-muted); font-size: .78rem; margin-block-start: .2rem; }
+.page-view-identity { flex-shrink: 0; color: var(--ink-muted); font-size: .8rem; }
+.page-view-pagination { display: flex; flex-wrap: wrap; gap: .5rem; margin-block-start: .75rem; }
 
 /* ---------------------------------------------------------------- tokens */
 :root {

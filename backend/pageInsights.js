@@ -1,12 +1,35 @@
 const db = require('./database');
+const { getAgentType } = require('./logParser');
 
-function getPageInsights(app, range, path) {
+function getPageInsights(app, range, path, query = {}) {
     if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//') || path.length > 500 || /[?#\\\s]/.test(path)) {
         throw Object.assign(new Error('Invalid page path'), { status: 400 });
     }
     const args = [app.id, range.from, range.to, path];
     const log = db.prepare(`SELECT COUNT(*) AS views,COUNT(DISTINCT ip) AS connections
         FROM visitor_events WHERE app_id=? AND occurred_at>=? AND occurred_at<? AND path=? AND is_bot=0 AND is_page_view=1`).get(...args);
+    const browserViews = db.prepare(`SELECT COUNT(*) AS n FROM browser_signals
+        WHERE app_id=? AND occurred_at>=? AND occurred_at<? AND path=? AND automation_hint=0`).get(...args).n;
+    const source = ['browser', 'server'].includes(query.historySource) ? query.historySource : browserViews ? 'browser' : 'server';
+    const total = source === 'browser' ? browserViews : log.views;
+    const limit = 20;
+    const requestedPage = Math.min(100000, Math.max(1, Math.floor(Number(query.historyPage) || 1)));
+    const page = Math.min(requestedPage, Math.max(1, Math.ceil(total / limit)));
+    const rows = source === 'browser' ? db.prepare(`SELECT b.id,b.occurred_at,b.user_agent,
+        CASE WHEN b.visit_hash IS NULL OR b.visit_hash='' THEN NULL ELSE EXISTS (
+            SELECT 1 FROM browser_signals h WHERE h.app_id=b.app_id AND h.visitor_hash=b.visitor_hash
+            AND h.automation_hint=0 AND h.occurred_at<b.occurred_at
+            AND h.visit_hash IS NOT NULL AND h.visit_hash<>'' AND h.visit_hash<>b.visit_hash) END AS is_returning
+        FROM browser_signals b WHERE b.app_id=? AND b.occurred_at>=? AND b.occurred_at<?
+            AND b.path=? AND b.automation_hint=0 ORDER BY b.occurred_at DESC,b.id DESC LIMIT ? OFFSET ?`)
+        .all(...args, limit, (page - 1) * limit)
+        .map(({ user_agent, is_returning, ...row }) => ({ ...row, device: getAgentType({ userAgent: user_agent || '' }),
+            returning: is_returning === null ? null : Boolean(is_returning) }))
+        : db.prepare(`SELECT id,occurred_at,device_type AS device FROM visitor_events
+            WHERE app_id=? AND occurred_at>=? AND occurred_at<? AND path=? AND is_bot=0 AND is_page_view=1
+            ORDER BY occurred_at DESC,id DESC LIMIT ? OFFSET ?`).all(...args, limit, (page - 1) * limit)
+            .map(row => ({ ...row, returning: null }));
+    const history = { source, rows, page, limit, total, has_more: page * limit < total, browser_views: browserViews };
     // A cohort is one recorded session on this page, never an IP or a claimed person.
     const cohort = `WITH cohort AS (SELECT session_hash,MIN(occurred_at) AS started
         FROM growth_events WHERE app_id=? AND occurred_at>=? AND occurred_at<? AND path=?
@@ -28,7 +51,7 @@ function getPageInsights(app, range, path) {
     const engagement = require('./browserSignals').slicedEngagement(app) ? db.prepare(`SELECT COUNT(*) AS visits,AVG(dwell) AS active_ms,AVG(depth) AS scroll
         FROM (SELECT session_hash,SUM(dwell_ms) AS dwell,MAX(scroll_depth) AS depth FROM engagement_signals
         WHERE app_id=? AND occurred_at>=? AND occurred_at<? AND path=? AND automation_hint=0 GROUP BY session_hash)`).get(...args) : null;
-    return { path, log, visits, contact_visits: contacts, actions, next, engagement,
+    return { path, log, visits, contact_visits: contacts, actions, next, engagement, history,
         coverage_since: db.prepare('SELECT MIN(occurred_at) AS first FROM growth_events WHERE app_id=?').get(app.id).first,
         low_sample: visits < 30 };
 }
