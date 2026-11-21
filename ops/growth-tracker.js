@@ -160,6 +160,105 @@
   }, true);
   // An app may explicitly report a visible success, but this never verifies a lead.
   addEventListener('vee:form-success', () => send('form_success_observed', 'form'));
+  if (!scope && !prefix && location.hostname === 'alenu.co.il') {
+    const start = () => {
+      const action = label => send('alenu_journey', label);
+      const landing = /^\/(?:index\.html)?$/.test(location.pathname);
+      const intake = /^\/start(?:\.html)?\/?$/.test(location.pathname);
+      if (!landing && !intake) return;
+      const scrolled = () => {
+        if (scrollY <= 0) return;
+        action('page-scroll');
+        removeEventListener('scroll', scrolled);
+      };
+      addEventListener('scroll', scrolled, { passive: true });
+      if (landing) {
+        action('landing-open');
+        const sections = ['hero', 'ours', 'form', 'accounts', 'updates', 'price', 'faq', 'about', 'closing'];
+        if ('IntersectionObserver' in window) {
+          const observer = new IntersectionObserver(entries => {
+            for (const { target, isIntersecting } of entries) {
+              if (!isIntersecting) continue;
+              action('section-' + target.id);
+              observer.unobserve(target);
+            }
+          }, { rootMargin: '0px 0px -25% 0px' });
+          for (const id of sections) {
+            const section = document.getElementById(id);
+            if (section) observer.observe(section);
+          }
+        }
+        document.addEventListener('click', event => {
+          if (!event.isTrusted) return;
+          const target = event.target;
+          if (target.closest?.('a[href="/start"]')) {
+            const place = target.closest('#sticky, header, #hero, #price, #closing');
+            if (place) action('start-' + (place.tagName === 'HEADER' ? 'header' : place.id));
+          }
+          if (target.closest?.('a[href="#form"]')) action('nav-how');
+          if (target.closest?.('a[href="#price"]')) action('nav-price');
+          if (target.closest?.('a[href="/miluim"]')) action('nav-miluim');
+          if (target.closest?.('#faq summary')) action('faq-toggle');
+          if (target.closest?.('#formToggle')) action('video-toggle');
+        }, true);
+      }
+      if (!intake) return;
+      const selection = document.getElementById('selectionStep');
+      const details = document.getElementById('detailsStep');
+      const handoff = document.getElementById('handoff');
+      const form = document.getElementById('requestForm');
+      if (!selection || !details || !handoff || !form) return;
+      const fields = { fName: 'name', fPhone: 'phone', fCity: 'city' };
+      const buttons = { nextStep: 'next-details', editSelection: 'back-selection', editDetails: 'back-details', copyMessage: 'copy-message' };
+      const states = { sending: 'crm-sending', sent: 'crm-received', wa: 'crm-unconfirmed' };
+      let stage;
+      const reflectStep = () => {
+        const current = !handoff.hidden ? states[handoff.dataset.state] : !details.hidden ? 'details-open' : !selection.hidden ? 'selection-open' : '';
+        if (!current || current === stage) return;
+        stage = current;
+        action(current);
+      };
+      const steps = new MutationObserver(reflectStep);
+      for (const section of [selection, details, handoff]) {
+        steps.observe(section, { attributes: true, attributeFilter: ['hidden', 'data-state'] });
+      }
+      reflectStep();
+      const edited = new Set();
+      form.addEventListener('input', event => {
+        const field = fields[event.target.id];
+        if (!event.isTrusted || !field || edited.has(field)) return;
+        edited.add(field);
+        action('edit-' + field);
+      });
+      document.addEventListener('change', event => {
+        if (!event.isTrusted) return;
+        const control = event.target;
+        const account = control.closest?.('.utility-choice')?.dataset.u;
+        if (['elec', 'water', 'arnona', 'gas'].includes(account)) action('account-' + account);
+        if (control.matches?.('[data-bind="address"]')) action('change-address');
+        if (control.matches?.('[data-role]')) action('change-role');
+        if (control.matches?.('[data-direction]')) action('change-direction');
+      });
+      document.addEventListener('click', event => {
+        if (!event.isTrusted) return;
+        const button = event.target.closest?.('button[id]');
+        const label = button && buttons[button.id];
+        if (typeof label === 'string') action(label);
+        if (event.target.closest?.('.flow-addon summary')) action('address-toggle');
+      }, true);
+      form.addEventListener('submit', () => {
+        queueMicrotask(() => {
+          const invalid = [...form.querySelectorAll('input[aria-invalid="true"]')].map(input => fields[input.id]).filter(Boolean);
+          if (invalid.length) {
+            send('form_error', 'form');
+            invalid.forEach(field => action('invalid-' + field));
+          }
+        });
+      }, true);
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+    else start();
+  }
   let path = '';
   function navigation() { if (path !== location.pathname) { path = location.pathname; send('page_view'); } }
   for (const method of ['pushState', 'replaceState']) {

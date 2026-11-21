@@ -57,11 +57,23 @@ function browserHistory(app, range, query) {
             AND visit_hash=? AND automation_hint=0 AND occurred_at>=? AND occurred_at<?
             ORDER BY occurred_at,id LIMIT 80`).all(app.id, visitor, visit.visit_hash, from, range.to);
         const until = new Date(Math.min(Date.parse(range.to), Date.parse(visit.last_seen) + 30 * 60000)).toISOString();
+        // Initial journey beacons may arrive just before the navigation beacon for the same browser session.
+        const journeyFrom = new Date(Math.max(Date.parse(from), Date.parse(visit.first_seen) - 1500)).toISOString();
         visit.actions = db.prepare(`SELECT occurred_at,event_type,label,path FROM growth_events WHERE app_id=?
             AND browser_session_hash IN (SELECT session_hash FROM browser_signals WHERE app_id=? AND visitor_hash=? AND visit_hash=? AND automation_hint=0)
             AND automation_hint=0 AND event_type!='page_view'
-            AND occurred_at>=? AND occurred_at<? ORDER BY occurred_at,id LIMIT 80`)
-            .all(app.id, app.id, visitor, visit.visit_hash, visit.first_seen, until);
+            AND occurred_at>=? AND occurred_at<? AND (occurred_at>=? OR event_type='alenu_journey')
+            ORDER BY occurred_at,id LIMIT 80`)
+            .all(app.id, app.id, visitor, visit.visit_hash, journeyFrom, until, visit.first_seen);
+        if (app.name === 'Alenu') {
+            const latest = db.prepare(`SELECT occurred_at,event_type,label,path FROM growth_events WHERE app_id=?
+                AND browser_session_hash IN (SELECT session_hash FROM browser_signals WHERE app_id=? AND visitor_hash=? AND visit_hash=? AND automation_hint=0)
+                AND automation_hint=0 AND event_type='alenu_journey' AND (?=1 OR label IN
+                    ('landing-open','selection-open','details-open','crm-sending','crm-received','crm-unconfirmed'))
+                AND occurred_at>=? AND occurred_at<? ORDER BY occurred_at DESC,id DESC LIMIT 1`)
+            visit.last_journey_action = latest.get(app.id, app.id, visitor, visit.visit_hash, 1, journeyFrom, until) || null;
+            visit.last_journey_stage = latest.get(app.id, app.id, visitor, visit.visit_hash, 0, journeyFrom, until) || null;
+        }
         const product = db.prepare(`SELECT occurred_at,event_type,label,path FROM product_events WHERE app_id=?
             AND session_hash IN (SELECT session_hash FROM browser_signals WHERE app_id=? AND visitor_hash=? AND visit_hash=? AND automation_hint=0)
             AND automation_hint=0 AND occurred_at>=? AND occurred_at<? ORDER BY occurred_at,id LIMIT 80`)

@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { apiFetch, rangeQuery } from '../lib/api';
 import { formatDateTime, formatNumber } from '../lib/format';
-import { pageName, VISITOR_HINT } from '../lib/analyticsLabels';
+import { ALENU_JOURNEY_ACTIONS, pageName, VISITOR_HINT } from '../lib/analyticsLabels';
 import { DataState, Empty, Hint, Panel } from './AnalyticsParts';
 import Modal from './Modal';
 
@@ -15,7 +15,7 @@ const durationLabel = value => {
   const seconds = Math.max(0, Math.round(Number(value) || 0));
   return seconds < 60 ? `${formatNumber(seconds)} שנ׳` : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')} דק׳`;
 };
-const actionName = row => ({ contact_click: `לחיצה ל${({ whatsapp: 'וואטסאפ', phone: 'טלפון', email: 'דוא״ל' })[row.label] || 'יצירת קשר'}`,
+const actionName = row => (row.event_type === 'alenu_journey' && ALENU_JOURNEY_ACTIONS[row.label]) || ({ contact_click: `לחיצה ל${({ whatsapp: 'וואטסאפ', phone: 'טלפון', email: 'דוא״ל' })[row.label] || 'יצירת קשר'}`,
   form_start: 'התחלת מילוי טופס', form_submit: 'ניסיון שליחת טופס', form_error: 'שגיאה בטופס',
   form_success_observed: 'הוצגה הודעת הצלחה בטופס', project_open: 'פתיחת פרויקט', outbound_click: 'מעבר לאתר חיצוני',
   tool_opened: 'פתיחת כלי', tool_completed: 'השלמת פעולה בכלי', file_opened: 'פתיחת קובץ', file_downloaded: 'הורדת קובץ',
@@ -53,7 +53,11 @@ function BrowserHistory({ appId, appName, range, visitor, onClose }) {
           {result.visits.map((visit, index) => <li key={`${visit.first_seen}:${index}`}>
             <div className="visitor-visit-list__head"><strong><bdi>{formatDateTime(visit.first_seen)}</bdi></strong><span>{viewsLabel(visit.page_views)}{visit.engagement && <> · {durationLabel(visit.engagement.active_seconds)} פעילות · גלילה עד <bdi>{formatNumber(visit.engagement.max_scroll_depth)}%</bdi></>} · {visit.in_period ? 'בטווח שנבחר' : 'ביקור קודם'}</span></div>
             <p className="status-line">מקור: <bdi>{visit.arrival?.source || 'לא ידוע'}</bdi>{visit.arrival?.campaign && <> · <bdi>{visit.arrival.campaign}</bdi></>}{visit.arrival?.content && <> · <bdi>{visit.arrival.content}</bdi></>} · {({tagged:'קישור מתויג',referrer:'אתר מפנה',unknown:'לא ידוע'})[visit.arrival?.evidence] || 'ללא ראיה שמורה'}</p>
-            {visit.outcomes?.map((o,i)=><p className="status-line" key={i}><bdi>{formatDateTime(o.occurred_at)}</bdi> · {({submitted:'טופס נשמר ב־Desk',received:'פנייה התקבלה לפי Desk',qualified:'פנייה מתאימה לפי Desk',customer:'תשלום נרשם בתיק המקושר',lost:'לא התקדם לפי Desk'})[o.stage]}</p>)}
+            {visit.last_journey_action && <dl className="visitor-journey">
+              {visit.last_journey_stage && <div><dt>שלב אחרון שנמדד</dt><dd>{actionName(visit.last_journey_stage)}</dd></div>}
+              <div><dt>פעולה אחרונה במסלול</dt><dd>{actionName(visit.last_journey_action)} · <bdi>{formatDateTime(visit.last_journey_action.occurred_at)}</bdi></dd></div>
+            </dl>}
+            {visit.outcomes?.map((o,i)=><p className="status-line" key={i}><bdi>{formatDateTime(o.occurred_at)}</bdi> · {({submitted:'שמירת טופס אומתה ב־CRM',received:'קליטת פנייה אומתה',qualified:'הפנייה שויכה לתיק',customer:'תשלום נרשם בתיק המקושר',lost:'הפנייה סומנה כלא מתקדמת'})[o.stage]}</p>)}
             <ol className="visitor-steps">
               {[...visit.pages.map(row => ({ ...row, type: 'page' })), ...visit.actions.map(row => ({ ...row, type: 'action' }))]
                 .sort((a, b) => a.occurred_at.localeCompare(b.occurred_at)).map((row, i) => <li key={`${row.occurred_at}:${i}`}>

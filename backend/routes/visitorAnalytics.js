@@ -752,6 +752,11 @@ router.get('/apps/:id/browser', (req, res) => {
     catch (error) { respondError(res, error); }
 });
 
+router.get('/apps/:id/alenu-journey', (req, res) => {
+    try { res.json(require('../alenuJourney').alenuJourneySummary(assertApp(req.params.id), parseRange(req.query))); }
+    catch (error) { respondError(res, error); }
+});
+
 router.get('/apps/:id/vitals', (req, res) => {
     try {
         const app = assertApp(req.params.id);

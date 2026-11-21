@@ -5,6 +5,7 @@ import { apiFetch, rangeQuery } from '../lib/api';
 import { useRange } from '../lib/useRange';
 import { DataState, Empty, Panel, PageHead, RangePicker, RankedList, Stat, StatRow, Tabs } from '../components/AnalyticsParts';
 import ProductAnalytics from '../components/ProductAnalytics';
+import AlenuJourney from '../components/AlenuJourney';
 import TrackingStatus from '../components/TrackingStatus';
 import PageInsights from '../components/PageInsights';
 import TrafficChart from '../components/TrafficChart';
@@ -183,6 +184,7 @@ const VisitorDetail = ({ diagnostics = false }) => {
         <div className="workspace-tabs"><Tabs label="תצוגת אתר" tabs={[{ id: 'overview', label: 'סקירה', icon: ChartNoAxesCombined }, { id: 'visitors', label: 'מבקרים', icon: Users }, { id: 'pages', label: 'עמודים', icon: PanelsTopLeft }, { id: 'sources', label: 'מקורות', icon: Link2 }, { id: 'audience', label: 'קהל', icon: Globe }]} value={view} onChange={value => { const next = new URLSearchParams(query); next.set('view', value); next.delete('page'); next.delete('visitor'); setQuery(next); }} /></div>
         {view === 'visitors' && data?.range && <BrowserVisitors key={`${id}:${data.range.from}:${data.range.to}`} appId={id} appName={data.app?.name} range={data.range} />}
         {view === 'overview' && <>
+          {data?.app?.name === 'Alenu' && data.range && <AlenuJourney key={`${id}:${data.range.from}:${data.range.to}:${data.generated_at}`} appId={id} range={data.range} />}
           {!summary.browser_signal_page_views && <p className="status-line is-attention">לא נמדדה פעילות בטווח הזה.</p>}
           <TrafficChart data={data} previous={previous} comparisonError={comparisonError} marks={marks} />
           {data?.range && <ChartNotes appId={Number(id)} range={data.range} onMarks={setMarks} />}

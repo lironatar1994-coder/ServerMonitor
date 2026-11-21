@@ -83,7 +83,8 @@ function sourcesSummary(db, appId, from, to, filters = {}) {
     const state = db.prepare("SELECT value FROM monitor_metadata WHERE key='desk-outcomes'").get();
     let desk = { status: 'unavailable' }; try { desk = JSON.parse(state?.value || '{}'); } catch { /* unavailable */ }
     const recent = db.prepare(`SELECT occurred_at,source,medium,campaign,content,evidence,path,event_type FROM growth_events
-        WHERE app_id=? AND automation_hint=0 AND occurred_at>=? AND occurred_at<? ${extra} ORDER BY occurred_at DESC LIMIT 30`).all(...args);
+        WHERE app_id=? AND automation_hint=0 AND event_type!='alenu_journey'
+        AND occurred_at>=? AND occurred_at<? ${extra} ORDER BY occurred_at DESC LIMIT 30`).all(...args);
     const bursts = db.prepare(`WITH recent AS (
         SELECT occurred_at,source,campaign FROM growth_events WHERE app_id=? AND automation_hint=0 AND event_type='page_view'
         AND occurred_at>=? AND occurred_at<? ORDER BY occurred_at DESC LIMIT 200

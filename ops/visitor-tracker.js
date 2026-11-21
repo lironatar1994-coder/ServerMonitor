@@ -136,7 +136,7 @@
      section was on screen, and coarse 12x12 click cells. Sent as 15-second deltas for this page
      visit. Never text, form values, recordings or element contents; sections are named by their id. */
   function engagement() {
-    let last = performance.now(), activeUntil = last + 30000, dwell = 0, depth = 0;
+    let last = performance.now(), activeUntil = last + 30000, dwell = 0, depth = 0, sentDepth = 0;
     let wasVisible = document.visibilityState === 'visible';
     const clicks = new Map(), cells = new Map(), views = new Map(), visible = new Set();
     const named = el => /^[A-Za-z0-9_-]{1,40}$/.test(el?.id || '') ? el.id : '';
@@ -191,13 +191,14 @@
     }, true);
     function flush() {
       tick();
-      if (dwell < 1000 && !clicks.size) return;
+      if (dwell < 1000 && !clicks.size && depth <= sentDepth) return;
       if (document.cookie.split(';').some(c => c.trim() === 'monitor_internal=1')) return;
       const body = { kind: 'engagement', event_id: random(), visitor_id: visitor, session_id: session,
         path: location.pathname, scroll_depth: depth, dwell_ms: Math.round(dwell),
         viewport_width: innerWidth, viewport_class: innerWidth < 768 ? 'mobile' : innerWidth < 1100 ? 'tablet' : 'desktop',
         webdriver: navigator.webdriver === true, zones: [...clicks].map(([zone, taps]) => ({ zone, taps })),
         views: [...views.values()].slice(0, 24).map(row => ({ ...row, dwell_ms: Math.round(row.dwell_ms) })), heatmap: [...cells.values()] };
+      sentDepth = depth;
       dwell = 0; clicks.clear(); cells.clear(); views.clear();
       fetch(endpoint, { method: 'POST', credentials: 'same-origin', keepalive: true,
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});

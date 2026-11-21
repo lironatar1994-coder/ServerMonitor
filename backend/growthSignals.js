@@ -1,7 +1,8 @@
 const crypto = require('crypto');
 const db = require('./database');
 const { getSignalKey, findSignalApp, normalizeIp, validateSignalBody, getAutomationHint } = require('./browserSignals');
-const EVENTS = new Set(['page_view', 'contact_click', 'project_open', 'outbound_click', 'form_start', 'form_submit', 'form_error', 'form_success_observed']);
+const { isAlenuJourney } = require('./alenuJourney');
+const EVENTS = new Set(['page_view', 'contact_click', 'project_open', 'outbound_click', 'form_start', 'form_submit', 'form_error', 'form_success_observed', 'alenu_journey']);
 const SAFE_TAG = /^[\p{L}\p{N}_. -]{1,80}$/u;
 const rate = new Map();
 let rateWindow = Date.now();
@@ -26,7 +27,11 @@ function recordGrowthSignal({ body, ip, userAgent, siteUrl }) {
     if (prefix && signal.path !== prefix && !signal.path.startsWith(prefix + '/')) {
         throw Object.assign(new Error('Signal path does not belong to website'), { status: 400 });
     }
-    const label = ['whatsapp', 'phone', 'email', 'form', 'link'].includes(body.label) ? body.label : '';
+    const journey = body.event_type === 'alenu_journey';
+    if (journey && !isAlenuJourney(app, signal.path, body.label)) {
+        throw Object.assign(new Error('Invalid Alenu journey action'), { status: 400 });
+    }
+    const label = journey || ['whatsapp', 'phone', 'email', 'form', 'link'].includes(body.label) ? body.label : '';
     const placement = app.name === 'LA webs' && ['header', 'hero', 'floating', 'contact', 'footer', 'content'].includes(body.placement) ? body.placement : '';
     const project = app.name === 'LA webs' && ['koral', 'miryam', 'pinhas', 'reuven', 'sos', 'seder', 'pdf', 'pizza'].includes(body.project) ? body.project : '';
     boundedRate(app.id, address);

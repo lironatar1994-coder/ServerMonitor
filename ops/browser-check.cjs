@@ -53,11 +53,11 @@ let browser;
   page.on('pageerror', () => failures.push('JavaScript exception'));
   page.on('response', r => { if (r.status() >= 400 && ['script', 'stylesheet', 'image', 'font'].includes(r.request().resourceType())) failures.push(`Resource HTTP ${r.status()}: ${new URL(r.url()).pathname}`); });
   await check('login-screen', async () => { await page.goto(`${monitor}/login`); await page.getByRole('button', { name: 'כניסה', exact: true }).waitFor(); });
-  await check('alenu-desk-intake', async () => {
+  await check('alenu-crm-intake', async () => {
     // Deliberately incomplete: tests public routing and validation without storing any lead.
-    const response = await context.request.post('https://alenu.co.il/desk/api/public/whatsapp', {
+    const response = await context.request.post('https://alenu.co.il/alenu-crm/api/public/lead', {
       headers: { Origin: 'https://alenu.co.il' }, data: { site:'alenu',kind:'form',requestId:'monitor-invalid-probe' }, timeout:15000 });
-    assert.equal(response.status(),400,'Desk public intake did not validate the incomplete probe');
+    assert.equal(response.status(),400,'Alenu CRM did not validate the incomplete probe');
     const tracker = await context.request.get('https://alenu.co.il/.well-known/server-monitor-growth.js');
     assert.ok(tracker.ok()); assert.ok((await tracker.text()).includes('__monitorAttribution'),'Attribution collector missing');
   });
@@ -72,13 +72,17 @@ let browser;
   await context.addCookies([{ name: '__Host-monitor', value: token, url: new URL(monitor).origin, httpOnly: true, secure: true, sameSite: 'Strict' }]);
   await check('monitor-identity-cannot-open-vault', async () => { const r = await fetch(monitor + '/api/vault/status', { headers: { Authorization: `Bearer ${token}` } }); assert.equal(r.status, 403); });
   const alenu = db.prepare("SELECT id FROM apps WHERE name='Alenu'").get();
-  const routes = ['/visitors', `/visitors/${app.id}`, ...(alenu ? [`/visitors/${alenu.id}?view=sources`] : []), '/infrastructure', '/services', `/services/${app.id}`, '/settings', '/clients', `/clients/${app.id}`];
+  const routes = ['/visitors', `/visitors/${app.id}`, ...(alenu ? [`/visitors/${alenu.id}`, `/visitors/${alenu.id}?view=sources`] : []), '/infrastructure', '/services', `/services/${app.id}`, '/settings', '/clients', `/clients/${app.id}`];
   for (const width of [1365, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     for (const route of routes) await check(`monitor-${width}${route}`, async () => {
       await page.goto(monitor + route);
       await page.locator('.page h1').waitFor();
       await page.locator('.skeleton-stack,.page-loader').waitFor({ state: 'hidden' });
+      if (alenu && route === `/visitors/${alenu.id}`) {
+        await page.locator('.alenu-journey h2').waitFor();
+        await page.locator('.alenu-journey .skeleton-stack').waitFor({ state: 'hidden' });
+      }
       assert.equal(await page.locator('.error-state').count(), 0, 'Dashboard reported a loading error');
       if (process.env.BROWSER_CHECK_CAPTURE === '1' && route === `/visitors/${app.id}`) await page.screenshot({ path: path.join(path.dirname(output), `monitor-${width}.png`) });
       await page.addStyleTag({ content: '*,*::before,*::after { transition:none!important; animation:none!important; }' });
@@ -196,6 +200,47 @@ let browser;
     assert.equal(db.prepare('SELECT automation_hint FROM browser_signals WHERE app_id=? AND event_id=?').get(site.id, eventId)?.automation_hint, 1,
       'Canonical browser signal missing or counted as visitor activity');
     } finally { await signalPage.close(); }
+  });
+  if (alenu) await check('alenu-journey-signals', async () => {
+    const probe = await context.newPage();
+    const seen = new Map();
+    probe.on('response', response => {
+      if (!response.url().endsWith('/.well-known/vee-growth-signal') || !response.ok()) return;
+      const body = response.request().postDataJSON();
+      if (body?.event_type === 'alenu_journey') seen.set(body.label, body);
+    });
+    await probe.route('**/*', route => {
+      const info = new URL(route.request().url());
+      if (info.origin !== 'https://alenu.co.il' || info.pathname.startsWith('/alenu-crm/') ||
+          ['font', 'media', 'image'].includes(route.request().resourceType())) return route.abort();
+      return route.continue();
+    });
+    try {
+      probe.setDefaultTimeout(4000);
+      const required = ['landing-open', 'page-scroll', 'section-price', 'start-hero', 'selection-open', 'next-details', 'details-open', 'edit-name', 'invalid-phone'];
+      await probe.goto('https://alenu.co.il/?static', { waitUntil: 'domcontentloaded', timeout: 6000 });
+      await probe.locator('#price').scrollIntoViewIfNeeded();
+      if (!seen.has('section-price')) await probe.waitForResponse(response => response.url().endsWith('/.well-known/vee-growth-signal') &&
+        response.request().postDataJSON()?.label === 'section-price', { timeout: 3500 });
+      await probe.locator('.hero-cta').click();
+      await probe.locator('#nextStep').click();
+      await probe.locator('#fName').fill('monitor-fixture-name');
+      await probe.locator('#requestForm button[type=submit]').click();
+      for (let i = 0; i < 12 && !required.every(label => seen.has(label)); i++) {
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
+      const missing = required.filter(label => !seen.has(label));
+      assert.deepEqual(missing, [], 'Missing Alenu journey signals');
+      const shared = seen.get('landing-open').navigation_session_id;
+      assert.ok(shared, 'Anonymous session was missing');
+      for (const label of required) {
+        const row = seen.get(label);
+        assert.equal(row.navigation_session_id, shared, 'Journey lost the shared browser session');
+        assert.ok(!JSON.stringify(row).includes('monitor-fixture-name'), 'Form content reached analytics');
+        assert.equal(db.prepare('SELECT automation_hint FROM growth_events WHERE app_id=? AND event_id=?').get(alenu.id, row.event_id)?.automation_hint, 1,
+          'Synthetic journey must stay out of visitor analytics');
+      }
+    } finally { await probe.close(); }
   });
   await context.close();
 })().catch(error => {
