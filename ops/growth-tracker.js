@@ -246,15 +246,15 @@
         if (typeof label === 'string') action(label);
         if (event.target.closest?.('.flow-addon summary')) action('address-toggle');
       }, true);
-      form.addEventListener('submit', () => {
-        queueMicrotask(() => {
-          const invalid = [...form.querySelectorAll('input[aria-invalid="true"]')].map(input => fields[input.id]).filter(Boolean);
-          if (invalid.length) {
-            send('form_error', 'form');
-            invalid.forEach(field => action('invalid-' + field));
-          }
-        });
-      }, true);
+      // Read validation state after the form's own submit handler has run.
+      document.addEventListener('submit', event => {
+        if (event.target !== form) return;
+        const invalid = [...form.querySelectorAll('input[aria-invalid="true"]')].map(input => fields[input.id]).filter(Boolean);
+        if (invalid.length) {
+          send('form_error', 'form');
+          invalid.forEach(field => action('invalid-' + field));
+        }
+      });
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
     else start();
