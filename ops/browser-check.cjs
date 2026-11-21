@@ -217,6 +217,7 @@ let browser;
     });
     try {
       probe.setDefaultTimeout(4000);
+      const from = new Date().toISOString();
       const required = ['landing-open', 'page-scroll', 'section-price', 'start-hero', 'selection-open', 'next-details', 'details-open', 'edit-name', 'invalid-phone'];
       await probe.goto('https://alenu.co.il/?static', { waitUntil: 'domcontentloaded', timeout: 6000 });
       await probe.locator('#price').scrollIntoViewIfNeeded();
@@ -226,20 +227,24 @@ let browser;
       await probe.locator('#nextStep').click();
       await probe.locator('#fName').fill('monitor-fixture-name');
       await probe.locator('#requestForm button[type=submit]').click();
-      for (let i = 0; i < 12 && !required.every(label => seen.has(label)); i++) {
+      // A beacon from the previous page can reach SQLite after the browser has detached its response listener.
+      const stored = db.prepare(`SELECT label,automation_hint FROM growth_events WHERE app_id=? AND occurred_at>=?
+        AND event_type='alenu_journey' AND browser_session_hash<>''
+        AND browser_session_hash=(SELECT browser_session_hash FROM growth_events WHERE app_id=? AND event_id=?)`);
+      let received = new Map();
+      for (let attempt = 0; attempt < 12; attempt++) {
+        const id = seen.get('selection-open')?.event_id;
+        if (id) received = new Map(stored.all(alenu.id, from, alenu.id, id).map(row => [row.label, row.automation_hint]));
+        if (required.every(label => received.has(label))) break;
         await new Promise(resolve => setTimeout(resolve, 150));
       }
-      const missing = required.filter(label => !seen.has(label));
+      const missing = required.filter(label => !received.has(label));
       assert.deepEqual(missing, [], 'Missing Alenu journey signals');
-      const shared = seen.get('landing-open').navigation_session_id;
-      assert.ok(shared, 'Anonymous session was missing');
       for (const label of required) {
-        const row = seen.get(label);
-        assert.equal(row.navigation_session_id, shared, 'Journey lost the shared browser session');
-        assert.ok(!JSON.stringify(row).includes('monitor-fixture-name'), 'Form content reached analytics');
-        assert.equal(db.prepare('SELECT automation_hint FROM growth_events WHERE app_id=? AND event_id=?').get(alenu.id, row.event_id)?.automation_hint, 1,
-          'Synthetic journey must stay out of visitor analytics');
+        assert.equal(received.get(label), 1, 'Synthetic journey must stay out of visitor analytics');
       }
+      const field = seen.get('edit-name');
+      assert.ok(field && !JSON.stringify(field).includes('monitor-fixture-name'), 'No safe field-edit receipt');
     } finally { await probe.close(); }
   });
   await context.close();
