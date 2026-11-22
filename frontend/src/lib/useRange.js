@@ -3,15 +3,18 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { getRangePreset } from './api';
 import { reportRange } from './reportNavigation';
 const STORAGE_KEY = 'vee-monitor.range';
+// A chosen period lasts for the open tab only, so every new visit starts at 24 hours.
+// Report and shared links keep their exact dates through `from`/`to`.
+try { localStorage.removeItem(STORAGE_KEY); } catch { /* optional storage */ }
 const readStored = fallback => {
   try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    const stored = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null');
     if ([1, 7, 30, 90].includes(stored?.days)) return { days: stored.days, custom: null };
     if (stored?.custom && reportRange(new URLSearchParams(stored.custom).toString())) return stored;
   } catch { /* optional storage */ }
   return fallback;
 };
-const persist = value => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(value)); } catch { /* optional storage */ } return value; };
+const persist = value => { try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(value)); } catch { /* optional storage */ } return value; };
 export function useRange(defaultDays = 1) {
   const location = useLocation(), navigate = useNavigate();
   const [stored, setStored] = useState(() => readStored({ days: defaultDays, custom: null }));

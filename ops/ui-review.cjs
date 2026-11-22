@@ -167,7 +167,7 @@ const check = async (name, fn) => { try { await fn(); results.push({ name, ok: t
       const shared = page.url(), query = new URL(shared).searchParams;
       assert.ok(query.has('from') && query.has('to'));
       assert.equal(Date.parse(query.get('to')) - Date.parse(query.get('from')), 7 * 86400000);
-      await page.evaluate(() => localStorage.removeItem('vee-monitor.range'));
+      await page.evaluate(() => sessionStorage.removeItem('vee-monitor.range'));
       await page.goto(shared); await page.locator('.page-insights h3').first().waitFor();
       assert.equal(new URL(page.url()).searchParams.get('from'), query.get('from'));
     });
