@@ -15,7 +15,7 @@ spec = importlib.util.spec_from_file_location('maintenance', Path(__file__).with
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 # What production backs up, before the tests below put their own folders in its place.
-DATABASES, ASSETS = dict(m.DATABASES), dict(m.ASSETS)
+DATABASES, ASSETS, WRITTEN_ONCE = dict(m.DATABASES), dict(m.ASSETS), set(m.WRITTEN_ONCE)
 
 class SiteMoveChecks(unittest.TestCase):
     def test_a_new_host_is_a_move_but_www_and_https_are_not(self):
@@ -171,6 +171,93 @@ class Backups(unittest.TestCase):
             m.snapshot()
         self.assertEqual(list(m.BACKUPS.iterdir()), [])
 
+    def test_one_changed_bit_in_a_picture_fails_the_snapshot(self):
+        pictures = self.root / 'pictures'
+        pictures.mkdir()
+        # Random as a real picture is, so gzip stores it as it is; and the archive is 5 MiB to the byte, so reading up to
+        # tar's end marker does not happen to meet the end of the gzip stream as well.
+        (pictures / 'photo.webp').write_bytes(os.urandom(5 * 1024**2 - 2048))
+        m.DATABASES, m.ASSETS = {}, {'pictures': pictures}
+        def flip(share):
+            return lambda data: data[:int(len(data) * share)] + bytes([data[int(len(data) * share)] ^ 4]) + data[int(len(data) * share) + 1:]
+        real = m.archive_folder
+        # The last two are gzip's own checksum, after the end of tar's data: wrong, and cut off.
+        for spoil in (flip(.1), flip(.5), flip(.9), lambda data: data[:-8] + bytes([data[-8] ^ 1]) + data[-7:], lambda data: data[:-8]):
+            def spoiled(source, dest, *rest):
+                real(source, dest, *rest)
+                dest.write_bytes(spoil(dest.read_bytes()))
+                return []
+            with patch.object(m, 'archive_folder', spoiled), self.assertRaisesRegex(RuntimeError, 'Backup archive damaged: pictures.tar.gz'):
+                m.snapshot()
+            self.assertEqual(list(m.BACKUPS.iterdir()), [])
+        self.assertTrue(Path(m.snapshot()).is_dir())
+
+    def test_a_damaged_database_fails_the_snapshot(self):
+        source = self.root / 'gifts.sqlite'
+        with closing(sqlite3.connect(source)) as db:
+            db.execute('CREATE TABLE gifts(name TEXT)')
+            db.execute('CREATE INDEX names ON gifts(name)')
+            db.executemany('INSERT INTO gifts VALUES (?)', [(f'gift {n}',) for n in range(50)])
+            db.commit()
+            page = db.execute("SELECT rootpage FROM sqlite_master WHERE name = 'names'").fetchone()[0]
+            size = db.execute('PRAGMA page_size').fetchone()[0]
+        data = bytearray(source.read_bytes())
+        data[page * size - 100:page * size] = bytes(100)
+        source.write_bytes(data)
+        m.DATABASES = {'gifts': str(source)}
+        # SQLite answers the check with a list of faults, or not at all.
+        with self.assertRaisesRegex((RuntimeError, sqlite3.DatabaseError), 'Backup integrity failure: gifts|malformed'):
+            m.snapshot()
+        self.assertEqual(list(m.BACKUPS.iterdir()), [])
+
+    def test_a_copy_that_would_fill_the_disk_is_refused(self):
+        from types import SimpleNamespace
+        source, folder = self.root / 'a.sqlite', self.root / 'uploads/gift'
+        with closing(sqlite3.connect(source)) as db:
+            db.execute('CREATE TABLE a(b)')
+            db.commit()
+        folder.mkdir(parents=True)
+        (folder / 'photo.webp').write_bytes(b'x' * 3000000)
+        m.DATABASES, m.ASSETS = {'a': str(source)}, {'uploads': folder.parent}
+        needed = source.stat().st_size + 3000000
+        self.assertEqual(m.source_bytes(), needed)
+        wal = self.root / 'a.sqlite-wal'
+        wal.write_bytes(b'x' * 1000)
+        self.assertEqual(m.source_bytes(), needed + 1000)
+        wal.unlink()
+        with patch.object(m.shutil, 'disk_usage', return_value=SimpleNamespace(free=m.FREE_FLOOR + needed - 1)):
+            with self.assertRaisesRegex(RuntimeError, r'Less than 514 MiB free \(2 MiB to copy\); backup refused'):
+                m.snapshot()
+        self.assertEqual(list(m.BACKUPS.iterdir()), [])
+        with patch.object(m.shutil, 'disk_usage', return_value=SimpleNamespace(free=m.FREE_FLOOR + needed)):
+            self.assertTrue(Path(m.snapshot()).is_dir())
+
+    def test_the_daily_run_and_the_health_check_name_a_folder_that_never_rested(self):
+        def snapshot(changed):
+            m.write_json(m.STATE / 'backup-status.json', {'completed': time.time(), 'path': 'x', 'files': {}, 'changed_while_copied': changed})
+            return 'x'
+        quiet = {'cleanup': lambda *a, **k: {'errors': [], 'files': []}, 'housekeeping': lambda: [], 'updates_status': lambda: {},
+                 'dedupe_release_dependencies': lambda: [], 'run': lambda *a, **k: '', 'write_summary': lambda result: None}
+        for changed, warnings in (({'bestpresent-uploads': 2, 'koral-uploads': 1}, ['Newest backup was copied while these changed: bestpresent-uploads, koral-uploads']), ({}, [])):
+            with patch.multiple(m, **quiet, snapshot=lambda: snapshot(changed)):
+                m.daily()
+            self.assertEqual(json.loads((m.STATE / 'daily-status.json').read_text())['changed_while_copied'], changed)
+            self.assertEqual(m.backup_health(), ([], warnings))
+        self.assertEqual(m.backup_health(time.time() + 37 * 3600)[0], ['Last successful backup is older than 36 hours'])
+        (m.STATE / 'backup-status.json').unlink()
+        self.assertEqual(m.backup_health()[0], ['No successful verified backup recorded'])
+
+    def test_snapshots_over_their_budget_are_a_warning(self):
+        m.write_json(m.STATE / 'backup-status.json', {'completed': time.time()})
+        self.assertEqual(m.backup_health(), ([], []))
+        (m.BACKUPS / '20261101T000000Z').mkdir()
+        (m.BACKUPS / '20261101T000000Z/manifest.json').write_text('{}')
+        m.prune_snapshots()
+        self.assertEqual(m.backup_health(), ([], []))
+        with patch.object(m, 'BACKUP_BUDGET', 1):
+            m.prune_snapshots()
+        self.assertEqual(m.backup_health(), ([], ['Backups take 0.0 GiB, over their budget of 2 GiB']))
+
 
 class LiveFolders(unittest.TestCase):
     """The real GNU tar, and a folder that changes at a set moment: tar's own checkpoint runs a script while it reads."""
@@ -183,6 +270,10 @@ class LiveFolders(unittest.TestCase):
         set -- "$LIVE"/gift-*; rm -rf "$1"
         echo new > "$LIVE/new-$PPID.webp"
     fi'''
+    # Once in each run: a file cut short in the middle of it, and long again before the next run.
+    CUT = '''if [ "$(cat "$LIVE.seen" 2>/dev/null)" != "$PPID" ]; then
+        echo "$PPID" > "$LIVE.seen"; echo run >> "$LIVE.runs"; : > "$LIVE/a.webp"
+    else head -c 60000 /dev/zero > "$LIVE/a.webp"; fi'''
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -198,10 +289,13 @@ class LiveFolders(unittest.TestCase):
         (self.quiet / 'orders.json').write_text('{"orders":[1]}')
         state = self.root / 'state'
         (state / 'backups').mkdir(parents=True)
-        values = {'STATE': state, 'BACKUPS': state / 'backups', 'DATABASES': {}, 'ASSETS': {'live': self.live, 'quiet': self.quiet},
+        values = {'STATE': state, 'BACKUPS': state / 'backups', 'DATABASES': {}, 'ASSETS': {'live': self.live, 'quiet': self.quiet}, 'WRITTEN_ONCE': {'live'},
                   'AUTH_KEY': self.root / 'auth.key', 'AUTH_KEY_BACKUP': self.root / 'keys/auth.key'}
         self.patches = [patch.object(m, name, value) for name, value in values.items()]
         for item in self.patches: item.start()
+        self.pauses = []
+        self.patches.append(patch.object(m.time, 'sleep', self.pauses.append))
+        self.patches[-1].start()
 
     def tearDown(self):
         for item in self.patches: item.stop()
@@ -224,14 +318,18 @@ class LiveFolders(unittest.TestCase):
     def test_a_folder_that_never_rests_does_not_cost_the_snapshot(self):
         with self.during(self.BUSY):
             saved = Path(m.snapshot())
-        self.assertEqual(set(json.loads((saved / 'manifest.json').read_text())), {'live.tar.gz', 'quiet.tar.gz'})
+        # The record travels with the snapshot: it is hashed in the manifest, so the PC copies it too.
+        self.assertEqual(set(json.loads((saved / 'manifest.json').read_text())), {'live.tar.gz', 'quiet.tar.gz', 'changed-while-copied.json'})
+        record = json.loads((saved / 'changed-while-copied.json').read_text())
+        self.assertEqual(list(record), ['live.tar.gz'])
+        self.assertIn('tar: ./a.webp: file changed as we read it', record['live.tar.gz'])
         files = self.files(saved / 'live.tar.gz')
         self.assertEqual(files['./kept/photo.webp'], b'kept' * 5000)
         self.assertEqual(files['./a.webp'][:60000], b'x' * 60000)
         # Both runs met changes, so both pictures and both gifts are gone; the count says which folder it was.
         self.assertFalse([name for name in files if name.startswith(('./b-', './gift-'))])
-        self.assertEqual(list(self.status()['changed_while_copied']), ['live'])
-        self.assertGreaterEqual(self.status()['changed_while_copied']['live'], 3)
+        self.assertEqual(self.status()['changed_while_copied'], {'live': len(record['live.tar.gz'])})
+        self.assertGreaterEqual(len(record['live.tar.gz']), 3)
         self.assertEqual(self.files(saved / 'quiet.tar.gz'), {'./orders.json': b'{"orders":[1]}'})
 
     def test_a_folder_that_settles_is_archived_again_whole(self):
@@ -241,18 +339,48 @@ class LiveFolders(unittest.TestCase):
         self.assertEqual(files['./a.webp'], b'x' * 60000 + b'more\n')
         self.assertEqual(files['./new.webp'], b'new\n')
         self.assertEqual(self.status()['changed_while_copied'], {})
+        self.assertFalse((saved / 'changed-while-copied.json').exists())
+
+    def test_a_store_that_is_rewritten_in_place_is_kept_only_from_a_quiet_moment(self):
+        m.ASSETS = {'store': self.live}
+        with self.during(self.BUSY), self.assertRaisesRegex(RuntimeError, r'(?s)tar failed \(1\).*file changed as we read it'):
+            m.snapshot()
+        self.assertEqual(list(m.BACKUPS.iterdir()), [])
+        self.assertEqual(self.pauses, [0, 2, 20])
+        # Two runs met a write and the third did not.
+        self.pauses.clear()
+        twice = 'grep -qx "$PPID" "$LIVE.n" 2>/dev/null || echo "$PPID" >> "$LIVE.n"; [ "$(wc -l < "$LIVE.n")" -gt 2 ] || echo more >> "$LIVE/a.webp"'
+        with self.during(twice):
+            saved = Path(m.snapshot())
+        self.assertEqual(self.pauses, [0, 2, 20])
+        self.assertEqual(self.files(saved / 'store.tar.gz')['./a.webp'], (self.live / 'a.webp').read_bytes())
+        self.assertEqual(self.status()['changed_while_copied'], {})
+
+    def test_the_folders_whose_files_are_written_once(self):
+        # A name put here accepts copies of a folder that was changing: its app must never write a file over.
+        self.assertEqual(WRITTEN_ONCE, {'koral-uploads', 'koral2-uploads', 'yomuledet-uploads', 'bestpresent-uploads'})
+        self.assertLessEqual(WRITTEN_ONCE, set(ASSETS))
 
     def test_a_damaged_copy_fails_the_snapshot(self):
         # A file cut short while tar reads it is also exit status 1, and is filled up with zeros.
-        with self.during(': > "$LIVE/a.webp"'), self.assertRaisesRegex(RuntimeError, r'(?s)tar failed \(1\).*File shrank'):
+        with self.during(self.CUT), self.assertRaisesRegex(RuntimeError, r'(?s)tar failed \(1\).*File shrank'):
             m.snapshot()
+        self.assertEqual((self.root / 'live.runs').read_text().split(), ['run'] * 3)
         self.assertEqual(list(m.BACKUPS.iterdir()), [])
         self.assertFalse((m.STATE / 'backup-status.json').exists())
+
+    def test_a_copy_damaged_once_is_made_again(self):
+        with self.during('[ -e "$LIVE.seen" ] || { echo 1 > "$LIVE.seen"; : > "$LIVE/a.webp"; }'):
+            saved = Path(m.snapshot())
+        self.assertEqual(self.files(saved / 'live.tar.gz')['./a.webp'], b'')
+        self.assertEqual(self.files(saved / 'live.tar.gz')['./kept/photo.webp'], b'kept' * 5000)
+        self.assertEqual(self.status()['changed_while_copied'], {})
 
     def test_any_other_complaint_fails_even_beside_a_change(self):
         dest = self.root / 'x.tar.gz'
         with self.during(self.BUSY), self.assertRaisesRegex(RuntimeError, r'(?s)tar failed \(2\).*Cannot stat.*file changed as we read it'):
-            m.archive_folder(self.live, dest, ['./absent'])
+            m.archive_folder(self.live, dest, ['./absent'], True)
+        self.assertEqual(self.pauses, [0])
         for source, dest in ((self.root / 'absent', dest), (self.live, self.root / 'absent/x.tar.gz')):
             with self.assertRaisesRegex(RuntimeError, 'tar failed'):
                 m.archive_folder(source, dest)

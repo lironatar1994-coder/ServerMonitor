@@ -177,6 +177,15 @@ function pathMatches(path, filter) {
     return path === base || String(path).startsWith(base + '/');
 }
 
+const matchesAny = (path, filters) => splitConfig(filters).some((filter) => pathMatches(path, filter));
+
+/** Whether a referrer is a page of one of these hosts under one of these paths (both as the catalog writes them). */
+function isPageOf(referrer, hosts, filters) {
+    let url;
+    try { url = new URL(referrer); } catch { return false; }
+    return splitConfig(hosts).includes(url.hostname) && matchesAny(url.pathname, filters);
+}
+
 function isTargetAppLine(line, appName, logFilter, logHost, logExclude, parsedEntry) {
     const entry = parsedEntry || parseNginxAccessLine(line);
     if (!entry) return false;
@@ -296,7 +305,12 @@ function isPageView(entry) {
     if (method !== 'GET') return false;
     if (status < 200 || status >= 300) return false;
     if (!path.startsWith('/')) return false;
-    return !nonPageViewPathPatterns.some((pattern) => pattern.test(path));
+    return !isAssetPath(path);
+}
+
+/** Files, APIs and the measurement's own addresses: what a page asks for, never a page. */
+function isAssetPath(path) {
+    return nonPageViewPathPatterns.some((pattern) => pattern.test(path));
 }
 
 function getAgentType(entry, rawLine = '') {
@@ -539,8 +553,11 @@ module.exports = {
     getBotReason,
     getRecentVisitors,
     getUniqueVisitors,
+    isAssetPath,
+    isPageOf,
     isPageView,
     isTargetAppLine,
+    matchesAny,
     pathMatches,
     parseAccessLogTimestamp,
     parseNginxAccessLine,

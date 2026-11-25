@@ -3,7 +3,7 @@ const fs = require('fs');
 const net = require('net');
 const db = require('./database');
 const { findAppForSiteUrl } = require('./siteIdentity');
-const { getBotClassification } = require('./logParser');
+const { getBotClassification, matchesAny } = require('./logParser');
 
 const DEFAULT_KEY_PATH = '/root/.visitor-signal-key';
 const ID_PATTERN = /^[A-Za-z0-9_-]{16,96}$/;
@@ -314,11 +314,17 @@ function recordProductEvent({ body, ip, userAgent, siteUrl }) {
 
 function findSignalApp(siteUrl) {
     const apps = db.prepare(`
-        SELECT id, name, url
+        SELECT id, name, url, log_exclude
         FROM apps
         WHERE analytics_enabled = 1 AND url IS NOT NULL
     `).all();
     return findAppForSiteUrl(apps, siteUrl);
+}
+
+/** A page the app's catalog row excludes: another site's, or one that nobody measures (BestPresent). */
+function isExcludedPage(body, siteUrl) {
+    const path = normalizePath(body?.path);
+    return Boolean(path) && matchesAny(path, findSignalApp(siteUrl)?.log_exclude);
 }
 
 function recordBrowserSignal({ body, ip, userAgent, siteUrl }) {
@@ -455,6 +461,7 @@ module.exports = {
     getSignalKey,
     findSignalApp,
     isAuthorizedSignal,
+    isExcludedPage,
     normalizeIp,
     normalizePath,
     recordBrowserSignal,

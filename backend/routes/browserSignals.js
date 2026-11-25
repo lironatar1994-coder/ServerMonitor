@@ -1,6 +1,7 @@
 const express = require('express');
 const {
     isAuthorizedSignal,
+    isExcludedPage,
     recordBrowserSignal,
     recordEngagementSignal,
     recordProductEvent,
@@ -28,13 +29,16 @@ function collectSignal(req, res, fixedSiteUrl = null) {
         return res.status(202).json({ accepted: false, internal: true });
     }
     try {
+        const siteUrl = fixedSiteUrl || req.get('x-visitor-site-url');
+        // A tab opened before its page lost its tag goes on posting: accepted, and nothing is kept.
+        if (isExcludedPage(req.body, siteUrl)) return res.status(202).json({ accepted: false, excluded: true });
         // The Nginx bridge exposes one path, so the payload selects the signal kind.
         const record = SIGNAL_RECORDERS[req.body?.kind] || recordBrowserSignal;
         const result = record({
             body: req.body,
             ip: req.get('x-visitor-ip'),
             userAgent: req.get('x-visitor-user-agent'),
-            siteUrl: fixedSiteUrl || req.get('x-visitor-site-url')
+            siteUrl
         });
         return res.status(result.duplicate ? 200 : 201).json(result);
     } catch (error) {

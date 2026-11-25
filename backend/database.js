@@ -1,6 +1,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const { isPageOf, matchesAny } = require('./logParser');
 
 const dbPath = process.env.MONITOR_DB_PATH || path.join(__dirname, 'monitor.db');
 // Every process shares this file; wait for another writer (e.g. a reclassification) rather than failing at startup.
@@ -529,13 +530,22 @@ function syncProductionApps() {
     const clearEvents = db.prepare('DELETE FROM visitor_events WHERE app_id = ?');
     const clearState = db.prepare('DELETE FROM visitor_ingestion_state WHERE app_id = ?');
     // Server events plus every browser table that records the page path.
-    const pathTables = ['visitor_events', 'browser_signals', 'growth_events', 'engagement_signals', 'engagement_zones', 'engagement_zone_views', 'engagement_heatmap_cells', 'web_vitals', 'js_errors'];
+    const pathTables = ['visitor_events', 'browser_signals', 'growth_events', 'engagement_signals', 'engagement_zones', 'engagement_zone_views', 'engagement_heatmap_cells', 'product_events', 'web_vitals', 'js_errors'];
     const existingTables = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name));
     const deleteExcluded = pathTables.filter((table) => existingTables.has(table)).map((table) => db.prepare(`DELETE FROM ${table} WHERE app_id = ? AND (path = ? OR substr(path, 1, ?) = ?)`));
     // `/a` removes `/a` and `/a/...`; `/a*` removes every path starting with `/a`.
     const exclusionArgs = (prefix) => prefix.endsWith('*')
         ? [prefix.slice(0, -1), prefix.length - 1, prefix.slice(0, -1)]
         : [prefix, prefix.length + 1, prefix + '/'];
+    // What those pages asked for, their trackers above all, is stored under its own path with the page as referrer.
+    const referrers = db.prepare('SELECT DISTINCT referrer FROM visitor_events WHERE app_id = ? AND referrer IS NOT NULL').pluck();
+    const forgetReferrers = db.prepare('UPDATE visitor_events SET referrer = NULL WHERE app_id = ? AND referrer IN (SELECT value FROM json_each(?))');
+    // A notice about a page has it in its key: `page:<app>:<path>`, `404:<app>:<path>:<day>`.
+    const notices = [['insight_notifications', 'key'], ['push_deliveries', 'notification_key']].filter(([table]) => existingTables.has(table)).map(([table, column]) => ({
+        keys: db.prepare(`SELECT DISTINCT ${column} FROM ${table}`).pluck(),
+        remove: db.prepare(`DELETE FROM ${table} WHERE ${column} IN (SELECT value FROM json_each(?))`)
+    }));
+    const noticePage = (key, id) => new RegExp(`^(?:page|404):${id}:(/.*?)(?::\\d{4}-\\d\\d-\\d\\d)?$`).exec(key)?.[1] ?? '';
 
     db.transaction(() => {
         productionApps.forEach((definition) => {
@@ -555,7 +565,11 @@ function syncProductionApps() {
                 // Narrowing ownership removes only the newly excluded paths and keeps the rest of the history.
                 const removed = addedExclusions.reduce((total, prefix) => total + deleteExcluded.reduce((sum, statement) => sum
                     + statement.run(existing.id, ...exclusionArgs(prefix)).changes, 0), 0);
-                console.log(`Removed ${removed} records now owned by other apps: ${definition.name}`);
+                const added = addedExclusions.join('|');
+                const pages = referrers.all(existing.id).filter((referrer) => isPageOf(referrer, normalized.log_host, added));
+                const forgotten = forgetReferrers.run(existing.id, JSON.stringify(pages)).changes;
+                notices.forEach(({ keys, remove }) => remove.run(JSON.stringify(keys.all().filter((key) => matchesAny(noticePage(key, existing.id), added)))));
+                console.log(`Removed ${removed} records and ${forgotten} referrers now owned by other apps: ${definition.name}`);
             } else if (visitorConfigChanged) {
                 clearEvents.run(existing.id);
                 clearState.run(existing.id);

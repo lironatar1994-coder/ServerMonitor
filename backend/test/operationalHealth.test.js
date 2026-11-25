@@ -42,6 +42,18 @@ test('a stale or missing PC backup copy is a warning, an unreadable check is not
   assert.equal(buildOperationalHealth({ ...base, pcCopiedAt: now / 1000 - 3600 }).issues.some(item => item.id === 'backup-pc'), false);
   assert.equal(buildOperationalHealth({ ...base }).issues.some(item => item.id === 'backup-pc'), false);
 });
+test('a snapshot kept while its folder changed and snapshots over their budget are warnings', () => {
+  const issue = (id, extra) => buildOperationalHealth({ ...base, ...extra }).issues.find(item => item.id === id);
+  const changed = (value) => issue('backup-changed', { backup: { ...base.backup, changed_while_copied: value } });
+  assert.equal(changed({ 'bestpresent-uploads': 3, 'koral-uploads': 1 }).severity, 'warning');
+  assert.match(changed({ 'bestpresent-uploads': 3, 'koral-uploads': 1 }).detail, /^bestpresent-uploads · koral-uploads;/);
+  assert.equal(changed({}), undefined);
+  assert.equal(issue('backup-changed', {}), undefined);
+  const budget = issue('backup-budget', { health: { ...base.health, warnings: ['Backups take 7.0 GiB, over their budget of 2 GiB'] } });
+  assert.equal(budget.severity, 'warning');
+  assert.equal(budget.detail, '7.0 GB בשימוש, המכסה 2 GB');
+  assert.equal(issue('backup-budget', {}), undefined);
+});
 test('browser-check issues name failing sites and keep checker faults a warning', () => {
   const issue = (browser) => buildOperationalHealth({ ...base, browser: { checked: now, ...browser } }).issues.find(item => item.id === 'browser-check');
   const sites = issue({ errors: ['a'], failures: [{ check: 'site-browser-signal-Alenu', area: 'site', site: 'Alenu' }] });

@@ -23,9 +23,12 @@ test('narrowed LA webs ownership removes only sibling-app records and keeps its 
     const vitals = db.prepare(`INSERT INTO web_vitals (app_id, event_id, occurred_at, path) VALUES (?, ?, '2026-10-01T00:00:00Z', ?)`);
     const error = db.prepare(`INSERT INTO js_errors (app_id, day, path, signature, name, message, first_seen, last_seen)
         VALUES (?, '2026-10-01', ?, 's', 'Error', 'm', '2026-10-01T00:00:00Z', '2026-10-01T00:00:00Z')`);
+    const product = db.prepare(`INSERT INTO product_events (app_id, event_id, visitor_hash, session_hash, path, event_type, label)
+        VALUES (?, ?, 'v', 's', ?, 'tool_opened', 'tool')`);
     ['/', '/work/koral/', '/cv/', '/cv-manager/login', '/videos/p/1', '/alenu', '/curriculum', '/bestpresent', '/bestpresent/noa', '/bestpresents'].forEach((item, index) => {
         event.run(laWebs, index, item);
         signal.run(laWebs, `e${index}`, item);
+        product.run(laWebs, `e${index}`, item);
         vitals.run(laWebs, `e${index}`, item);
         error.run(laWebs, item);
     });
@@ -35,11 +38,40 @@ test('narrowed LA webs ownership removes only sibling-app records and keeps its 
 
     db = require('../database');
     const kept = (table) => db.prepare(`SELECT path FROM ${table} WHERE app_id = ? ORDER BY path`).all(laWebs).map((row) => row.path);
-    for (const table of ['visitor_events', 'browser_signals', 'web_vitals', 'js_errors']) {
+    for (const table of ['visitor_events', 'browser_signals', 'product_events', 'web_vitals', 'js_errors']) {
         assert.deepEqual(kept(table), ['/', '/bestpresents', '/curriculum', '/work/koral/'], table);
     }
     assert.equal(db.prepare("SELECT COUNT(*) AS n FROM apps WHERE name IN ('Maavar', 'Alenu CRM', 'Alenu CRM · עיבוד מסמכים', 'Libi Diamonds')").get().n, 0);
     assert.equal(db.prepare("SELECT url FROM apps WHERE name = 'PDF Studio'").get().url, 'https://lawebs.co.il/pdf-studio/');
+    db.close();
+    delete require.cache[databasePath];
+});
+
+test('a page that leaves a site leaves no address there: not as a referrer, not in a notice', () => {
+    let db = require('../database');
+    const laWebs = db.prepare("SELECT id FROM apps WHERE name = 'LA webs'").get().id;
+    db.prepare("UPDATE apps SET log_exclude = replace(log_exclude, '|/bestpresent', '') WHERE id = ?").run(laWebs);
+    const request = db.prepare(`INSERT INTO visitor_events (app_id, source_file_id, source_offset, occurred_at, ip, path, referrer, is_page_view)
+        VALUES (?, 'referrers', ?, '2026-10-01T00:00:00Z', '1.1.1.1', ?, ?, ?)`);
+    const gone = ['https://lawebs.co.il/bestpresent', 'https://lawebs.co.il/bestpresent/noa', 'https://www.lawebs.co.il/bestpresent/noa?x=1', 'http://lawebs.co.il/bestpresent/g/token#k'];
+    const kept = ['https://lawebs.co.il/', 'https://lawebs.co.il/bestpresents', 'https://lawebs.co.il/cv/', 'https://google.com/bestpresent/noa', 'android-app://lawebs', 'not an address', null];
+    request.run(laWebs, 0, '/', gone[1], 1);
+    [...gone, ...kept].forEach((referrer, index) => request.run(laWebs, index + 1, '/.well-known/vee-visitor-signal', referrer, 0));
+    const notice = db.prepare(`INSERT INTO insight_notifications (key, category, app_id, title, body, url, created_at) VALUES (?, 'pages', ?, 't', 'b', 'u', '2026-10-01T00:00:00Z')`);
+    const device = db.prepare(`INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, created_at) VALUES (1, 'e', 'p', 'a', '2026-10-01T00:00:00Z')`).run().lastInsertRowid;
+    const delivery = db.prepare("INSERT INTO push_deliveries (subscription_id, category, notification_key, sent_at) VALUES (?, 'pages', ?, '2026-10-01T00:00:00Z')");
+    const left = [`page:${laWebs}:/bestpresent/noa`, `404:${laWebs}:/bestpresent:2026-10-01`, `404:${laWebs}:/bestpresent/g/a:b:2026-10-01`];
+    const others = [`404:${laWebs}:/old:2026-10-01`, `page:${laWebs}9:/bestpresent/noa`, `page:${laWebs}:/bestpresents`, 'digest:2026-10-01'];
+    [...left, ...others].forEach((key) => { notice.run(key, laWebs); delivery.run(device, key); });
+    db.close();
+    delete require.cache[databasePath];
+
+    db = require('../database');
+    const rows = db.prepare("SELECT path, referrer FROM visitor_events WHERE source_file_id = 'referrers' ORDER BY source_offset").all();
+    assert.equal(rows[0].path, '/');
+    assert.deepEqual(rows.map((row) => row.referrer), [null, ...gone.map(() => null), ...kept]);
+    assert.deepEqual(db.prepare('SELECT key FROM insight_notifications ORDER BY key').pluck().all(), [...others].sort());
+    assert.deepEqual(db.prepare('SELECT notification_key FROM push_deliveries ORDER BY notification_key').pluck().all(), [...others].sort());
     db.close();
     delete require.cache[databasePath];
 });

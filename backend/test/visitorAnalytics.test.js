@@ -360,6 +360,30 @@ test('backfills, classifies, deduplicates, and incrementally ingests', () => {
     assert.equal(db.prepare('SELECT COUNT(*) AS count FROM visitor_events WHERE app_id = ?').get(appId).count, 3);
 });
 
+test('what an excluded page asked for is kept without its address; pages keep where they were reached from', () => {
+    const logPath = path.join(tempDir, 'referrers.log');
+    const line = (request, status, referrer) => withRecentTimestamp(`1.2.3.4 - - [x] "${request} HTTP/2.0" ${status} 10 "${referrer}" "Mozilla/5.0 (Windows NT 10.0)" "lawebs.co.il"`, 1);
+    const gift = 'https://lawebs.co.il/bestpresent/noa';
+    const cases = [
+        ['GET /bestpresent/noa', 200, '-', undefined],
+        ['POST /.well-known/vee-visitor-signal', 204, gift, null],
+        ['GET /.well-known/server-monitor-growth.js', 200, 'https://www.lawebs.co.il/bestpresent/g/token', null],
+        ['GET /favicon.ico', 404, gift, null],
+        ['POST /.well-known/vee-growth-signal', 204, 'https://lawebs.co.il/work/koral/', 'https://lawebs.co.il/work/koral/'],
+        ['GET /assets/app.js', 200, 'https://lawebs.co.il/bestpresents', 'https://lawebs.co.il/bestpresents'],
+        ['GET /', 200, 'https://lawebs.co.il/Koralevents', 'https://lawebs.co.il/Koralevents'],
+        ['GET /missing', 404, 'https://lawebs.co.il/cv/', 'https://lawebs.co.il/cv/'],
+        ['GET /contact', 200, '-', null]
+    ];
+    fs.writeFileSync(logPath, cases.map(([request, status, referrer]) => line(request, status, referrer) + '\n').join(''));
+    const laWebs = db.prepare("SELECT log_host, log_exclude FROM apps WHERE name = 'LA webs'").get();
+    const id = db.prepare('INSERT INTO apps (name, log_path, log_host, log_exclude) VALUES (?, ?, ?, ?)').run('Referrers Site', logPath, laWebs.log_host, laWebs.log_exclude).lastInsertRowid;
+    assert.equal(ingestApp(db.prepare('SELECT * FROM apps WHERE id = ?').get(id)), cases.length - 1);
+    assert.deepEqual(db.prepare('SELECT path, referrer FROM visitor_events WHERE app_id = ? ORDER BY source_offset').all(id),
+        cases.slice(1).map(([request, , , expected]) => ({ path: request.split(' ')[1], referrer: expected })));
+    db.prepare('DELETE FROM apps WHERE id = ?').run(id);
+});
+
 test('purges raw visitor events older than 90 days', () => {
     const app = db.prepare('SELECT id FROM apps WHERE name = ?').get('Test Site');
     db.prepare(`INSERT INTO visitor_events (app_id, source_file_id, source_offset, occurred_at, ip)

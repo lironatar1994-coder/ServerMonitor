@@ -5,6 +5,8 @@ const {
     CLASSIFICATION_RULESET_VERSION,
     getAgentType,
     getBotClassification,
+    isAssetPath,
+    isPageOf,
     isPageView,
     isTargetAppLine,
     parseAccessLogTimestamp,
@@ -90,6 +92,9 @@ function ingestLine(app, line, sourceFileId, sourceOffset) {
         bot = { classification: 'internal', confidence: 100, reason: 'internal network' };
     }
     const location = enrichLocation(entry.ip);
+    // What a page asks for names that page, and an excluded one is not ours to name: a tab of it that was opened
+    // before its tag was removed goes on posting.
+    const unnamed = entry.referrer === '-' || (isAssetPath(entry.path) && isPageOf(entry.referrer, app.log_host, app.log_exclude));
     return insertEvent.run(
         app.id,
         sourceFileId,
@@ -99,7 +104,7 @@ function ingestLine(app, line, sourceFileId, sourceOffset) {
         entry.method,
         entry.path,
         entry.status,
-        entry.referrer === '-' ? null : entry.referrer,
+        unnamed ? null : entry.referrer,
         entry.host,
         entry.userAgent,
         getAgentType(entry, line),

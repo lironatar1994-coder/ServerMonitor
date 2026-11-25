@@ -122,6 +122,8 @@ function buildOperationalHealth({
     // unattended-upgrades installs security fixes daily; still pending after two days means it stopped.
     if ((health.warnings || []).some((value) => /Security updates pending/i.test(value)))
       add("security-updates", "עדכוני אבטחה לא הותקנו", `${health.updates?.security ?? ""} עדכונים ממתינים יותר מיומיים; העדכון האוטומטי לא התקין אותם`.trim());
+    const budget = (health.warnings || []).map((value) => /^Backups take ([0-9.]+) GiB, over their budget of ([0-9]+) GiB$/.exec(value)).find(Boolean);
+    if (budget) add("backup-budget", "הגיבויים חורגים מהמכסה", `${budget[1]} GB בשימוש, המכסה ${budget[2]} GB`);
     const other = (health.errors || []).filter(
       (value) => !/Disk usage/.test(value),
     );
@@ -228,6 +230,10 @@ function buildOperationalHealth({
       "לא נמצא גיבוי מוצלח מ־36 השעות האחרונות.",
       "error",
     );
+  // Kept although an app was writing: the snapshot's changed-while-copied.json names the files.
+  const changed = Object.keys(backup?.changed_while_copied || {});
+  if (changed.length)
+    add("backup-changed", "תיקייה השתנתה בזמן הגיבוי", `${changed.join(" · ")}; הקבצים רשומים בתוך הגיבוי`);
   // The PC copy is the only off-server backup; undefined means the check was not available.
   if (pcCopiedAt !== undefined && !fresh(pcCopiedAt, now, 48 * 3600000))
     add(

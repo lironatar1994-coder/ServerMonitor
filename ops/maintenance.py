@@ -18,6 +18,7 @@ import sys
 import tempfile
 import tarfile
 import time
+import zlib
 
 STATE = Path('/var/lib/lawebs-maintenance')
 BACKUPS = STATE / 'backups'
@@ -44,6 +45,11 @@ ASSETS = {
     'bestpresent-uploads': Path('/var/lib/bestpresent/uploads'),
     'ball-coaster-library': Path('/var/lib/private/ball-coaster'),
 }
+# Their apps never write into a file they have finished: a new one takes its place. A copy made while files
+# come and go holds all the others whole, which is not so for a store that is rewritten in place.
+WRITTEN_ONCE = {'koral-uploads', 'koral2-uploads', 'yomuledet-uploads', 'bestpresent-uploads'}
+FREE_FLOOR = 512 * 1024**2
+BACKUP_BUDGET = 2 * 1024**3
 AUTH_KEY = Path('/root/.server-monitor-auth-key')
 AUTH_KEY_BACKUP = Path('/root/server-monitor-key-backups/auth.key')
 SERVICES = ['nginx', 'ssh', 'pm2-root', 'koralevents', 'koralevents2', 'fail2ban']
@@ -111,29 +117,64 @@ def compress_verified(path):
 FOLDER_IN_USE = re.compile(r'tar: .*: (?:file changed as we read it|File removed before we read it)')
 
 
-def archive_folder(source, dest, excludes=()):
-    """Archive a folder its app may be writing to; returns how many changes tar met while reading.
+def archive_folder(source, dest, excludes=(), written_once=False):
+    """Archive a folder its app may be writing to; returns tar's complaints about what changed meanwhile.
 
-    The snapshot is one for all apps, so one upload at 03:00 must not cost everyone the night's backup.
-    A folder that changed is archived once more, for a quiet copy, and kept if it changes again.
-    Any other complaint, whatever the exit status, is a failure.
+    The snapshot is one for all apps, so one write at 03:00 must not cost everyone the night's backup:
+    whatever ends with exit status 1 is tried again after a pause, for a quiet copy. Only a folder whose files
+    are written once is kept although it changed again, and only when FOLDER_IN_USE is all tar had to say.
     """
     command = ['tar', *excludes, '-czf', str(dest), '-C', str(source), '.']
-    for _ in range(2):
+    for pause in (0, 2, 20):
+        time.sleep(pause)
         # The C locale keeps the messages in English; names in them may be any bytes.
         p = subprocess.run(command, capture_output=True, encoding='utf-8', errors='replace', timeout=180,
                            env={**os.environ, 'LC_ALL': 'C'})
-        if not p.returncode:
-            return 0
+        if p.returncode != 1:
+            break
         complaints = [line for line in p.stderr.split('\n') if line]
-        if p.returncode != 1 or not complaints or not all(map(FOLDER_IN_USE.fullmatch, complaints)):
-            raise RuntimeError(f'tar failed ({p.returncode}): {p.stderr[-800:]}')
-    return len(complaints)
+        if pause and written_once and complaints and all(map(FOLDER_IN_USE.fullmatch, complaints)):
+            return complaints
+    if p.returncode:
+        raise RuntimeError(f'tar failed ({p.returncode}): {p.stderr[-800:]}')
+    return []
+
+
+def read_back(path):
+    """Read an archive to its very end. gzip's checksum comes after tar's end marker, where tarfile stops, and
+    nothing before it notices a changed bit in a picture, which gzip stores as it is."""
+    try:
+        with gzip.open(path) as stream:
+            with tarfile.open(fileobj=stream, mode='r|', bufsize=1024 * 1024) as archive:
+                for member in archive:
+                    if member.isfile():
+                        f = archive.extractfile(member)
+                        while f.read(1024 * 1024):
+                            pass
+            while stream.read(1024 * 1024):
+                pass
+    except (OSError, EOFError, zlib.error, tarfile.TarError) as exc:
+        raise RuntimeError(f'Backup archive damaged: {path.name}: {exc}') from exc
+
+
+def source_bytes():
+    """What a snapshot copies, before compression. A missing path counts nothing here; it fails the snapshot itself."""
+    files = [Path(source + suffix) for source in DATABASES.values() for suffix in ('', '-wal')]
+    for folder in ASSETS.values():
+        files.extend(Path(base) / name for base, _, names in os.walk(folder) for name in names)
+    total = 0
+    for path in files:
+        try:
+            total += path.lstat().st_size
+        except OSError:
+            pass  # gone meanwhile, or no WAL
+    return total
 
 
 def snapshot():
-    if shutil.disk_usage('/').free < 512 * 1024**2:
-        raise RuntimeError('Less than 512 MiB free; backup refused')
+    size = source_bytes()
+    if shutil.disk_usage('/').free < size + FREE_FLOOR:
+        raise RuntimeError(f'Less than {(size + FREE_FLOOR) // 1024**2} MiB free ({size // 1024**2} MiB to copy); backup refused')
     stamp = dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     staging = BACKUPS / ('.partial-' + stamp)
     staging.mkdir(mode=0o700)
@@ -177,22 +218,20 @@ def snapshot():
             # SQLite gets its own online snapshot; never restore a live WAL copy
             # from the file archive over the verified suppliers snapshot.
             excludes = ['--exclude=./suppliers.db', '--exclude=./suppliers.db-wal', '--exclude=./suppliers.db-shm'] if name == 'dfus-store' else []
-            changes = archive_folder(source, dest, excludes)
+            changes = archive_folder(source, dest, excludes, name in WRITTEN_ONCE)
+            read_back(dest)
             if changes:
                 changed[name] = changes
-            with tarfile.open(dest) as archive:
-                for member in archive:
-                    if member.isfile():
-                        f = archive.extractfile(member)
-                        while f.read(1024 * 1024):
-                            pass
+        if changed:
+            # Travels with the snapshot, to the PC too: which of these copies is the doubtful one, and which files in it.
+            write_json(staging / 'changed-while-copied.json', {name + '.tar.gz': changes for name, changes in changed.items()})
         manifest = {p.name: {'bytes': p.stat().st_size, 'sha256': sha256(p)}
                     for p in staging.iterdir() if p.is_file()}
         write_json(staging / 'manifest.json', manifest)
         final = BACKUPS / stamp
         staging.rename(final)
         write_json(STATE / 'backup-status.json', {'completed': time.time(), 'path': str(final), 'files': manifest,
-                                                  'changed_while_copied': changed})
+                                                  'changed_while_copied': {name: len(changes) for name, changes in changed.items()}})
         prune_snapshots()
         return str(final)
     except BaseException:
@@ -215,14 +254,14 @@ def prune_snapshots():
         acknowledged = False
         if ack.is_file():
             acknowledged = json.loads(ack.read_text()).get('manifest_sha256') == sha256(p / 'manifest.json')
-        if acknowledged or age > 30 * 86400 or total > 2 * 1024**3:
+        if acknowledged or age > 30 * 86400 or total > BACKUP_BUDGET:
             if p.resolve().parent != BACKUPS.resolve():
                 raise RuntimeError('Unsafe backup retention path')
             shutil.rmtree(p)
             total -= sizes[p]
             removed.append({'snapshot': p.name, 'pc_verified': acknowledged})
     write_json(STATE / 'retention-status.json', {'checked': time.time(), 'bytes': total,
-               'removed': removed, 'over_budget': total > 2 * 1024**3})
+               'removed': removed, 'over_budget': total > BACKUP_BUDGET})
 
 RELEASE_BASES = [Path('/opt') / name for name in ('koralevents', 'koralevents2', 'maavar', 'lawebs-portfolio',
                                                   'cv-manager', 'pizza-manager-platform', 'desk', 'allsee',
@@ -545,9 +584,10 @@ def daily():
     except Exception as exc:
         routine.append({'ok': False, 'error': f'Update check: {exc}'})
     location = snapshot()
+    changed = json.loads((STATE / 'backup-status.json').read_text())['changed_while_copied']
     post = cleanup(True, releases=True)
     dedupe = dedupe_release_dependencies()
-    result = {'completed': time.time(), 'backup': location, 'pre_cleanup': pre,
+    result = {'completed': time.time(), 'backup': location, 'changed_while_copied': changed, 'pre_cleanup': pre,
               'cleanup': post, 'housekeeping': routine, 'dependency_dedupe': dedupe,
               'net_freed_bytes': shutil.disk_usage('/').free - before}
     write_json(STATE / 'daily-status.json', result)
@@ -564,6 +604,7 @@ def write_summary(result=None, error=None):
         lines.append('ERROR: ' + str(error))
     else:
         lines += ['Verified backup: ' + result['backup'],
+                  'Changed while copied: ' + (', '.join(sorted(result['changed_while_copied'])) or 'nothing'),
                   f"Net freed: {result['net_freed_bytes'] / 1024**2:.1f} MiB",
                   f"Removed items: {len(result['pre_cleanup']['files']) + len(result['cleanup']['files'])}",
                   'Current releases, newest three versions and running-process releases preserved.']
@@ -657,6 +698,26 @@ def browser_health(force=False, warnings=None):
     return errors
 
 
+def backup_health(now=None):
+    """The newest snapshot's age and the folders that kept changing under it, and what all the snapshots take."""
+    errors, warnings = [], []
+    try:
+        last = json.loads((STATE / 'backup-status.json').read_text())
+        if (now or time.time()) - last['completed'] > 36 * 3600:
+            errors.append('Last successful backup is older than 36 hours')
+        if last.get('changed_while_copied'):
+            warnings.append('Newest backup was copied while these changed: ' + ', '.join(sorted(last['changed_while_copied'])))
+    except Exception:
+        errors.append('No successful verified backup recorded')
+    try:
+        kept = json.loads((STATE / 'retention-status.json').read_text())
+        if kept['over_budget']:
+            warnings.append(f"Backups take {kept['bytes'] / 1024**3:.1f} GiB, over their budget of {BACKUP_BUDGET // 1024**3} GiB")
+    except (FileNotFoundError, ValueError, KeyError, TypeError):
+        pass
+    return errors, warnings
+
+
 def health():
     errors, warnings = [], []
     disk = shutil.disk_usage('/')
@@ -708,12 +769,9 @@ def health():
             run(['openssl', 'x509', '-checkend', str(21 * 86400), '-noout', '-in', str(cert)])
         except Exception:
             errors.append(f'Certificate expires within 21 days: {cert.parent.name}')
-    try:
-        last = json.loads((STATE / 'backup-status.json').read_text())
-        if time.time() - last['completed'] > 36 * 3600:
-            errors.append('Last successful backup is older than 36 hours')
-    except Exception:
-        errors.append('No successful verified backup recorded')
+    backup_errors, backup_warnings = backup_health()
+    errors.extend(backup_errors)
+    warnings.extend(backup_warnings)
     try:
         failed = json.loads((STATE / 'daily-failure.json').read_text())
         errors.append('Last maintenance failed: ' + failed['error'])
