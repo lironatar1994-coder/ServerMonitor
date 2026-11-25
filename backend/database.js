@@ -407,7 +407,7 @@ const veeExcludedPaths = [
 const lawebsExcludedPaths = [
     '/seder', '/Koralevents', '/koralevents', '/Koralevents2', '/PinhasRatzon', '/pinhasratzon',
     '/alenu', '/alenu-crm', '/cv', '/cv-manager', '/desk', '/allsee', '/videos', '/rc',
-    '/PizzaManager', '/pdf-studio', '/maavar', '/yomuledet', '/ball-coaster'
+    '/PizzaManager', '/pdf-studio', '/maavar', '/yomuledet', '/ball-coaster', '/bestpresent'
 ].join('|');
 
 const productionApps = [
@@ -430,6 +430,9 @@ const productionApps = [
     { name: 'Ball Coaster', url: 'https://lawebs.co.il/ball-coaster/', systemd_unit: 'ball-coaster-api.service', log_path: sharedNginxLog, log_host: 'lawebs.co.il|www.lawebs.co.il', log_filter: '/ball-coaster', health_url: 'http://127.0.0.1:4021/health', analytics_enabled: 1, reporting_enabled: 0 },
     // Birthday gift sites (builder, published sites and API), live since 2026-11-03.
     { name: 'יומולדת', url: 'https://lawebs.co.il/yomuledet/', systemd_unit: 'yomuledet.service', health_url: 'http://127.0.0.1:3170/yomuledet/api/health', analytics_enabled: 0, reporting_enabled: 0 },
+    // Gift sites on its own domain (named gifts are <name>.bestpresent.co.il) and at lawebs.co.il/bestpresent.
+    // Its privacy page promises no tracking tools: no tag and no visits on either address.
+    { name: 'BestPresent', url: 'https://bestpresent.co.il/', systemd_unit: 'bestpresent.service', health_url: 'http://127.0.0.1:3171/bestpresent/api/health', analytics_enabled: 0, reporting_enabled: 0 },
     // Desk's WhatsApp gateway; its connection state is checked separately in operational health.
     { name: 'Desk · וואטסאפ', systemd_unit: 'whatsapp-bot.service', health_url: 'http://127.0.0.1:3160/health', analytics_enabled: 0, reporting_enabled: 0 },
     { name: 'מסד נתונים PostgreSQL', systemd_unit: 'postgresql@16-main.service', analytics_enabled: 0, reporting_enabled: 0 },
@@ -526,7 +529,7 @@ function syncProductionApps() {
     const clearEvents = db.prepare('DELETE FROM visitor_events WHERE app_id = ?');
     const clearState = db.prepare('DELETE FROM visitor_ingestion_state WHERE app_id = ?');
     // Server events plus every browser table that records the page path.
-    const pathTables = ['visitor_events', 'browser_signals', 'growth_events', 'engagement_signals', 'engagement_zones', 'engagement_zone_views', 'engagement_heatmap_cells'];
+    const pathTables = ['visitor_events', 'browser_signals', 'growth_events', 'engagement_signals', 'engagement_zones', 'engagement_zone_views', 'engagement_heatmap_cells', 'web_vitals', 'js_errors'];
     const existingTables = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name));
     const deleteExcluded = pathTables.filter((table) => existingTables.has(table)).map((table) => db.prepare(`DELETE FROM ${table} WHERE app_id = ? AND (path = ? OR substr(path, 1, ?) = ?)`));
     // `/a` removes `/a` and `/a/...`; `/a*` removes every path starting with `/a`.

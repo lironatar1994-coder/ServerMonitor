@@ -20,9 +20,14 @@ test('narrowed LA webs ownership removes only sibling-app records and keeps its 
         VALUES (?, 'f', ?, '2026-10-01T00:00:00Z', '1.1.1.1', ?, 1)`);
     const signal = db.prepare(`INSERT INTO browser_signals (app_id, event_id, occurred_at, ip, visitor_hash, session_hash, path)
         VALUES (?, ?, '2026-10-01T00:00:00Z', '1.1.1.1', 'v', 's', ?)`);
-    ['/', '/work/koral/', '/cv/', '/cv-manager/login', '/videos/p/1', '/alenu', '/curriculum'].forEach((item, index) => {
+    const vitals = db.prepare(`INSERT INTO web_vitals (app_id, event_id, occurred_at, path) VALUES (?, ?, '2026-10-01T00:00:00Z', ?)`);
+    const error = db.prepare(`INSERT INTO js_errors (app_id, day, path, signature, name, message, first_seen, last_seen)
+        VALUES (?, '2026-10-01', ?, 's', 'Error', 'm', '2026-10-01T00:00:00Z', '2026-10-01T00:00:00Z')`);
+    ['/', '/work/koral/', '/cv/', '/cv-manager/login', '/videos/p/1', '/alenu', '/curriculum', '/bestpresent', '/bestpresent/noa', '/bestpresents'].forEach((item, index) => {
         event.run(laWebs, index, item);
         signal.run(laWebs, `e${index}`, item);
+        vitals.run(laWebs, `e${index}`, item);
+        error.run(laWebs, item);
     });
     event.run(pdf, 99, '/pdf-studio/');
     db.close();
@@ -30,8 +35,9 @@ test('narrowed LA webs ownership removes only sibling-app records and keeps its 
 
     db = require('../database');
     const kept = (table) => db.prepare(`SELECT path FROM ${table} WHERE app_id = ? ORDER BY path`).all(laWebs).map((row) => row.path);
-    assert.deepEqual(kept('visitor_events'), ['/', '/curriculum', '/work/koral/']);
-    assert.deepEqual(kept('browser_signals'), ['/', '/curriculum', '/work/koral/']);
+    for (const table of ['visitor_events', 'browser_signals', 'web_vitals', 'js_errors']) {
+        assert.deepEqual(kept(table), ['/', '/bestpresents', '/curriculum', '/work/koral/'], table);
+    }
     assert.equal(db.prepare("SELECT COUNT(*) AS n FROM apps WHERE name IN ('Maavar', 'Alenu CRM', 'Alenu CRM · עיבוד מסמכים', 'Libi Diamonds')").get().n, 0);
     assert.equal(db.prepare("SELECT url FROM apps WHERE name = 'PDF Studio'").get().url, 'https://lawebs.co.il/pdf-studio/');
     db.close();

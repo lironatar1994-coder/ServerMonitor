@@ -24,7 +24,7 @@ SITES = [
 ]
 # Native collectors (Seder, PDF Studio) and internal or unmeasured apps under lawebs.co.il
 # must not inherit the LA webs portfolio tag.
-LAWEBS_UNTRACKED = 'seder|PinhasRatzon|pinhasratzon|pdf-studio|PizzaManager(?!/p(?:/|$))|cv-manager|alenu|alenu-crm|maavar|desk|allsee|videos|rc|yomuledet|ball-coaster'
+LAWEBS_UNTRACKED = 'seder|PinhasRatzon|pinhasratzon|pdf-studio|PizzaManager(?!/p(?:/|$))|cv-manager|alenu|alenu-crm|maavar|desk|allsee|videos|rc|yomuledet|ball-coaster|bestpresent'
 
 def server_blocks(text):
     # Track braces while ignoring quoted strings/comments in the Nginx syntax.

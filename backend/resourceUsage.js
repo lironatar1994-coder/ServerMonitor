@@ -26,6 +26,8 @@ const PROJECTS = [
     { id: 'ball-coaster-data', name: 'Ball Coaster published coasters', path: '/var/lib/private/ball-coaster', type: 'data' },
     { id: 'yomuledet', name: 'יומולדת', path: '/opt/yomuledet', dependencies: [] },
     { id: 'yomuledet-data', name: 'יומולדת persistent data', path: '/var/lib/yomuledet', type: 'data' },
+    { id: 'bestpresent', name: 'BestPresent', path: '/opt/bestpresent', dependencies: ['/opt/bestpresent/current/node_modules'] },
+    { id: 'bestpresent-data', name: 'BestPresent persistent data', path: '/var/lib/bestpresent', type: 'data' },
     { id: 'whatsapp-bot', name: 'Desk · וואטסאפ', path: '/opt/whatsapp-bot', dependencies: ['/opt/whatsapp-bot/current/node_modules'] },
     { id: 'whatsapp-bot-data', name: 'Desk · וואטסאפ pairing state', path: '/var/lib/whatsapp-bot', type: 'data' },
     { id: 'on-your-way', name: 'On Your Way', path: '/root/OnYourWay', dependencies: ['/root/OnYourWay/backend/node_modules', '/root/OnYourWay/frontend/node_modules', '/root/OnYourWay/admin/node_modules'] },

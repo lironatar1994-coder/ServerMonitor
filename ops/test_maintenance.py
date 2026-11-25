@@ -1,7 +1,9 @@
 import importlib.util
-from contextlib import closing
+from contextlib import closing, contextmanager
+import os
 from pathlib import Path
 import sqlite3
+import tarfile
 import tempfile
 import time
 import unittest
@@ -12,6 +14,8 @@ from unittest.mock import patch
 spec = importlib.util.spec_from_file_location('maintenance', Path(__file__).with_name('maintenance.py'))
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
+# What production backs up, before the tests below put their own folders in its place.
+DATABASES, ASSETS = dict(m.DATABASES), dict(m.ASSETS)
 
 class SiteMoveChecks(unittest.TestCase):
     def test_a_new_host_is_a_move_but_www_and_https_are_not(self):
@@ -25,6 +29,16 @@ class SiteMoveChecks(unittest.TestCase):
             line = '1.2.3.4 - - [04/Nov/2026:21:00:00 +0200] "GET / HTTP/2.0" 200 1 "-" "x" "{}"\n'
             log.write_text('skipped partial line\n' + line.format('new-site.co.il') * 3 + line.format('www.owned.co.il') * 3 + line.format('rare.co.il') + line.replace('" 200 ', '" 410 ').format('retired.co.il') * 3 + line.replace('" 200 ', '" 301 ').format('retired.co.il') * 3)
             self.assertEqual(m.unowned_hosts({'owned.co.il'}, log, 3), ['No monitored site owns new-site.co.il (3 recent requests)'])
+
+    def test_a_named_gift_is_not_a_site_of_its_own(self):
+        with tempfile.TemporaryDirectory() as folder:
+            log = Path(folder) / 'access.log'
+            line = '1.2.3.4 - - [24/Nov/2026:21:00:00 +0200] "GET / HTTP/2.0" 200 1 "-" "x" "{}"\n'
+            log.write_text('skipped partial line\n' + ''.join(line.format(host) for host in
+                           ('noa.bestpresent.co.il', 'bestpresent.co.il', 'notbestpresent.co.il', 'monitor.vee-app.co.il')))
+            self.assertEqual(m.unowned_hosts({'bestpresent.co.il'}, log, 1), ['No monitored site owns notbestpresent.co.il (1 recent requests)'])
+            # The domain itself still needs an owner in the catalog.
+            self.assertEqual(len(m.unowned_hosts(set(), log, 1)), 2)
 
 class Backups(unittest.TestCase):
     def setUp(self):
@@ -148,6 +162,107 @@ class Backups(unittest.TestCase):
         self.assertFalse(folders[10].exists())
         self.assertFalse(folders[31].exists())
 
+    def test_bestpresent_database_and_pictures_are_in_the_snapshot(self):
+        self.assertEqual(DATABASES['bestpresent'], '/var/lib/bestpresent/bestpresent.db')
+        self.assertEqual(ASSETS['bestpresent-uploads'], Path('/var/lib/bestpresent/uploads'))
+        # Like every other app's: a path that is not there is an error, never a snapshot without it.
+        m.DATABASES, m.ASSETS = {}, {'bestpresent-uploads': self.root / 'missing'}
+        with self.assertRaisesRegex(RuntimeError, 'Missing required assets'):
+            m.snapshot()
+        self.assertEqual(list(m.BACKUPS.iterdir()), [])
+
+
+class LiveFolders(unittest.TestCase):
+    """The real GNU tar, and a folder that changes at a set moment: tar's own checkpoint runs a script while it reads."""
+    HOOK = "--sort=name --checkpoint=1 '--checkpoint-action=exec=. \"$LIVE_CHANGE\"'"
+    # Once in each run of tar: a picture still being written, one deleted, a whole gift deleted, a new one uploaded.
+    BUSY = '''if [ "$(cat "$LIVE.seen" 2>/dev/null)" != "$PPID" ]; then
+        echo "$PPID" > "$LIVE.seen"
+        echo more >> "$LIVE/a.webp"
+        set -- "$LIVE"/b-*.webp; rm -f "$1"
+        set -- "$LIVE"/gift-*; rm -rf "$1"
+        echo new > "$LIVE/new-$PPID.webp"
+    fi'''
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.live, self.quiet = self.root / 'live', self.root / 'quiet'
+        for name in ('gift-1', 'gift-2', 'kept'):
+            (self.live / name).mkdir(parents=True)
+            (self.live / name / 'photo.webp').write_bytes(name.encode() * 5000)
+        (self.live / 'a.webp').write_bytes(b'x' * 60000)  # long enough to be caught in the middle of it
+        for name in ('b-1.webp', 'b-2.webp'):
+            (self.live / name).write_bytes(b'picture')
+        self.quiet.mkdir()
+        (self.quiet / 'orders.json').write_text('{"orders":[1]}')
+        state = self.root / 'state'
+        (state / 'backups').mkdir(parents=True)
+        values = {'STATE': state, 'BACKUPS': state / 'backups', 'DATABASES': {}, 'ASSETS': {'live': self.live, 'quiet': self.quiet},
+                  'AUTH_KEY': self.root / 'auth.key', 'AUTH_KEY_BACKUP': self.root / 'keys/auth.key'}
+        self.patches = [patch.object(m, name, value) for name, value in values.items()]
+        for item in self.patches: item.start()
+
+    def tearDown(self):
+        for item in self.patches: item.stop()
+        self.temp.cleanup()
+
+    @contextmanager
+    def during(self, script):
+        path = self.root / 'change.sh'
+        path.write_text(script + '\n', newline='\n')
+        with patch.dict(os.environ, {'TAR_OPTIONS': self.HOOK, 'LIVE': self.live.as_posix(), 'LIVE_CHANGE': path.as_posix()}):
+            yield
+
+    def files(self, path):
+        with tarfile.open(path) as archive:
+            return {member.name: archive.extractfile(member).read() for member in archive if member.isfile()}
+
+    def status(self):
+        return json.loads((m.STATE / 'backup-status.json').read_text())
+
+    def test_a_folder_that_never_rests_does_not_cost_the_snapshot(self):
+        with self.during(self.BUSY):
+            saved = Path(m.snapshot())
+        self.assertEqual(set(json.loads((saved / 'manifest.json').read_text())), {'live.tar.gz', 'quiet.tar.gz'})
+        files = self.files(saved / 'live.tar.gz')
+        self.assertEqual(files['./kept/photo.webp'], b'kept' * 5000)
+        self.assertEqual(files['./a.webp'][:60000], b'x' * 60000)
+        # Both runs met changes, so both pictures and both gifts are gone; the count says which folder it was.
+        self.assertFalse([name for name in files if name.startswith(('./b-', './gift-'))])
+        self.assertEqual(list(self.status()['changed_while_copied']), ['live'])
+        self.assertGreaterEqual(self.status()['changed_while_copied']['live'], 3)
+        self.assertEqual(self.files(saved / 'quiet.tar.gz'), {'./orders.json': b'{"orders":[1]}'})
+
+    def test_a_folder_that_settles_is_archived_again_whole(self):
+        with self.during('if [ ! -e "$LIVE.seen" ]; then echo 1 > "$LIVE.seen"; echo more >> "$LIVE/a.webp"; echo new > "$LIVE/new.webp"; fi'):
+            saved = Path(m.snapshot())
+        files = self.files(saved / 'live.tar.gz')
+        self.assertEqual(files['./a.webp'], b'x' * 60000 + b'more\n')
+        self.assertEqual(files['./new.webp'], b'new\n')
+        self.assertEqual(self.status()['changed_while_copied'], {})
+
+    def test_a_damaged_copy_fails_the_snapshot(self):
+        # A file cut short while tar reads it is also exit status 1, and is filled up with zeros.
+        with self.during(': > "$LIVE/a.webp"'), self.assertRaisesRegex(RuntimeError, r'(?s)tar failed \(1\).*File shrank'):
+            m.snapshot()
+        self.assertEqual(list(m.BACKUPS.iterdir()), [])
+        self.assertFalse((m.STATE / 'backup-status.json').exists())
+
+    def test_any_other_complaint_fails_even_beside_a_change(self):
+        dest = self.root / 'x.tar.gz'
+        with self.during(self.BUSY), self.assertRaisesRegex(RuntimeError, r'(?s)tar failed \(2\).*Cannot stat.*file changed as we read it'):
+            m.archive_folder(self.live, dest, ['./absent'])
+        for source, dest in ((self.root / 'absent', dest), (self.live, self.root / 'absent/x.tar.gz')):
+            with self.assertRaisesRegex(RuntimeError, 'tar failed'):
+                m.archive_folder(source, dest)
+
+    def test_the_complaint_must_be_the_whole_line(self):
+        for line in ('tar: ./a.webp: file changed as we read it', 'tar: ./gift: File removed before we read it', 'tar: .: file changed as we read it'):
+            self.assertTrue(m.FOLDER_IN_USE.fullmatch(line), line)
+        for line in ('tar: ./a: file changed as we read it: Cannot open: Permission denied', 'tar: ./a: File shrank by 5 bytes; padding with zeros',
+                     'tar: ./a: Cannot stat: No such file or directory', 'gzip: stdout: No space left on device', 'tar: Exiting with failure status due to previous errors'):
+            self.assertFalse(m.FOLDER_IN_USE.fullmatch(line), line)
 
 
 class Updates(unittest.TestCase):

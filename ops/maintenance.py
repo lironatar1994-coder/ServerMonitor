@@ -30,6 +30,7 @@ DATABASES = {
     'seder': '/var/lib/seder/seder.db',
     'dfus-suppliers': '/var/lib/dfus-reuven/store/suppliers.db',
     'yomuledet': '/var/lib/yomuledet/yomuledet.db',
+    'bestpresent': '/var/lib/bestpresent/bestpresent.db',
 }
 ASSETS = {
     'maavar-encrypted': Path('/opt/maavar/shared/export'),
@@ -40,13 +41,15 @@ ASSETS = {
     'dfus-store': Path('/var/lib/dfus-reuven/store'),
     'dfus-legacy-quotes': Path('/var/lib/dfus-reuven/quotes'),
     'yomuledet-uploads': Path('/var/lib/yomuledet/uploads'),
+    'bestpresent-uploads': Path('/var/lib/bestpresent/uploads'),
     'ball-coaster-library': Path('/var/lib/private/ball-coaster'),
 }
 AUTH_KEY = Path('/root/.server-monitor-auth-key')
 AUTH_KEY_BACKUP = Path('/root/server-monitor-key-backups/auth.key')
 SERVICES = ['nginx', 'ssh', 'pm2-root', 'koralevents', 'koralevents2', 'fail2ban']
+# BestPresent's own domain is its catalog address; its first one, under lawebs.co.il, is checked here.
 URLS = ['https://alenu.co.il/', 'https://lawebs.co.il/', 'https://lawebs.co.il/Koralevents2/api/health',
-        'https://lawebs.co.il/Koralevents/api/health', 'https://vee-app.co.il/']
+        'https://lawebs.co.il/Koralevents/api/health', 'https://vee-app.co.il/', 'https://lawebs.co.il/bestpresent/']
 EXPECTED_PM2 = {'dfus-reuven-live', 'manager-site', 'on-your-way-backend',
                 'on-your-way-frontend', 'pinhas-ratzon-form', 'seder-live',
                 'seder-whatsapp', 'seder-calendar', 'server-monitor', 'sos-landing-standalone',
@@ -64,7 +67,8 @@ GROWTH_URLS = ['https://pinhasratzon.co.il/',
 
 MONITOR_LOG = '/var/log/nginx/monitor_host_access.log'
 UNOWNED_HOST_REQUESTS = 40
-INFRASTRUCTURE_HOSTS = {'monitor.vee-app.co.il', '63.250.61.126.sslip.io'}
+# Not sites of their own. A leading dot is every name under that domain: each BestPresent gift may have one.
+INFRASTRUCTURE_HOSTS = {'monitor.vee-app.co.il', '63.250.61.126.sslip.io', '.bestpresent.co.il'}
 
 def run(args, timeout=60):
     p = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
@@ -100,6 +104,31 @@ def compress_verified(path):
         raise RuntimeError(f'Compressed backup verification failed: {path.name}')
     path.unlink()
     return archive
+
+
+# GNU tar's two complaints about a folder in use, both with exit status 1. "File shrank ...; padding
+# with zeros" is also status 1 and is not among them: that copy is damaged.
+FOLDER_IN_USE = re.compile(r'tar: .*: (?:file changed as we read it|File removed before we read it)')
+
+
+def archive_folder(source, dest, excludes=()):
+    """Archive a folder its app may be writing to; returns how many changes tar met while reading.
+
+    The snapshot is one for all apps, so one upload at 03:00 must not cost everyone the night's backup.
+    A folder that changed is archived once more, for a quiet copy, and kept if it changes again.
+    Any other complaint, whatever the exit status, is a failure.
+    """
+    command = ['tar', *excludes, '-czf', str(dest), '-C', str(source), '.']
+    for _ in range(2):
+        # The C locale keeps the messages in English; names in them may be any bytes.
+        p = subprocess.run(command, capture_output=True, encoding='utf-8', errors='replace', timeout=180,
+                           env={**os.environ, 'LC_ALL': 'C'})
+        if not p.returncode:
+            return 0
+        complaints = [line for line in p.stderr.split('\n') if line]
+        if p.returncode != 1 or not complaints or not all(map(FOLDER_IN_USE.fullmatch, complaints)):
+            raise RuntimeError(f'tar failed ({p.returncode}): {p.stderr[-800:]}')
+    return len(complaints)
 
 
 def snapshot():
@@ -140,6 +169,7 @@ def snapshot():
                         raise RuntimeError(f'Backup integrity failure: {name}')
             if name in COMPRESSED_DATABASES:
                 compress_verified(dest)
+        changed = {}
         for name, source in ASSETS.items():
             if not source.is_dir():
                 raise RuntimeError(f'Missing required assets: {source}')
@@ -147,7 +177,9 @@ def snapshot():
             # SQLite gets its own online snapshot; never restore a live WAL copy
             # from the file archive over the verified suppliers snapshot.
             excludes = ['--exclude=./suppliers.db', '--exclude=./suppliers.db-wal', '--exclude=./suppliers.db-shm'] if name == 'dfus-store' else []
-            run(['tar', *excludes, '-czf', str(dest), '-C', str(source), '.'], timeout=180)
+            changes = archive_folder(source, dest, excludes)
+            if changes:
+                changed[name] = changes
             with tarfile.open(dest) as archive:
                 for member in archive:
                     if member.isfile():
@@ -159,7 +191,8 @@ def snapshot():
         write_json(staging / 'manifest.json', manifest)
         final = BACKUPS / stamp
         staging.rename(final)
-        write_json(STATE / 'backup-status.json', {'completed': time.time(), 'path': str(final), 'files': manifest})
+        write_json(STATE / 'backup-status.json', {'completed': time.time(), 'path': str(final), 'files': manifest,
+                                                  'changed_while_copied': changed})
         prune_snapshots()
         return str(final)
     except BaseException:
@@ -193,7 +226,7 @@ def prune_snapshots():
 
 RELEASE_BASES = [Path('/opt') / name for name in ('koralevents', 'koralevents2', 'maavar', 'lawebs-portfolio',
                                                   'cv-manager', 'pizza-manager-platform', 'desk', 'allsee',
-                                                  'yomuledet', 'whatsapp-bot')]
+                                                  'yomuledet', 'whatsapp-bot', 'bestpresent')]
 BUILD_ROOTS = [Path(p) for p in (
     '/root/OnYourWay/frontend', '/root/sos-landing-standalone',
     '/root/DfusReuven-live', '/root/Seder', '/root/PDFStudio')]
@@ -476,7 +509,10 @@ def unowned_hosts(owned, log=MONITOR_LOG, minimum=UNOWNED_HOST_REQUESTS):
             host = match.group(1).removeprefix('www.')
             counts[host] = counts.get(host, 0) + 1
     return [f'No monitored site owns {host} ({count} recent requests)' for host, count in sorted(counts.items())
-            if count >= minimum and host not in owned and host not in INFRASTRUCTURE_HOSTS]
+            if count >= minimum and host not in owned and not infrastructure(host)]
+
+def infrastructure(host):
+    return host in INFRASTRUCTURE_HOSTS or any(name.startswith('.') and host.endswith(name) for name in INFRASTRUCTURE_HOSTS)
 
 def updates_status(simulate=None, now=None):
     """Pending package updates from a simulated upgrade (no lock, nothing installed), once a day.

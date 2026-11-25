@@ -27,6 +27,8 @@ SITES = [
     ('miryamzelig.co.il.conf', 'miryamzelig.co.il', '', 'https://miryamzelig.co.il/'),
     ('sosbaderech.co.il.conf', 'sosbaderech.co.il', '', 'https://sosbaderech.co.il/'),
 ]
+# Private, internal or unmeasured apps under lawebs.co.il: no action tag.
+LAWEBS_UNTRACKED = 'PinhasRatzon|admin|login|dashboard|PizzaManager|cv-manager|alenu|alenu-crm|maavar|desk|allsee|videos|rc|yomuledet|ball-coaster|bestpresent'
 
 def main():
     key = Path('/root/.visitor-signal-key').read_text().strip()
@@ -47,7 +49,7 @@ def main():
         write(asset / 'portfolio-tracker.js', (ROOT / 'ops/portfolio-tracker.js').read_text(), 0o644)
         maps = ['map "$host:$uri" $monitor_growth_tag {', '    default "";',
             '    ~*^(www\\.)?vee-app\\.co\\.il:/(maavar|Manager_Site|serve-monitor|pdf-studio|Miryam_Zelig|api|admin|login|dashboard)(/|$) "";',
-            '    ~*^(www\\.)?lawebs\\.co\\.il:/(PinhasRatzon|admin|login|dashboard|PizzaManager|cv-manager|alenu|alenu-crm|maavar|desk|allsee|videos|rc|yomuledet|ball-coaster)(/|$) "";',
+            f'    ~*^(www\\.)?lawebs\\.co\\.il:/({LAWEBS_UNTRACKED})(/|$) "";',
             '    ~*^(www\\.)?alenu\\.co\\.il:/desk(/|$) "";']
         for config, host, prefix, site, *extra in SITES:
             opts = extra[0] if extra else {}

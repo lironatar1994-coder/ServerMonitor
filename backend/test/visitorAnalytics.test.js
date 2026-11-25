@@ -98,6 +98,23 @@ test('retires removed production apps and seeds the new lawebs.co.il application
     for (const name of ['Desk', 'AllSee', 'Video Library', 'CV Manager']) assert.equal(app(name).analytics_enabled, 0, name);
 });
 
+test('BestPresent is watched as a service and never measured', () => {
+    const row = db.prepare(`SELECT url, systemd_unit, pm2_name, health_url, log_path, log_host, log_filter,
+        analytics_enabled, reporting_enabled, alerts_enabled FROM apps WHERE name = 'BestPresent'`).get();
+    assert.deepEqual(row, {
+        url: 'https://bestpresent.co.il/',
+        systemd_unit: 'bestpresent.service',
+        pm2_name: null,
+        health_url: 'http://127.0.0.1:3171/bestpresent/api/health',
+        log_path: null,
+        log_host: null,
+        log_filter: null,
+        analytics_enabled: 0,
+        reporting_enabled: 0,
+        alerts_enabled: 1
+    });
+});
+
 test('seeds Seder with exact host, path, runtime, and client reporting ownership', () => {
     const app = db.prepare(`
         SELECT name, url, pm2_name, log_path, log_host, log_filter,
@@ -391,8 +408,12 @@ test('path segment ownership isolates Koral routes, LA webs and its sibling apps
     assert.equal(matches('LA webs', 'lawebs.co.il', '/seder'), false);
     assert.equal(matches('LA webs', 'lawebs.co.il', '/Koralevents2'), false);
     assert.equal(matches('LA webs', 'lawebs.co.il', '/'), true);
-    for (const path of ['/alenu/', '/cv/', '/cv-manager/login', '/desk/', '/allsee/', '/videos/', '/rc/', '/PizzaManager/p/oven-demo/', '/pdf-studio/', '/alenu-crm']) {
+    for (const path of ['/alenu/', '/cv/', '/cv-manager/login', '/desk/', '/allsee/', '/videos/', '/rc/', '/PizzaManager/p/oven-demo/', '/pdf-studio/', '/alenu-crm', '/yomuledet/', '/bestpresent', '/bestpresent/', '/bestpresent/noa']) {
         assert.equal(matches('LA webs', 'lawebs.co.il', path), false, path);
+    }
+    // No measured site owns BestPresent's own domain or a gift's name under it.
+    for (const { name } of db.prepare('SELECT name FROM apps WHERE analytics_enabled = 1').all()) {
+        for (const host of ['bestpresent.co.il', 'noa.bestpresent.co.il']) assert.equal(matches(name, host, '/'), false, `${name} ${host}`);
     }
     assert.equal(matches('LA webs', 'lawebs.co.il', '/work/koral/'), true);
     assert.equal(matches('Mila Tova CV', 'lawebs.co.il', '/cv/'), true);
