@@ -293,8 +293,10 @@ class LiveFolders(unittest.TestCase):
                   'AUTH_KEY': self.root / 'auth.key', 'AUTH_KEY_BACKUP': self.root / 'keys/auth.key'}
         self.patches = [patch.object(m, name, value) for name, value in values.items()]
         for item in self.patches: item.start()
+        # The pauses between two runs of tar are whole seconds; on Linux subprocess naps by fractions while it waits.
         self.pauses = []
-        self.patches.append(patch.object(m.time, 'sleep', self.pauses.append))
+        nap = m.time.sleep
+        self.patches.append(patch.object(m.time, 'sleep', lambda pause: self.pauses.append(pause) if isinstance(pause, int) else nap(pause)))
         self.patches[-1].start()
 
     def tearDown(self):
@@ -379,7 +381,7 @@ class LiveFolders(unittest.TestCase):
     def test_any_other_complaint_fails_even_beside_a_change(self):
         dest = self.root / 'x.tar.gz'
         with self.during(self.BUSY), self.assertRaisesRegex(RuntimeError, r'(?s)tar failed \(2\).*Cannot stat.*file changed as we read it'):
-            m.archive_folder(self.live, dest, ['./absent'], True)
+            m.archive_folder(self.live, dest, ['--add-file=./absent'], True)
         self.assertEqual(self.pauses, [0])
         for source, dest in ((self.root / 'absent', dest), (self.live, self.root / 'absent/x.tar.gz')):
             with self.assertRaisesRegex(RuntimeError, 'tar failed'):
